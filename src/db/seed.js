@@ -1,21 +1,25 @@
 const db = require("../config/database");
 
+// `name` is the internal, never-user-facing slug (matches the adapter files
+// in src/providers/ and the fare formula's rate lookup keys) — it never
+// changes. `display_name` is what /api/providers actually returns to the
+// app, and is the only thing a rename like this needs to touch.
 const providers = [
   {
     name: "ridego",
-    display_name: "RideGo",
+    display_name: "inDrive",
     logo_url: null,
     deep_link_url: "https://ridego.example.com",
   },
   {
     name: "quickride",
-    display_name: "QuickRide",
+    display_name: "Yango",
     logo_url: null,
     deep_link_url: "https://quickride.example.com",
   },
   {
     name: "urbancab",
-    display_name: "UrbanCab",
+    display_name: "Bykea",
     logo_url: null,
     deep_link_url: "https://urbancab.example.com",
   },
@@ -43,35 +47,43 @@ const rates = {
   },
 };
 
+// Always upserts (never skips outright) so that renaming a provider's
+// display_name here — like this inDrive/Yango/Bykea rename — takes effect
+// on an already-seeded database too, without ever inserting a duplicate row
+// (name is UNIQUE, so ON CONFLICT DO UPDATE is what makes this idempotent
+// AND rename-safe at the same time).
 function seedDatabase() {
-  const existingProviders = db.prepare("SELECT COUNT(*) AS count FROM providers").get();
-
-  if (existingProviders.count > 0) {
-    console.log("Database already seeded");
-    return;
-  }
-
-  const insertProvider = db.prepare(`
+  const upsertProvider = db.prepare(`
     INSERT INTO providers (name, display_name, is_active, logo_url, deep_link_url)
     VALUES (@name, @display_name, 1, @logo_url, @deep_link_url)
+    ON CONFLICT(name) DO UPDATE SET
+      display_name = excluded.display_name,
+      logo_url = excluded.logo_url,
+      deep_link_url = excluded.deep_link_url
   `);
 
   const getProviderId = db.prepare(`SELECT id FROM providers WHERE name = ?`);
 
-  const insertRate = db.prepare(`
+  const upsertRate = db.prepare(`
     INSERT INTO vehicle_rates
       (provider_id, vehicle_type, base_fare, per_km_rate, per_min_rate, minimum_fare, surge_multiplier)
     VALUES (@provider_id, @vehicle_type, @base_fare, @per_km_rate, @per_min_rate, @minimum_fare, @surge_multiplier)
+    ON CONFLICT(provider_id, vehicle_type) DO UPDATE SET
+      base_fare = excluded.base_fare,
+      per_km_rate = excluded.per_km_rate,
+      per_min_rate = excluded.per_min_rate,
+      minimum_fare = excluded.minimum_fare,
+      surge_multiplier = excluded.surge_multiplier
   `);
 
   const seedAll = db.transaction(() => {
     for (const provider of providers) {
-      insertProvider.run(provider);
+      upsertProvider.run(provider);
       const { id } = getProviderId.get(provider.name);
 
       const vehicleRates = rates[provider.name];
       for (const vehicleType of Object.keys(vehicleRates)) {
-        insertRate.run({
+        upsertRate.run({
           provider_id: id,
           vehicle_type: vehicleType,
           ...vehicleRates[vehicleType],
@@ -81,7 +93,7 @@ function seedDatabase() {
   });
 
   seedAll();
-  console.log("Database seed completed");
+  console.log("Database seed completed (providers upserted)");
 }
 
 if (require.main === module) {
