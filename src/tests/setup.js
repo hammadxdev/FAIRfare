@@ -2,7 +2,7 @@
 process.env.DB_PATH = process.env.DB_PATH || "./data/test.sqlite";
 process.env.NODE_ENV = "test";
 
-require("../db/migrate");
-require("../db/seed");
+const { ensureDatabaseReady } = require("../db/bootstrap");
+ensureDatabaseReady();
 
 module.exports = require("../app");

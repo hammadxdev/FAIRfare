@@ -43,14 +43,17 @@ const rates = {
   },
 };
 
-function seed() {
+function seedDatabase() {
+  const existingProviders = db.prepare("SELECT COUNT(*) AS count FROM providers").get();
+
+  if (existingProviders.count > 0) {
+    console.log("Database already seeded");
+    return;
+  }
+
   const insertProvider = db.prepare(`
     INSERT INTO providers (name, display_name, is_active, logo_url, deep_link_url)
     VALUES (@name, @display_name, 1, @logo_url, @deep_link_url)
-    ON CONFLICT(name) DO UPDATE SET
-      display_name = excluded.display_name,
-      logo_url = excluded.logo_url,
-      deep_link_url = excluded.deep_link_url
   `);
 
   const getProviderId = db.prepare(`SELECT id FROM providers WHERE name = ?`);
@@ -59,12 +62,6 @@ function seed() {
     INSERT INTO vehicle_rates
       (provider_id, vehicle_type, base_fare, per_km_rate, per_min_rate, minimum_fare, surge_multiplier)
     VALUES (@provider_id, @vehicle_type, @base_fare, @per_km_rate, @per_min_rate, @minimum_fare, @surge_multiplier)
-    ON CONFLICT(provider_id, vehicle_type) DO UPDATE SET
-      base_fare = excluded.base_fare,
-      per_km_rate = excluded.per_km_rate,
-      per_min_rate = excluded.per_min_rate,
-      minimum_fare = excluded.minimum_fare,
-      surge_multiplier = excluded.surge_multiplier
   `);
 
   const seedAll = db.transaction(() => {
@@ -84,7 +81,13 @@ function seed() {
   });
 
   seedAll();
-  console.log("Seed complete: providers and vehicle_rates populated.");
+  console.log("Database seed completed");
 }
 
-seed();
+if (require.main === module) {
+  seedDatabase();
+}
+
+module.exports = {
+  seedDatabase,
+};
