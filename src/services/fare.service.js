@@ -4,22 +4,23 @@ const { applyRecommendation } = require("./recommendation.service");
 const { getAdapter } = require("../providers/provider.registry");
 const AppError = require("../utils/AppError");
 
-const getActiveProvidersStmt = db.prepare(`SELECT * FROM providers WHERE is_active = 1`);
-const getRateStmt = db.prepare(`SELECT * FROM vehicle_rates WHERE provider_id = ? AND vehicle_type = ?`);
-
-const insertSearchStmt = db.prepare(`
-  INSERT INTO fare_searches
-    (pickup_name, pickup_lat, pickup_lng, dropoff_name, dropoff_lat, dropoff_lng, vehicle_type, distance_km, duration_min)
-  VALUES (@pickup_name, @pickup_lat, @pickup_lng, @dropoff_name, @dropoff_lat, @dropoff_lng, @vehicle_type, @distance_km, @duration_min)
-`);
-
-const insertResultStmt = db.prepare(`
-  INSERT INTO fare_results
-    (search_id, provider_id, estimated_fare, eta_min, is_cheapest, is_fastest, is_recommended, breakdown_json)
-  VALUES (@search_id, @provider_id, @estimated_fare, @eta_min, @is_cheapest, @is_fastest, @is_recommended, @breakdown_json)
-`);
+// Statements are prepared fresh inside each function rather than once at
+// module load — see the comment in app.js's readiness middleware for why a
+// module-load-time prepared statement isn't safe to trust on this platform.
 
 function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results }) {
+  const insertSearchStmt = db.prepare(`
+    INSERT INTO fare_searches
+      (pickup_name, pickup_lat, pickup_lng, dropoff_name, dropoff_lat, dropoff_lng, vehicle_type, distance_km, duration_min)
+    VALUES (@pickup_name, @pickup_lat, @pickup_lng, @dropoff_name, @dropoff_lat, @dropoff_lng, @vehicle_type, @distance_km, @duration_min)
+  `);
+
+  const insertResultStmt = db.prepare(`
+    INSERT INTO fare_results
+      (search_id, provider_id, estimated_fare, eta_min, is_cheapest, is_fastest, is_recommended, breakdown_json)
+    VALUES (@search_id, @provider_id, @estimated_fare, @eta_min, @is_cheapest, @is_fastest, @is_recommended, @breakdown_json)
+  `);
+
   const insertAll = db.transaction(() => {
     const searchInfo = insertSearchStmt.run({
       pickup_name: pickup.name,
@@ -55,6 +56,9 @@ function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, dur
 }
 
 function compareFares({ pickup, dropoff, vehicleType, route }) {
+  const getActiveProvidersStmt = db.prepare(`SELECT * FROM providers WHERE is_active = 1`);
+  const getRateStmt = db.prepare(`SELECT * FROM vehicle_rates WHERE provider_id = ? AND vehicle_type = ?`);
+
   const providers = getActiveProvidersStmt.all();
   if (providers.length === 0) {
     throw new AppError("No active providers configured", 500);
