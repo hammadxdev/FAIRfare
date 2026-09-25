@@ -12,7 +12,8 @@ const compareFaresHandler = asyncHandler(async (req, res) => {
 
   const { pickup, dropoff, vehicleType, route } = req.body;
 
-  const result = compareFares({
+  const result = await compareFares({
+    userId: req.user.id,
     pickup: { name: pickup.name, lat: pickup.lat, lng: pickup.lng },
     dropoff: { name: dropoff.name, lat: dropoff.lat, lng: dropoff.lng },
     vehicleType,

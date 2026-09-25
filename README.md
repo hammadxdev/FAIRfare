@@ -1,8 +1,8 @@
-# FAIRfair Backend
+# FairFare Backend
 
-Backend API for **FAIRfair**, a React Native app that compares ride fares across
-multiple providers. Real provider APIs aren't available yet, so this backend
-**simulates** 3 ride providers using configurable fare formulas stored in SQLite.
+Backend API for **FairFare**, a React Native app that compares ride fares across
+multiple providers. It supports simulated providers and an authorized inDrive
+integration using backend-only session credentials.
 It's built with a provider-adapter architecture so real APIs can be swapped in
 later without touching the routes/controllers/services layer.
 
@@ -12,7 +12,9 @@ later without touching the routes/controllers/services layer.
 - SQLite via `better-sqlite3`
 - CORS, dotenv
 - Node's built-in test runner (`node --test`) + `supertest`
-- No auth, no frontend, no AI — API only
+- JWT authentication with rotating refresh sessions
+- User-owned comparison history and private preferences
+- AI Chat remains a navigation placeholder; provider booking/recommendation flows are not implemented
 
 ## Folder Structure
 
@@ -44,7 +46,9 @@ backend/
     services/                     # business logic, framework-agnostic
       distance.service.js           # haversine distance + duration (fallback)
       fare.service.js                 # orchestrates providers, persists results
-      recommendation.service.js         # cheapest/fastest/recommended scoring
+      recommendation.service.js         # fare comparison badges
+      rideRecommendation.service.js     # ML expected-fare Book/Wait status
+      personalizedRideRecommendation.service.js # user-specific quote ranking
       googleMaps.service.js             # raw Google Maps Platform HTTP calls
       cache.service.js                    # in-memory TTL cache (autocomplete/details/geocode/route)
       mapUsage.service.js                   # daily Google request counters + limit
@@ -52,7 +56,7 @@ backend/
 
     providers/                          # one adapter per ride provider
       formula.js                          # shared pure fare formula
-      ridego.provider.js
+      indrive/                            # session, client, mapper, adapter, errors
       quickride.provider.js
       urbancab.provider.js
       provider.registry.js                  # name -> adapter lookup
@@ -128,12 +132,50 @@ Lowest fare → `isCheapest`. Lowest ETA → `isFastest`. Lowest score → `isRe
 Badges (`Cheapest`, `Fastest`, `Recommended`) are attached automatically. Results
 are always returned sorted by ascending fare.
 
+### Three separate recommendation concepts
+
+Fair Fare keeps these concepts separate:
+
+- **Personalized Recommendation** selects the current quote that best matches
+  the authenticated user's configured vehicle, avoided-vehicle, budget, and
+  priority preferences. It is calculated fresh for each comparison and is not
+  stored in history.
+- **Book/Wait** (`rideRecommendation.service.js`) compares a quote's current
+  fare with its model expected fare and returns `BOOK_NOW`, `WAIT`, `NEUTRAL`,
+  or `INSUFFICIENT_DATA`.
+- **ML Prediction** estimates fare from global eligible fare observations and
+  trip/provider conditions. User IDs and user preferences are not ML features.
+
+Personalized ranking uses normalized fare and pickup ETA scores within the
+current comparison set. Product-rule weights are centralized in
+`personalizedRideRecommendation.service.js`: `CHEAPEST` is fare-heavy,
+`FASTEST_PICKUP` is ETA-heavy, and `BALANCED` combines fare, ETA, preferred
+vehicle, and budget fit. These prototype weights are deterministic rules, not
+scientifically optimized values.
+
+Avoided vehicles remain visible in normal fare comparison and keep their
+provider launch action, but receive `eligible: false` and cannot be the top
+personalized recommendation. Invalid fares also cannot win. A typical budget
+sets `withinBudget` and `budgetDifference` (`budget - fare`); over-budget quotes
+are not hidden. Missing ETA is never treated as zero: its dimension is ignored
+for that quote and its weight is redistributed deterministically. If all ETA
+values are missing, the ETA weight is redistributed for every eligible quote.
+
+Exactly one eligible quote is marked `isTopRecommendation` when possible.
+Ties are resolved by score, lower fare, lower available ETA, then stable
+provider/category identifier. If all quotes are avoided or have invalid fares,
+there is no personalized winner while normal results remain available.
+
 ## Database
 
 SQLite file lives at `DB_PATH` (default `./data/fairfair.sqlite`), created
 automatically on first migration.
 
-Tables: `providers`, `vehicle_rates`, `fare_searches`, `fare_results`
+Tables: `users`, `user_sessions`, `user_preferences`, `saved_routes`,
+`comparison_history`, `comparison_history_quotes`, `providers`, `vehicle_rates`,
+`fare_searches`, `fare_results`, `provider_sessions`, `fare_observations`.
+Saved Routes are private, user-owned pickup/destination shortcuts and do not
+store fares; History remains the immutable record of completed comparisons.
 (see `src/db/schema.sql`). Every `/api/fares/compare` call persists a search
 row and one result row per provider.
 
@@ -168,6 +210,15 @@ see `src/tests/map.test.js`, which mocks `googleMaps.service.js` and never
 calls real Google APIs.
 
 ## API Endpoints
+
+### Saved Routes
+
+Authenticated clients can use `GET/POST /api/saved-routes` and
+`GET/PUT/DELETE /api/saved-routes/:id`. Ownership always comes from the access
+token user, never a client-supplied user ID. A Saved Route stores normalized
+location names/addresses and coordinates only. Comparing one always calls the
+normal fresh fare comparison flow; it never treats a saved or historical fare
+as current.
 
 ### `GET /api/health`
 
@@ -331,6 +382,163 @@ your quota. **`npm test` never hits real Google APIs** — `src/tests/map.test.j
 monkey-patches `googleMaps.service.js`'s exported functions with fakes, so CI
 and local test runs are free and deterministic.
 
+## inDrive integration
+
+Set `INDRIVE_MODE=simulated` for deterministic local development. Set
+`INDRIVE_MODE=real` and provide an authorized `INDRIVE_REFRESH_TOKEN`,
+`INDRIVE_DEVICE_FINGERPRINT`, and `INDRIVE_FINGERPRINT` through the backend
+environment only. The seed refresh token is used only when no persisted
+session exists; a rotated refresh token returned by inDrive is persisted and
+becomes authoritative. Access tokens renew inside a five-minute buffer with a
+process-level single-flight lock. A pricing 401 triggers exactly one forced
+renewal and retry; a second 401 marks the provider `AUTH_REQUIRED`.
+
+`GET /api/providers/status` returns only provider id, enabled, mode, and safe
+status (`READY`, `AUTH_REQUIRED`, `NOT_CONFIGURED`, `TEMPORARILY_UNAVAILABLE`,
+or `DISABLED`). Provider failures are returned as unavailable comparison cards,
+so other providers can still succeed. Successful normalized quotes are stored
+in `fare_observations`; failed responses are never stored as observations.
+
+Supported configuration variables are `INDRIVE_ENABLED`, `INDRIVE_MODE`,
+`INDRIVE_REFRESH_TOKEN`, `INDRIVE_DEVICE_FINGERPRINT`, `INDRIVE_FINGERPRINT`,
+`INDRIVE_APP_VERSION`, `INDRIVE_LANGUAGE`, `INDRIVE_OS_TYPE`,
+`INDRIVE_APP_FLAVOR`, `INDRIVE_REQUEST_TIMEOUT_MS`, and
+`INDRIVE_REFRESH_BUFFER_SECONDS`.
+
+Fair Fare does not implement inDrive authentication bypass. An authorized
+session credential must be supplied before the real provider integration can
+become READY.
+
+## ML Fare Prediction
+
+Fair Fare's first tabular prediction pipeline is separated from the Express
+business layer under `ml/`. It reads normalized `fare_observations`, prepares
+numeric and categorical features, performs a reproducible grouped split by
+`comparison_id`, compares a provider/vehicle historical-mean baseline with
+Linear Regression, Random Forest, and Gradient Boosting, and saves the
+selected sklearn pipeline plus JSON metadata under `ml/artifacts/`.
+
+The prediction target is `fare`. Features are provider ID/name, provider
+category ID/name, normalized vehicle type, pickup/destination coordinates and
+zones, numeric distance/duration, hour, weekday, and weekend flag. The
+observation ID, comparison ID, fare ranges, ETA, and raw provider JSON are
+excluded from the primary model to avoid leakage. Missing optional categories
+are encoded as `UNKNOWN`; invalid target/route rows are rejected and reported.
+
+Every observation carries `data_source`: `REAL`, `SIMULATED`, `TEST`, or
+`UNKNOWN`. Test requests are labelled `TEST`; simulated development adapters
+are labelled `SIMULATED`; legacy rows remain `UNKNOWN`. Training requires an
+explicit source and defaults to `SIMULATED`, so automated test rows are not
+silently trained as development data.
+
+Install the ML dependencies from `requirements.txt`. The local development
+commands are:
+
+```bash
+npm run ml:train:simulated
+npm run ml:evaluate
+npm run ml:test-prediction
+```
+
+`POST /api/predictions/fare` invokes the saved Python predictor through a
+structured stdin/stdout child process with no shell interpolation. Missing
+artifacts, unavailable Python, invalid input, and timeouts return a safe
+status instead of breaking fare comparison. Current provider fares remain
+primary; predictions are attached separately and are never guarantees.
+
+Example request:
+
+```json
+{
+  "providerId": 1,
+  "providerCategoryId": "31",
+  "providerCategoryName": "Rickshaw",
+  "vehicleType": "RICKSHAW",
+  "pickupLatitude": 31.5,
+  "pickupLongitude": 74.3,
+  "destinationLatitude": 31.4,
+  "destinationLongitude": 74.4,
+  "distanceMeters": 5800,
+  "durationSeconds": 900,
+  "hourOfDay": 18,
+  "dayOfWeek": 5,
+  "isWeekend": 0
+}
+```
+
+The response reports `AVAILABLE`, `MODEL_NOT_TRAINED`, or a safe failure
+status. `confidence` is currently `null`; no statistical confidence interval
+is claimed.
+
+The mobile results card shows `Current fare`, `Expected fare`, and a
+deterministic Book/Wait recommendation when prediction data is available.
+`BOOK_NOW` means the current quote is materially below the model reference;
+`WAIT` means it is materially above the reference; `NEUTRAL` means it is
+close. `INSUFFICIENT_DATA` keeps the quote usable when prediction data is not
+available. The recommendation does not predict future fare movement and does
+not guarantee that waiting will lower a fare.
+
+The current development model uses simulated or test-derived observations.
+Recommendations preserve that provenance and are not validated real-world
+forecasting.
+
+## Book/Wait Recommendation
+
+`src/services/rideRecommendation.service.js` compares each provider's current
+fare with its available ML expected fare. The default material-difference
+threshold is 10 percent and can be changed with
+`FAIRFARE_RECOMMENDATION_THRESHOLD_PERCENT`. The output statuses are
+`BOOK_NOW`, `WAIT`, `NEUTRAL`, and `INSUFFICIENT_DATA`.
+
+This recommendation is separate from the provider action button. The mobile
+action opens the provider; it remains available even when the recommendation
+is `WAIT`. No future price claim, confidence score, personalized preference
+logic, or chatbot is involved.
+
+There is no standalone recommendation endpoint in Version 1; comparison
+enrichment is the single path so prediction input construction is not
+duplicated.
+
+## Fare Observation Dataset
+
+`fare_observations` is the research/ML dataset and remains separate from the
+user-facing `comparison_history` snapshot. One observation is one valid fare
+quote for one provider vehicle/category at one comparison timestamp. A single
+comparison can therefore create multiple observation rows when an adapter
+returns multiple categories. Failed providers and quotes without a fare never
+create fabricated observations.
+
+Observations retain the provider category ID/name alongside a centralized
+`vehicle_type` normalization. Verified inDrive mappings are order type `2`
+(`Moto` → `BIKE`) and `31` (`Rickshaw` → `RICKSHAW`). Unverified inDrive IDs,
+including `33`, `29`, and `11`, remain `UNKNOWN` with their IDs preserved.
+Provider-specific category names are never replaced by the normalized value.
+
+Coordinates, numeric route distance/duration, fare/fare-range semantics,
+currency, ETA, and the UTC `observed_at` timestamp are stored when available.
+`hour_of_day`, `day_of_week`, and `is_weekend` are derived centrally using the
+configurable `FAIRFARE_MARKET_TIMEZONE` setting, which defaults to
+`Asia/Karachi`. Pickup/destination zones remain null unless a verified zone is
+already supplied by the caller.
+
+Adapters may provide a pricing-response fragment as `metadata.raw`. It is
+stored only as `raw_response_sanitized`; keys containing authorization,
+OAuth/token, refresh/session, cookie, credential, fingerprint/device, phone,
+or account data are removed recursively. Authenticated request headers and
+sessions are never stored. The normalized columns are the intended ML input.
+
+Development/research utilities:
+
+```bash
+npm run export:dataset   # writes data/exports/fare_observations.csv
+npm run stats:dataset    # prints counts, fare stats, date range, missing fields
+```
+
+The CSV contains normalized, non-secret columns only and is not generated or
+committed automatically. Current simulated provider comparisons are useful for
+pipeline validation but must not be described as real provider observations.
+Yango and Bykea adapters are not implemented here.
+
 ## Notes for Frontend Integration
 
 - All responses share the shape `{ success, message, data }` (or
@@ -342,10 +550,81 @@ and local test runs are free and deterministic.
 - The mobile app only ever talks to `/api/maps/*` on this backend — it never
   calls Google directly, so the Google API key is never present in the app
   bundle.
-- CORS is open (`cors()` with no restrictions) since there's no auth layer —
-  fine for FYP demo purposes, tighten before any real deployment.
+- Authenticated fare comparison, history, and preference requests require
+  `Authorization: Bearer <accessToken>`. The mobile client stores the session
+  in Expo SecureStore and refreshes expired access tokens once.
+- CORS is open (`cors()` with no restrictions) for the current FYP development
+  setup; tighten it before production deployment.
 - Base URL during development: `http://localhost:4000` (or your machine's LAN
   IP if testing on a physical device — set `PORT` in `.env` if 4000 is taken).
+
+## AI Ride Assistant
+
+`POST /api/ai/chat` is an authenticated natural-language explanation layer.
+The backend builds bounded context from the authenticated user's own current
+comparison, preferences, and recent history, then supplies existing ML,
+Book/Wait, and personalization outputs to the configured LLM. The LLM does
+not calculate fares or rerank rides. Current comparisons use a short-lived
+server-owned enriched context; historical entries remain snapshots.
+
+Set `AI_ASSISTANT_ENABLED=true`, `AI_API_KEY`, and optionally `AI_MODEL`,
+`AI_API_URL`, and `AI_REQUEST_TIMEOUT_MS` in the backend environment. When
+disabled or unconfigured, the endpoint returns a safe unavailable response
+and does not affect fare comparison. Automated tests inject a mock client and
+never require a live paid provider.
+
+## User Preferences
+
+Preferences are stored privately in one `user_preferences` row per account.
+The API is authenticated and derives ownership from the access token rather
+than a client-supplied user ID:
+
+```text
+GET /api/preferences
+PUT /api/preferences
+```
+
+The response uses normalized values such as `BIKE`, `RICKSHAW`,
+`ECONOMY_CAR`, `STANDARD_CAR`, `PREMIUM_CAR`, and `OTHER`; `UNKNOWN` is not a
+mobile selection. Supported priorities are `CHEAPEST`, `FASTEST_PICKUP`, and
+`BALANCED`. `typicalBudget` is an optional positive PKR amount.
+
+Preferences are a future personalization input only. They are not stored in
+`fare_observations` and are not features of the global fare-prediction model.
+
+## FYP Architecture Summary
+
+Fair Fare keeps decision authority outside the language model:
+
+```text
+Provider layer        -> current provider quotes
+ML layer              -> expected fare/reference estimate
+Book/Wait layer       -> current fare vs expected reference
+Personalization layer -> user-fit ranking from preferences
+AI layer              -> grounded natural-language explanation
+```
+
+Expected fare is not a guaranteed future fare. Book/Wait is advisory. The
+current development model uses SIMULATED observations and is not evidence of
+real-world generalization.
+
+## Final Version 1 Feature Matrix
+
+| Feature | Status | Evidence/Test | Limitation |
+|---|---|---|---|
+| Authentication | Implemented | `src/tests/auth.test.js` | No social login |
+| Persistent session | Implemented | Auth regression suite | Device validation pending |
+| Maps/routes | Implemented | `src/tests/map.test.js` | Real key/device validation pending |
+| Fare comparison | Implemented | `src/tests/fare.test.js` | Simulated providers |
+| History | Implemented | `src/tests/history.test.js` | SQLite persistence depends on hosting volume |
+| Preferences | Implemented | `src/tests/userPreference.test.js` | User-entered preferences |
+| Fare observations | Implemented | `src/tests/fareObservation.test.js` | Current dataset is development data |
+| ML prediction | Implemented | `ml/test_pipeline.py`, prediction smoke | SIMULATED training data |
+| Book/Wait | Implemented | `src/tests/rideRecommendation.test.js` | Advisory reference comparison |
+| Personalization | Implemented | personalized recommendation tests | Deterministic prototype rules |
+| AI Ride Assistant | Implemented | `src/tests/aiRideAssistant.test.js`, `npm run evaluate:ai` | Requires backend LLM configuration for live answers |
+| Provider handoff | Implemented | Mobile launcher behavior | Verified links are limited |
+| Real provider APIs | Postponed / not part of current demo | Provider adapters remain simulated | Requires authorized integrations |
 
 ## Deployment
 
@@ -378,7 +657,7 @@ restarts, attach a persistent volume/disk and point `DB_PATH` at it.
    `GOOGLE_MAPS_API_KEY`, `GOOGLE_MAPS_DAILY_REQUEST_LIMIT`,
    `GOOGLE_MAPS_ENABLE_CACHE`, and optionally `PORT`/`DB_PATH` if the host
    requires specific values.
-4. Once live, note the public URL (e.g. `https://fairfair-backend.example.com`)
-   — the mobile app needs `https://fairfair-backend.example.com/api` as its
+4. Once live, note the public URL (e.g. `https://fairfare-backend.example.com`)
+   — the mobile app needs `https://fairfare-backend.example.com/api` as its
    `EXPO_PUBLIC_API_BASE_URL`.
 5. Smoke test before pointing the app at it: `curl https://YOUR_URL/api/health`.

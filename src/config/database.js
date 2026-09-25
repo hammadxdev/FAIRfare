@@ -1,7 +1,9 @@
 const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
-require("dotenv").config({ quiet: true });
+// Resolve the backend environment from this module's location so `npm start`
+// behaves the same whether launched from D:\\ride or D:\\ride\\backend.
+require("dotenv").config({ path: path.resolve(__dirname, "..", "..", ".env"), quiet: true });
 
 function resolveDbPath() {
   // If DB_PATH is explicitly provided
@@ -32,11 +34,12 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(dbPath);
+const readOnly = process.env.FAIRFARE_READ_ONLY === "true";
+const db = new Database(dbPath, readOnly ? { readonly: true, fileMustExist: true } : undefined);
 
 // WAL can cause issues on serverless /tmp environments.
 // Use WAL locally, but avoid it on Vercel.
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && !readOnly) {
   db.pragma("journal_mode = WAL");
 }
 

@@ -1,6 +1,7 @@
 const db = require("../config/database");
 const { success } = require("../utils/apiResponse");
 const asyncHandler = require("../utils/asyncHandler");
+const { getProviderStatus } = require("../providers/provider.registry");
 
 const getProviders = asyncHandler(async (req, res) => {
   // Prepared fresh per request rather than once at module load — see the
@@ -20,4 +21,8 @@ const getProviders = asyncHandler(async (req, res) => {
   return success(res, { message: "Providers fetched successfully", data: providers });
 });
 
-module.exports = { getProviders };
+const getProviderStatuses = asyncHandler(async (req, res) => {
+  return success(res, { message: "Provider statuses fetched successfully", data: { providers: await getProviderStatus() } });
+});
+
+module.exports = { getProviders, getProviderStatuses };

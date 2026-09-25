@@ -6,10 +6,10 @@ const db = require("../config/database");
 // app, and is the only thing a rename like this needs to touch.
 const providers = [
   {
-    name: "ridego",
+    name: "indrive",
     display_name: "inDrive",
     logo_url: null,
-    deep_link_url: "https://ridego.example.com",
+    deep_link_url: "https://indrive.com",
   },
   {
     name: "quickride",
@@ -27,7 +27,7 @@ const providers = [
 
 // baseFare, perKmRate, perMinRate, minimumFare, surgeMultiplier per provider/vehicleType
 const rates = {
-  ridego: {
+  indrive: {
     bike: { base_fare: 60, per_km_rate: 20, per_min_rate: 1.0, minimum_fare: 120, surge_multiplier: 1.05 },
     rickshaw: { base_fare: 80, per_km_rate: 28, per_min_rate: 1.4, minimum_fare: 150, surge_multiplier: 1.05 },
     mini: { base_fare: 100, per_km_rate: 34, per_min_rate: 1.8, minimum_fare: 200, surge_multiplier: 1.05 },
@@ -53,6 +53,10 @@ const rates = {
 // (name is UNIQUE, so ON CONFLICT DO UPDATE is what makes this idempotent
 // AND rename-safe at the same time).
 function seedDatabase() {
+  // Migrate the original simulated inDrive slot (ridego) to the canonical
+  // provider id without creating a fourth provider on existing databases.
+  db.prepare(`UPDATE providers SET name = 'indrive', display_name = 'inDrive', deep_link_url = 'https://indrive.com' WHERE name = 'ridego' AND NOT EXISTS (SELECT 1 FROM providers WHERE name = 'indrive')`).run();
+  db.prepare(`UPDATE providers SET is_active = 0 WHERE name = 'ridego' AND EXISTS (SELECT 1 FROM providers WHERE name = 'indrive')`).run();
   const upsertProvider = db.prepare(`
     INSERT INTO providers (name, display_name, is_active, logo_url, deep_link_url)
     VALUES (@name, @display_name, 1, @logo_url, @deep_link_url)

@@ -2,6 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
+const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
+
+let auth;
+test.before(async () => { auth = await createAuthenticatedTestUser(app, "Fare Test User"); });
 
 const validPayload = {
   pickup: { name: "University Road, Sialkot", lat: 32.4945, lng: 74.5229 },
@@ -16,8 +20,15 @@ test("GET /api/providers returns 3 providers", async () => {
   assert.equal(res.body.data.length, 3);
 });
 
+test("GET /api/providers/status is safe and does not expose credentials", async () => {
+  const res = await request(app).get("/api/providers/status");
+  assert.equal(res.status, 200);
+  assert.ok(res.body.data.providers.some((provider) => provider.id === "indrive"));
+  assert.doesNotMatch(JSON.stringify(res.body), /access_token|refresh_token|fingerprint|authorization/i);
+});
+
 test("POST /api/fares/compare works for valid input and returns 3 results", async () => {
-  const res = await request(app).post("/api/fares/compare").send(validPayload);
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
   assert.equal(res.body.data.results.length, 3);
@@ -26,14 +37,14 @@ test("POST /api/fares/compare works for valid input and returns 3 results", asyn
 });
 
 test("results are sorted by lowest fare ascending", async () => {
-  const res = await request(app).post("/api/fares/compare").send(validPayload);
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
   const fares = res.body.data.results.map((r) => r.fare);
   const sorted = [...fares].sort((a, b) => a - b);
   assert.deepEqual(fares, sorted);
 });
 
 test("cheapest provider is correctly marked", async () => {
-  const res = await request(app).post("/api/fares/compare").send(validPayload);
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
   const results = res.body.data.results;
   const lowestFare = Math.min(...results.map((r) => r.fare));
   const cheapestResults = results.filter((r) => r.isCheapest);
@@ -46,6 +57,7 @@ test("cheapest provider is correctly marked", async () => {
 test("invalid vehicle type returns validation error", async () => {
   const res = await request(app)
     .post("/api/fares/compare")
+    .set("Authorization", authHeader(auth))
     .send({ ...validPayload, vehicleType: "helicopter" });
 
   assert.equal(res.status, 400);
@@ -54,7 +66,7 @@ test("invalid vehicle type returns validation error", async () => {
 });
 
 test("missing pickup/dropoff returns validation error", async () => {
-  const res = await request(app).post("/api/fares/compare").send({ vehicleType: "bike" });
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send({ vehicleType: "bike" });
 
   assert.equal(res.status, 400);
   assert.equal(res.body.success, false);
@@ -65,6 +77,7 @@ test("missing pickup/dropoff returns validation error", async () => {
 test("fare comparison uses route override distance/duration when provided", async () => {
   const res = await request(app)
     .post("/api/fares/compare")
+    .set("Authorization", authHeader(auth))
     .send({ ...validPayload, route: { distanceKm: 6.8, durationMin: 18 } });
 
   assert.equal(res.status, 200);
@@ -73,7 +86,7 @@ test("fare comparison uses route override distance/duration when provided", asyn
 });
 
 test("fare comparison still works without route (haversine fallback)", async () => {
-  const res = await request(app).post("/api/fares/compare").send(validPayload);
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
 
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
@@ -84,6 +97,7 @@ test("fare comparison still works without route (haversine fallback)", async () 
 test("fare comparison rejects invalid route override", async () => {
   const res = await request(app)
     .post("/api/fares/compare")
+    .set("Authorization", authHeader(auth))
     .send({ ...validPayload, route: { distanceKm: -5, durationMin: "fast" } });
 
   assert.equal(res.status, 400);

@@ -1,13 +1,21 @@
 {
-  "name": "fairfair-backend",
+  "name": "fairfare-backend",
   "version": "1.0.0",
-  "description": "FAIRfair backend - simulated ride fare comparison API",
+  "description": "FairFare backend - simulated ride fare comparison API",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",
+    "export:dataset": "node scripts/exportFareDataset.js",
+    "stats:dataset": "node scripts/fareDatasetStats.js",
+    "ml:train:simulated": "node scripts/exportFareDataset.js && python ml/train.py --csv data/exports/fare_observations.csv --source SIMULATED",
+    "ml:evaluate": "python ml/evaluate.py --metadata ml/artifacts/fare_model_metadata.json",
+    "ml:test-prediction": "python ml/smoke_prediction.py",
+    "evaluate:ai": "node evaluation/evaluateAi.js",
+    "ai:smoke": "node scripts/aiOpenRouterSmoke.js",
+    "performance:check": "node evaluation/performance.js",
     "test": "node --test \"src/tests/**/*.test.js\""
   },
   "keywords": [],
@@ -15,10 +23,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",

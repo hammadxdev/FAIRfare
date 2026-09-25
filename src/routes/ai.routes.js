@@ -1,0 +1,11 @@
+const { Router } = require("express");
+const { chat, listConversations, createConversation, getConversation, renameConversation, deleteConversation } = require("../controllers/ai.controller");
+const { requireAuth } = require("../middlewares/auth.middleware");
+const router = Router();
+router.post("/chat", requireAuth, chat);
+router.get("/conversations", requireAuth, listConversations);
+router.post("/conversations", requireAuth, createConversation);
+router.get("/conversations/:id", requireAuth, getConversation);
+router.patch("/conversations/:id", requireAuth, renameConversation);
+router.delete("/conversations/:id", requireAuth, deleteConversation);
+module.exports = router;

@@ -1,0 +1,65 @@
+{
+  "scenario": {
+    "preferences": {
+      "typicalBudget": 600,
+      "preferredVehicleType": "RICKSHAW",
+      "avoidedVehicleTypes": ["BIKE"],
+      "ridePriority": "BALANCED",
+      "currency": "PKR"
+    },
+    "comparison": {
+      "comparisonId": 7001,
+      "pickup": { "name": "Gulberg" },
+      "dropoff": { "name": "DHA" },
+      "results": [
+        {
+          "provider": { "displayName": "Bike Co" },
+          "categoryName": "Bike",
+          "fare": 300,
+          "etaMin": 5,
+          "fareType": "ESTIMATE",
+          "prediction": { "status": "AVAILABLE", "predictedFare": 340, "dataSource": "SIMULATED" },
+          "recommendation": { "status": "WAIT", "currentFare": 300, "expectedFare": 340, "reason": "Current fare is above the model reference.", "modelDataSource": "SIMULATED" },
+          "personalization": { "eligible": false, "isTopRecommendation": false, "withinBudget": true, "preferredVehicleMatch": false, "reasons": [], "exclusionReason": "Vehicle type is in your avoided preferences." }
+        },
+        {
+          "provider": { "displayName": "Rickshaw Co" },
+          "categoryName": "Rickshaw",
+          "fare": 480,
+          "etaMin": 8,
+          "fareType": "UPFRONT",
+          "prediction": { "status": "AVAILABLE", "predictedFare": 510, "dataSource": "SIMULATED" },
+          "recommendation": { "status": "NEUTRAL", "currentFare": 480, "expectedFare": 510, "reason": "Current fare is close to the model reference.", "modelDataSource": "SIMULATED" },
+          "personalization": { "eligible": true, "isTopRecommendation": true, "withinBudget": true, "preferredVehicleMatch": true, "reasons": ["Matches your preferred vehicle type.", "Within your PKR 600 typical budget."] }
+        },
+        {
+          "provider": { "displayName": "Economy Co" },
+          "categoryName": "Economy Car",
+          "fare": 650,
+          "etaMin": null,
+          "fareType": "ESTIMATE",
+          "prediction": { "status": "MODEL_NOT_TRAINED", "predictedFare": null, "dataSource": null },
+          "recommendation": { "status": "INSUFFICIENT_DATA", "currentFare": null, "expectedFare": null, "reason": "Not enough prediction data for a fare recommendation.", "modelDataSource": null },
+          "personalization": { "eligible": true, "isTopRecommendation": false, "withinBudget": false, "preferredVehicleMatch": false, "reasons": [], "exclusionReason": null }
+        }
+      ]
+    }
+  },
+  "cases": [
+    { "id": "cheapest", "question": "Which is cheapest?", "constraints": [{ "path": "comparison.rides.0.fare", "equals": 300 }] },
+    { "id": "fastest", "question": "Which has the fastest pickup?", "constraints": [{ "path": "comparison.rides.0.pickupEtaMin", "equals": 5 }] },
+    { "id": "budget", "question": "What's within my budget?", "constraints": [{ "path": "comparison.rides.0.personalization.withinBudget", "equals": true }, { "path": "comparison.rides.1.personalization.withinBudget", "equals": true }, { "path": "comparison.rides.2.personalization.withinBudget", "equals": false }] },
+    { "id": "avoid-bike", "question": "I have Rs. 600 and don't want a bike.", "constraints": [{ "path": "preferences.typicalBudget", "equals": 600 }, { "path": "preferences.avoidedVehicleTypes.0", "equals": "BIKE" }, { "path": "comparison.rides.0.personalization.eligible", "equals": false }, { "path": "comparison.rides.1.fare", "equals": 480 }] },
+    { "id": "preferred", "question": "Why is Rickshaw recommended?", "constraints": [{ "path": "comparison.rides.1.personalization.isTopRecommendation", "equals": true }, { "path": "comparison.rides.1.personalization.preferredVehicleMatch", "equals": true }] },
+    { "id": "book-wait", "question": "Should I book now?", "constraints": [{ "path": "comparison.rides.0.bookWait.status", "equals": "WAIT" }] },
+    { "id": "expected-fare", "question": "What is the expected fare?", "constraints": [{ "path": "comparison.rides.1.prediction.predictedFare", "equals": 510 }, { "path": "comparison.rides.1.prediction.dataSource", "equals": "SIMULATED" }] },
+    { "id": "missing-prediction", "question": "What is the expected fare for Economy?", "constraints": [{ "path": "comparison.rides.2.prediction.status", "equals": "MODEL_NOT_TRAINED" }, { "path": "comparison.rides.2.prediction.predictedFare", "equals": null }] },
+    { "id": "missing-eta", "question": "Is Economy the fastest pickup?", "constraints": [{ "path": "comparison.rides.2.pickupEtaMin", "equals": null }] },
+    { "id": "fare-semantics", "question": "Are these fares final?", "constraints": [{ "path": "comparison.rides.0.fareType", "equals": "ESTIMATE" }, { "path": "comparison.rides.1.fareType", "equals": "UPFRONT" }] },
+    { "id": "preference", "question": "What are my ride preferences?", "constraints": [{ "path": "preferences.preferredVehicleType", "equals": "RICKSHAW" }, { "path": "preferences.ridePriority", "equals": "BALANCED" }] },
+    { "id": "route", "question": "What route am I discussing?", "constraints": [{ "path": "comparison.route.pickup", "equals": "Gulberg" }, { "path": "comparison.route.dropoff", "equals": "DHA" }] },
+    { "id": "history", "question": "What did I compare recently?", "constraints": [] },
+    { "id": "no-history", "question": "What did I compare recently?", "constraints": [] },
+    { "id": "unavailable-data", "question": "Tell me something you cannot verify.", "constraints": [{ "path": "comparison.rides.2.prediction.predictedFare", "equals": null }] }
+  ]
+}

@@ -2,3 +2,8 @@ node_modules/
 data/
 .env
 *.log
+ml/artifacts/*.joblib
+ml/artifacts/*_metadata.json
+ml/.deps/
+__pycache__/
+ml/__pycache__/

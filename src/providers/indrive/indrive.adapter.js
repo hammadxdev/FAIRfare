@@ -1,0 +1,56 @@
+const { getConfig, ORDER_TYPE_IDS } = require("./indrive.constants");
+const { createIndriveClient } = require("./indrive.client");
+const { createSessionManager } = require("./indrive.auth");
+const { mapPricingResponse } = require("./indrive.mapper");
+const { IndriveError, CODES } = require("./indrive.errors");
+const { calculateFare } = require("../formula");
+
+function buildPricingPayload(route) {
+  return {
+    order_type_ids: ORDER_TYPE_IDS,
+    route: [
+      { latitude: Number(route.pickup.latitude), longitude: Number(route.pickup.longitude) },
+      { latitude: Number(route.destination.latitude), longitude: Number(route.destination.longitude) },
+    ],
+    geo: {
+      distance_meters: Number(route.distanceMeters), duration_seconds: Number(route.durationSeconds),
+      toll_cost: 0.0, provider: "", points: [],
+    },
+  };
+}
+
+function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
+  const indriveClient = client || createIndriveClient({ config });
+  const sessionManager = session || createSessionManager({ client: indriveClient, config });
+  return {
+    id: "indrive", name: "indrive", displayName: "inDrive", mode: config.mode,
+    getStatus: sessionManager.getStatus,
+    getSessionManager: () => sessionManager,
+    async getQuotes({ route, rate, vehicleType }) {
+      if (config.mode === "simulated") {
+        const quote = calculateFare({ baseFare: rate.base_fare, perKmRate: rate.per_km_rate, perMinRate: rate.per_min_rate, minimumFare: rate.minimum_fare, surgeMultiplier: rate.surge_multiplier, distanceKm: route.distanceMeters / 1000, durationMin: route.durationSeconds / 60 });
+        return [{ providerId: "indrive", providerName: "inDrive", categoryId: vehicleType, categoryName: vehicleType, normalizedCategory: vehicleType.toUpperCase(), fare: quote.finalFare, fareMin: null, fareMax: null, currency: "PKR", fareType: "RECOMMENDED", pickupEtaSeconds: 420, tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, isAvailable: true, deepLink: null, metadata: { simulated: true, breakdown: quote.breakdown } }];
+      }
+      if (!config.enabled) throw new IndriveError(CODES.UNAVAILABLE, "inDrive is disabled");
+      const accessToken = await sessionManager.ensureValidSession();
+      const first = await indriveClient.getPricing(accessToken, buildPricingPayload(route));
+      if (first.status === 401) {
+        const retryToken = await sessionManager.ensureValidSession({ force: true });
+        const second = await indriveClient.getPricing(retryToken, buildPricingPayload(route));
+        if (second.status === 401) { sessionManager.markAuthRequired(); throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive pricing authentication failed"); }
+        if (second.status < 200 || second.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive pricing failed", { status: second.status });
+        return mapPricingResponse(second.body, route);
+      }
+      if (first.status === 429) throw new IndriveError(CODES.RATE_LIMITED, "inDrive pricing rate limited");
+      if (first.status < 200 || first.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive pricing failed", { status: first.status });
+      return mapPricingResponse(first.body, route);
+    },
+    getFareQuote() { throw new Error("Use getQuotes for inDrive"); },
+    getPickupEtaMin() { return null; },
+  };
+}
+
+const defaultAdapter = createIndriveAdapter();
+module.exports = defaultAdapter;
+module.exports.createIndriveAdapter = createIndriveAdapter;
+module.exports.buildPricingPayload = buildPricingPayload;

@@ -26,6 +26,7 @@ function getFareQuote({ rate, distanceKm, durationMin }) {
 
 module.exports = {
   name: "quickride",
+  mode: "simulated",
   getFareQuote,
   getPickupEtaMin,
 };

@@ -11,9 +11,34 @@ const DEFAULT_BIAS_LOCATION = { lat: 32.4945, lng: 74.5229 };
 const DEFAULT_BIAS_RADIUS_METERS = 50000;
 const DEFAULT_REGION = "pk";
 
+function classifyMapsFailure({ body, response, error } = {}) {
+  const networkCode = error?.code || error?.cause?.code;
+  if (networkCode === "EACCES" || networkCode === "ENETUNREACH" || networkCode === "ECONNREFUSED" || networkCode === "ETIMEDOUT" || error?.message === "fetch failed") return "MAPS_NETWORK_ERROR";
+  const status = body?.status || body?.error?.status;
+  if (status === "REQUEST_DENIED" || response?.status === 401 || response?.status === 403) return "MAPS_UPSTREAM_DENIED";
+  if (status === "OVER_QUERY_LIMIT" || response?.status === 429) return "MAPS_QUOTA_ERROR";
+  if (status === "INVALID_REQUEST" || response?.status === 400) return "MAPS_INVALID_REQUEST";
+  if (status === "ZERO_RESULTS") return "MAPS_NO_RESULTS";
+  return "MAPS_UPSTREAM_ERROR";
+}
+
+function logGoogleFailure(apiName, { response, body, error } = {}) {
+  if (process.env.NODE_ENV === "production") return;
+
+  const reason = body?.error_message || body?.error?.message || error?.message || error?.code || "unknown upstream error";
+  const googleStatus = body?.status || body?.error?.status || null;
+  console.error(`[maps] ${apiName} upstream failure`, {
+    classification: classifyMapsFailure({ response, body, error }),
+    httpStatus: response?.status || null,
+    googleStatus,
+    reason: String(reason).slice(0, 300),
+  });
+}
+
 function getApiKey() {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey || apiKey === "your_google_maps_api_key_here") {
+    if (process.env.NODE_ENV !== "production") console.error("[maps] configuration failure", { classification: "MAPS_CONFIG_ERROR" });
     throw new AppError(
       "Google Maps API key is missing. Set GOOGLE_MAPS_API_KEY in backend/.env to enable map features.",
       500
@@ -34,16 +59,25 @@ async function fetchAutocomplete({ input, sessionToken }) {
     radius: String(DEFAULT_BIAS_RADIUS_METERS),
   });
 
-  const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`);
-  const body = await response.json();
+  let response;
+  let body;
+  try {
+    response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`);
+    body = await response.json();
+  } catch (error) {
+    logGoogleFailure("Places Autocomplete", { response, error });
+    throw error;
+  }
 
   if (body.status === "REQUEST_DENIED") {
+    logGoogleFailure("Places Autocomplete", { response, body });
     throw new AppError(
       "Google Places API request denied. Check Places API enablement and API key restrictions.",
       502
     );
   }
   if (body.status !== "OK" && body.status !== "ZERO_RESULTS") {
+    logGoogleFailure("Places Autocomplete", { response, body });
     throw new AppError(`Google Places Autocomplete failed: ${body.status}`, 502);
   }
 
@@ -66,16 +100,25 @@ async function fetchPlaceDetails({ placeId, sessionToken }) {
     fields: "place_id,name,formatted_address,geometry/location",
   });
 
-  const response = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?${params}`);
-  const body = await response.json();
+  let response;
+  let body;
+  try {
+    response = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?${params}`);
+    body = await response.json();
+  } catch (error) {
+    logGoogleFailure("Place Details", { response, error });
+    throw error;
+  }
 
   if (body.status === "REQUEST_DENIED") {
+    logGoogleFailure("Place Details", { response, body });
     throw new AppError(
       "Google Places API request denied. Check Places API enablement and API key restrictions.",
       502
     );
   }
   if (body.status !== "OK") {
+    logGoogleFailure("Place Details", { response, body });
     throw new AppError(`Google Place Details failed: ${body.status}`, 502);
   }
 
@@ -97,10 +140,18 @@ async function fetchReverseGeocode({ lat, lng }) {
     key: apiKey,
   });
 
-  const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params}`);
-  const body = await response.json();
+  let response;
+  let body;
+  try {
+    response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params}`);
+    body = await response.json();
+  } catch (error) {
+    logGoogleFailure("Reverse Geocoding", { response, error });
+    throw error;
+  }
 
   if (body.status !== "OK" && body.status !== "ZERO_RESULTS") {
+    logGoogleFailure("Reverse Geocoding", { response, body });
     throw new AppError(`Google Reverse Geocoding failed: ${body.status}`, 502);
   }
 
@@ -132,20 +183,28 @@ async function computeRouteWithTravelMode({ origin, destination, travelMode }) {
     routingPreference: travelMode === "TWO_WHEELER" ? "TRAFFIC_UNAWARE" : "TRAFFIC_AWARE",
   };
 
-  const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
-    },
-    body: JSON.stringify(requestBody),
-  });
+  let response;
+  let body;
+  try {
+    response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-  const body = await response.json();
+    body = await response.json();
+  } catch (error) {
+    logGoogleFailure("Routes", { response, error });
+    throw error;
+  }
 
   if (!response.ok || !body.routes?.length) {
     const message = body.error?.message || "no route found";
+    logGoogleFailure("Routes", { response, body });
     throw new AppError(`Google Routes API failed: ${message}`, 502);
   }
 
@@ -173,6 +232,7 @@ async function computeRoute({ origin, destination, vehicleType }) {
 }
 
 module.exports = {
+  classifyMapsFailure,
   getApiKey,
   fetchAutocomplete,
   fetchPlaceDetails,

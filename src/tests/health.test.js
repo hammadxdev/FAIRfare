@@ -7,5 +7,5 @@ test("GET /api/health returns success", async () => {
   const res = await request(app).get("/api/health");
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
-  assert.equal(res.body.message, "FAIRfair backend is running");
+  assert.equal(res.body.message, "FairFare backend is running");
 });
