@@ -112,11 +112,15 @@ function validateRouteRequest(body) {
   const errors = [];
   const { origin, destination, vehicleType } = body || {};
 
-  if (!origin || !isValidLat(origin.lat) || !isValidLng(origin.lng)) {
-    errors.push("origin.lat/origin.lng must be valid coordinates");
+  if (!origin) errors.push("origin is required");
+  else {
+    if (!isValidLat(origin.lat)) errors.push("origin.lat must be a finite number between -90 and 90");
+    if (!isValidLng(origin.lng)) errors.push("origin.lng must be a finite number between -180 and 180");
   }
-  if (!destination || !isValidLat(destination.lat) || !isValidLng(destination.lng)) {
-    errors.push("destination.lat/destination.lng must be valid coordinates");
+  if (!destination) errors.push("destination is required");
+  else {
+    if (!isValidLat(destination.lat)) errors.push("destination.lat must be a finite number between -90 and 90");
+    if (!isValidLng(destination.lng)) errors.push("destination.lng must be a finite number between -180 and 180");
   }
   if (!vehicleType || !VEHICLE_TYPES.includes(vehicleType)) {
     errors.push(`vehicleType must be one of: ${VEHICLE_TYPES.join(", ")}`);

@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const app = require("./setup");
-const db = require("../config/database");
+const { query } = require("../config/postgres");
 const request = require("supertest");
 const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
 
@@ -30,12 +30,12 @@ test("one successful quote creates one observation with numeric route and histor
     route: { distanceKm: 19.124, durationMin: 36.3 },
   });
   assert.equal(response.status, 200);
-  const row = db.prepare("SELECT * FROM fare_observations WHERE pickup_latitude = ? ORDER BY id DESC LIMIT 1").get(route.pickup.lat);
+  const row = (await query("SELECT * FROM fare_observations WHERE pickup_latitude = $1 ORDER BY id DESC LIMIT 1", [route.pickup.lat])).rows[0];
   assert.ok(row);
   assert.equal(typeof row.distance_meters, "number");
   assert.equal(typeof row.duration_seconds, "number");
-  assert.equal(row.pickup_latitude, route.pickup.lat);
-  assert.equal(row.destination_longitude, route.dropoff.lng);
+  assert.equal(Number(row.pickup_latitude), route.pickup.lat);
+  assert.equal(Number(row.destination_longitude), route.dropoff.lng);
   assert.equal(row.data_source, "TEST");
   assert.ok(row.comparison_id);
   assert.ok(row.observed_at);
@@ -90,17 +90,17 @@ test("failed providers produce no fabricated observation and raw response is san
   }).length, 1);
 });
 
-test("persisting multi-category rows stores both observations", () => {
-  const history = db.prepare(`INSERT INTO comparison_history
-    (pickup_label, pickup_latitude, pickup_longitude, destination_label, destination_latitude, destination_longitude, distance_meters, duration_seconds)
-    VALUES ('Observation Test Pickup', 31.5, 74.3, 'Observation Test Destination', 31.6, 74.4, 19124, 2178)`).run();
-  const comparisonId = Number(history.lastInsertRowid);
-  const inserted = persistFareObservations({
+test("persisting multi-category rows stores both observations", async () => {
+  const history = (await query(`INSERT INTO comparison_history
+    (user_id, pickup_label, pickup_latitude, pickup_longitude, destination_label, destination_latitude, destination_longitude, distance_meters, duration_seconds)
+    VALUES ($1, 'Observation Test Pickup', 31.5, 74.3, 'Observation Test Destination', 31.6, 74.4, 19124, 2178) RETURNING id`, [auth.user.id]));
+  const comparisonId = history.rows[0].id;
+  const inserted = await persistFareObservations({
     comparisonId,
     ...route,
     results: [{ provider: { id: 1, name: "indrive" }, quotes: [{ categoryId: "2", fare: 250 }, { categoryId: "31", fare: 430 }] }],
   });
-  const after = db.prepare("SELECT COUNT(*) AS count FROM fare_observations WHERE comparison_id = ?").get(comparisonId).count;
+  const after = Number((await query("SELECT COUNT(*) AS count FROM fare_observations WHERE comparison_id = $1", [comparisonId])).rows[0].count);
   assert.equal(inserted, 2);
   assert.equal(after, 2);
 });

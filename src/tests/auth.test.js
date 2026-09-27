@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
-const db = require("../config/database");
+const { query } = require("../config/postgres");
 
 const email = `auth-${Date.now()}@example.com`;
 const otherEmail = `auth-other-${Date.now()}@example.com`;
@@ -13,7 +13,7 @@ async function login(value = email) { let result = await request(app).post("/api
 test("registration hashes password and returns an account without a session", async () => {
   const res = await register();
   assert.equal(res.status, 200); assert.equal(res.body.data.accessToken, undefined); assert.equal(res.body.data.refreshToken, undefined); assert.equal(res.body.data.user.email, email); assert.equal(res.body.data.user.password_hash, undefined);
-  const row = db.prepare("SELECT password_hash FROM users WHERE email = ?").get(email);
+  const row = (await query("SELECT password_hash FROM users WHERE email = $1", [email])).rows[0];
   assert.ok(row.password_hash.startsWith("$2")); assert.notEqual(row.password_hash, password);
 });
 test("registration validation and duplicate email are rejected", async () => {

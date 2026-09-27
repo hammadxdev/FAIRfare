@@ -16,9 +16,31 @@ const pool = process.env.DATABASE_URL && Pool ? new Pool({
   ssl: process.env.PG_SSL_DISABLE === "true" ? false : { rejectUnauthorized: false },
 }) : null;
 
+const TRANSIENT_CONNECT_CODES = new Set(["ENOTFOUND", "EAI_AGAIN", "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT"]);
+const configuredConnectRetries = Number(process.env.PG_CONNECT_RETRIES || 1);
+const CONNECT_RETRIES = Number.isFinite(configuredConnectRetries) && configuredConnectRetries >= 0
+  ? Math.floor(configuredConnectRetries)
+  : 1;
+
+function isTransientConnectError(error) {
+  return TRANSIENT_CONNECT_CODES.has(String(error?.code || ""));
+}
+
+async function connectWithRetry() {
+  let attempt = 0;
+  while (true) {
+    try { return await pool.connect(); }
+    catch (error) {
+      if (!isTransientConnectError(error) || attempt >= CONNECT_RETRIES) throw error;
+      attempt += 1;
+      await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+    }
+  }
+}
+
 async function checkPostgres() {
   if (!pool) return { configured: false, reachable: false };
-  const client = await pool.connect();
+  const client = await connectWithRetry();
   try { await client.query("SELECT 1"); return { configured: true, reachable: true }; }
   catch (error) {
     if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
@@ -32,9 +54,14 @@ async function checkPostgres() {
 
 async function withTransaction(work) {
   if (!pool) throw new Error("PostgreSQL is not configured");
-  const client = await pool.connect();
+  // Retry only connection establishment. Retrying after BEGIN/queries could
+  // replay a token rotation after the database has already committed it.
+  const client = await connectWithRetry();
   try { await client.query("BEGIN"); const result = await work(client); await client.query("COMMIT"); return result; }
-  catch (error) { await client.query("ROLLBACK"); throw error; }
+  catch (error) {
+    try { await client.query("ROLLBACK"); } catch (rollbackError) { rollbackError.suppressRawLog = true; }
+    throw error;
+  }
   finally { client.release(); }
 }
 

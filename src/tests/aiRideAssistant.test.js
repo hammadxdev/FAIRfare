@@ -5,6 +5,7 @@ const app = require("./setup");
 const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
 const { rememberComparison, clearComparisonsForTests } = require("../services/currentComparison.service");
 const assistant = require("../services/ai/aiRideAssistant.service");
+const { randomUUID } = require("crypto");
 
 test.beforeEach(() => {
   clearComparisonsForTests();
@@ -34,7 +35,7 @@ test("AI supplies only the authenticated user's preferences and bounded history"
 test("AI current comparison context is owned, factual, and keeps prediction separate", async () => {
   const userA = await createAuthenticatedTestUser(app, "AI Comparison A");
   const userB = await createAuthenticatedTestUser(app, "AI Comparison B");
-  const comparison = { comparisonId: 991234, pickup: { name: "Gulberg" }, dropoff: { name: "DHA" }, results: [
+  const comparison = { comparisonId: randomUUID(), pickup: { name: "Gulberg" }, dropoff: { name: "DHA" }, results: [
     { provider: { displayName: "Bike Co" }, categoryName: "Bike", fare: 300, etaMin: 5, prediction: { status: "AVAILABLE", predictedFare: 340, dataSource: "SIMULATED" }, recommendation: { status: "WAIT", currentFare: 300, expectedFare: 340, reason: "Current fare is below reference", modelDataSource: "SIMULATED" }, personalization: { eligible: false, isTopRecommendation: false, withinBudget: true, reasons: [], exclusionReason: "Vehicle type is in your avoided preferences." } },
     { provider: { displayName: "Rickshaw Co" }, categoryName: "Rickshaw", fare: 480, etaMin: 8, prediction: null, recommendation: null, personalization: { eligible: true, isTopRecommendation: true, withinBudget: true, preferredVehicleMatch: true, reasons: ["Matches your preferred vehicle type."] } },
   ] };

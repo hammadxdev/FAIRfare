@@ -118,6 +118,9 @@ const reverseGeocodeHandler = asyncHandler(async (req, res) => {
 const routeHandler = asyncHandler(async (req, res) => {
   const errors = validateRouteRequest(req.body);
   if (errors.length > 0) {
+    if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+      console.warn("[maps] route validation failed", { fields: errors.map((error) => error.split(" ")[0]) });
+    }
     throw new AppError("Validation failed", 400, errors);
   }
 

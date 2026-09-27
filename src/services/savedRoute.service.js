@@ -4,14 +4,19 @@ const AppError = require("../utils/AppError");
 const LABEL_TYPES = ["HOME", "WORK", "UNIVERSITY", "FAVORITE", "CUSTOM"];
 const COORDINATE_TOLERANCE = 0.0001;
 
+function numericCoordinate(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function mapRow(row) {
   if (!row) return null;
   return {
     id: row.id,
     name: row.name,
     labelType: row.label_type,
-    pickup: { name: row.pickup_name, address: row.pickup_address, latitude: row.pickup_latitude, longitude: row.pickup_longitude },
-    destination: { name: row.destination_name, address: row.destination_address, latitude: row.destination_latitude, longitude: row.destination_longitude },
+    pickup: { name: row.pickup_name, address: row.pickup_address, lat: numericCoordinate(row.pickup_latitude), lng: numericCoordinate(row.pickup_longitude) },
+    destination: { name: row.destination_name, address: row.destination_address, lat: numericCoordinate(row.destination_latitude), lng: numericCoordinate(row.destination_longitude) },
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -36,6 +36,11 @@ function isEmailDeliveryError(error) { return String(error?.code || "").startsWi
 function safeRefreshError(error) {
   const code = String(error?.code || "");
   const messages = {
+    ENOTFOUND: "database DNS resolution failed",
+    EAI_AGAIN: "database DNS resolution temporarily failed",
+    ECONNREFUSED: "database connection refused",
+    ECONNRESET: "database connection reset",
+    ETIMEDOUT: "database connection timed out",
     "22P02": "invalid input syntax",
     "23505": "unique constraint violation",
     "23503": "foreign-key constraint violation",
@@ -54,6 +59,9 @@ const refresh = asyncHandler(async (req, res) => {
     if (!error.isOperational || error.statusCode >= 500) {
       console.error("[AUTH] refresh failed", safeRefreshError(error));
       error.suppressRawLog = true;
+      // pg can attach nested connection errors (including addresses) to an
+      // AggregateError. Never return those internals to the client.
+      error.errors = null;
     }
     throw error;
   }

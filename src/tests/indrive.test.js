@@ -1,17 +1,27 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const Database = require("better-sqlite3");
-const fs = require("fs");
-const path = require("path");
 const { createSessionManager } = require("../providers/indrive/indrive.auth");
 const { createIndriveAdapter, buildPricingPayload } = require("../providers/indrive/indrive.adapter");
 const { createIndriveClient } = require("../providers/indrive/indrive.client");
 const { mapPricingResponse } = require("../providers/indrive/indrive.mapper");
 
 function createDb() {
-  const database = new Database(":memory:");
-  database.exec(fs.readFileSync(path.join(__dirname, "../db/schema.sql"), "utf8"));
-  return database;
+  const state = { row: null };
+  return {
+    state,
+    async query(text, params) {
+      if (/^SELECT \* FROM provider_sessions/i.test(text)) return { rows: state.row ? [{ ...state.row }] : [] };
+      state.row = {
+        provider: params[0],
+        access_token: params[1],
+        refresh_token: params[2],
+        access_expires_at: params[3],
+        status: params[4],
+        updated_at: params[5],
+      };
+      return { rows: [], rowCount: 1 };
+    },
+  };
 }
 
 const config = {
@@ -24,7 +34,7 @@ test("inDrive session manager reports missing refresh configuration without cras
   const database = createDb();
   const manager = createSessionManager({ config: { ...config, refreshToken: "" }, client: { renew: async () => { throw new Error("must not call"); } }, database, logger: { log() {} } });
   await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_NOT_CONFIGURED");
-  assert.equal(database.prepare("SELECT status FROM provider_sessions WHERE provider='indrive'").get().status, "NOT_CONFIGURED");
+  assert.equal(database.state.row.status, "NOT_CONFIGURED");
 });
 
 test("concurrent refresh calls are single-flight and rotated refresh token persists", async () => {
@@ -37,7 +47,7 @@ test("concurrent refresh calls are single-flight and rotated refresh token persi
   const tokens = await Promise.all([manager.ensureValidSession(), manager.ensureValidSession(), manager.ensureValidSession()]);
   assert.deepEqual(tokens, ["access-1", "access-1", "access-1"]);
   assert.equal(calls, 1);
-  assert.equal(database.prepare("SELECT refresh_token FROM provider_sessions WHERE provider='indrive'").get().refresh_token, "refresh-2");
+  assert.equal(database.state.row.refresh_token, "refresh-2");
 });
 
 test("pricing payload keeps route values numeric and 401 retries once", async () => {

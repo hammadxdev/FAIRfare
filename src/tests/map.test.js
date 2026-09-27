@@ -210,6 +210,16 @@ test("route endpoint response is normalized when Google service is mocked", asyn
   assert.ok(res.body.data.polylineCoordinates.length > 0);
 });
 
+test("route endpoint reports the invalid coordinate field without coordinate values", async () => {
+  const res = await request(app)
+    .post("/api/maps/route")
+    .send({ origin: { lat: "31.5", lng: 74.3 }, destination: { lat: 31.6, lng: 74.4 }, vehicleType: "bike" });
+
+  assert.equal(res.status, 400);
+  assert.deepEqual(res.body.errors, ["origin.lat must be a finite number between -90 and 90"]);
+  assert.equal(JSON.stringify(res.body).includes("31.5"), false);
+});
+
 test("usage endpoint returns request counters", async () => {
   const res = await request(app).get("/api/maps/usage");
   assert.equal(res.status, 200);

@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
-const db = require("../config/database");
+const { query } = require("../config/postgres");
 const llm = require("../services/ai/llmClient");
 const assistant = require("../services/ai/aiRideAssistant.service");
 const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
@@ -84,7 +84,7 @@ test("successful fallback persists one user and one assistant with its model", a
   assert.equal(response.status, 200);
   assert.deepEqual(calls, [PRIMARY, FALLBACKS[0]]);
   const id = response.body.data.conversation.id;
-  const rows = db.prepare("SELECT role, model_id FROM ai_messages WHERE conversation_id = ? ORDER BY id").all(id);
+  const rows = (await query("SELECT role, model_id FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at ASC, id ASC", [id])).rows;
   assert.deepEqual(rows, [{ role: "USER", model_id: null }, { role: "ASSISTANT", model_id: FALLBACKS[0] }]);
 });
 
