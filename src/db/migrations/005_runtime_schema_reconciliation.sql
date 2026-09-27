@@ -147,6 +147,7 @@ ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS pickup_latitude numeric;
 ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS pickup_longitude numeric;
 ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS destination_latitude numeric;
 ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS destination_longitude numeric;
+ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS label_type text;
 
 -- Some existing Supabase saved_routes variants use *_lat/*_lng. Preserve
 -- those values while making the runtime's domain column names canonical.
@@ -163,6 +164,142 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'destination_lng') THEN
     EXECUTE 'UPDATE saved_routes SET destination_longitude = destination_lng WHERE destination_longitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'label') THEN
+    EXECUTE 'UPDATE saved_routes SET label_type = label WHERE label_type IS NULL';
+  END IF;
+END $$;
+
+-- Legacy coordinate columns are no longer written by the runtime. If an
+-- existing Supabase table made them NOT NULL, relax only those old
+-- constraints so canonical-column inserts remain compatible. Existing
+-- values are preserved above; no rows or columns are removed.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'pickup_lat') THEN
+    EXECUTE 'ALTER TABLE saved_routes ALTER COLUMN pickup_lat DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'pickup_lng') THEN
+    EXECUTE 'ALTER TABLE saved_routes ALTER COLUMN pickup_lng DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'destination_lat') THEN
+    EXECUTE 'ALTER TABLE saved_routes ALTER COLUMN destination_lat DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'destination_lng') THEN
+    EXECUTE 'ALTER TABLE saved_routes ALTER COLUMN destination_lng DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'saved_routes' AND column_name = 'label') THEN
+    EXECUTE 'ALTER TABLE saved_routes ALTER COLUMN label DROP NOT NULL';
+  END IF;
+END $$;
+
+-- Reconcile older history and observation shapes without replacing their
+-- existing columns. Canonical runtime columns are added and backfilled only
+-- when their values are currently NULL.
+ALTER TABLE comparison_history ADD COLUMN IF NOT EXISTS pickup_label text;
+ALTER TABLE comparison_history ADD COLUMN IF NOT EXISTS pickup_latitude numeric;
+ALTER TABLE comparison_history ADD COLUMN IF NOT EXISTS pickup_longitude numeric;
+ALTER TABLE comparison_history ADD COLUMN IF NOT EXISTS destination_label text;
+ALTER TABLE comparison_history ADD COLUMN IF NOT EXISTS destination_latitude numeric;
+ALTER TABLE comparison_history ADD COLUMN IF NOT EXISTS destination_longitude numeric;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'pickup_name') THEN
+    EXECUTE 'UPDATE comparison_history SET pickup_label = pickup_name WHERE pickup_label IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'pickup_lat') THEN
+    EXECUTE 'UPDATE comparison_history SET pickup_latitude = pickup_lat WHERE pickup_latitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'pickup_lng') THEN
+    EXECUTE 'UPDATE comparison_history SET pickup_longitude = pickup_lng WHERE pickup_longitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'destination_name') THEN
+    EXECUTE 'UPDATE comparison_history SET destination_label = destination_name WHERE destination_label IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'destination_lat') THEN
+    EXECUTE 'UPDATE comparison_history SET destination_latitude = destination_lat WHERE destination_latitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'destination_lng') THEN
+    EXECUTE 'UPDATE comparison_history SET destination_longitude = destination_lng WHERE destination_longitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'pickup_lat') THEN
+    EXECUTE 'ALTER TABLE comparison_history ALTER COLUMN pickup_lat DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'pickup_lng') THEN
+    EXECUTE 'ALTER TABLE comparison_history ALTER COLUMN pickup_lng DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'destination_lat') THEN
+    EXECUTE 'ALTER TABLE comparison_history ALTER COLUMN destination_lat DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history' AND column_name = 'destination_lng') THEN
+    EXECUTE 'ALTER TABLE comparison_history ALTER COLUMN destination_lng DROP NOT NULL';
+  END IF;
+END $$;
+
+ALTER TABLE comparison_history_quotes ADD COLUMN IF NOT EXISTS provider text;
+ALTER TABLE comparison_history_quotes ADD COLUMN IF NOT EXISTS category text;
+ALTER TABLE comparison_history_quotes ADD COLUMN IF NOT EXISTS fare numeric;
+ALTER TABLE comparison_history_quotes ADD COLUMN IF NOT EXISTS pickup_eta_seconds numeric;
+ALTER TABLE comparison_history_quotes ADD COLUMN IF NOT EXISTS availability text;
+ALTER TABLE comparison_history_quotes ADD COLUMN IF NOT EXISTS fare_type text;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history_quotes' AND column_name = 'provider_name') THEN
+    EXECUTE 'UPDATE comparison_history_quotes SET provider = provider_name WHERE provider IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history_quotes' AND column_name = 'provider_category_name') THEN
+    EXECUTE 'UPDATE comparison_history_quotes SET category = provider_category_name WHERE category IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history_quotes' AND column_name = 'pickup_eta_minutes') THEN
+    EXECUTE 'UPDATE comparison_history_quotes SET pickup_eta_seconds = pickup_eta_minutes * 60 WHERE pickup_eta_seconds IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history_quotes' AND column_name = 'provider_id') THEN
+    EXECUTE 'ALTER TABLE comparison_history_quotes ALTER COLUMN provider_id DROP NOT NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'comparison_history_quotes' AND column_name = 'vehicle_type') THEN
+    EXECUTE 'ALTER TABLE comparison_history_quotes ALTER COLUMN vehicle_type DROP NOT NULL';
+  END IF;
+END $$;
+
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS provider text;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS provider_category text;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS normalized_category text;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS pickup_latitude numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS pickup_longitude numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS destination_latitude numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS destination_longitude numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS currency text;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS fare_type text;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS fare numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS pickup_eta_seconds numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS observed_at timestamptz;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS hour_of_day integer;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS day_of_week integer;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'pickup_lat') THEN
+    EXECUTE 'UPDATE fare_observations SET pickup_latitude = pickup_lat WHERE pickup_latitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'pickup_lng') THEN
+    EXECUTE 'UPDATE fare_observations SET pickup_longitude = pickup_lng WHERE pickup_longitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'destination_lat') THEN
+    EXECUTE 'UPDATE fare_observations SET destination_latitude = destination_lat WHERE destination_latitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'destination_lng') THEN
+    EXECUTE 'UPDATE fare_observations SET destination_longitude = destination_lng WHERE destination_longitude IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'observation_hour') THEN
+    EXECUTE 'UPDATE fare_observations SET hour_of_day = observation_hour WHERE hour_of_day IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'observation_day_of_week') THEN
+    EXECUTE 'UPDATE fare_observations SET day_of_week = observation_day_of_week WHERE day_of_week IS NULL';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fare_observations' AND column_name = 'created_at') THEN
+    EXECUTE 'UPDATE fare_observations SET observed_at = created_at WHERE observed_at IS NULL';
   END IF;
 END $$;
 

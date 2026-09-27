@@ -101,7 +101,7 @@ const reverseGeocodeHandler = asyncHandler(async (req, res) => {
   const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = reverseGeocodeCache.get(cacheKey);
   if (cached) {
-    logMapRequest("reverse-geocode", { lat, lng, cache: "hit" });
+    logMapRequest("reverse-geocode", { cache: "hit" });
     return success(res, { data: cached });
   }
 
@@ -110,7 +110,7 @@ const reverseGeocodeHandler = asyncHandler(async (req, res) => {
   const data = await googleMapsService.fetchReverseGeocode({ lat, lng });
   mapUsageService.recordRequest("reverseGeocodeRequests");
   reverseGeocodeCache.set(cacheKey, data);
-  logMapRequest("reverse-geocode", { lat, lng, cache: "miss" });
+  logMapRequest("reverse-geocode", { cache: "miss" });
 
   return success(res, { data });
 });
