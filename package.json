@@ -16,7 +16,8 @@
     "evaluate:ai": "node evaluation/evaluateAi.js",
     "ai:smoke": "node scripts/aiOpenRouterSmoke.js",
     "performance:check": "node evaluation/performance.js",
-    "test": "node --test \"src/tests/**/*.test.js\""
+    "test": "node --test \"src/tests/**/*.test.js\"",
+    "test:email-auth": "node scripts/emailAuthSmoke.js"
   },
   "keywords": [],
   "author": "",
@@ -28,7 +29,9 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.16.3",
+    "resend": "^6.30.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",
