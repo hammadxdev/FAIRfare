@@ -3,7 +3,13 @@ const jwt = require("jsonwebtoken");
 
 const accessSecret = process.env.JWT_ACCESS_SECRET || (process.env.NODE_ENV === "test" ? "test-only-fairfare-access-secret" : null);
 const accessTtl = process.env.ACCESS_TOKEN_TTL || "15m";
+// Refresh sessions use a sliding 30-day lifetime. Keep the existing seconds
+// setting as the single source of truth for backwards compatibility.
 const refreshTtlSeconds = Number(process.env.REFRESH_TOKEN_TTL_SECONDS || 60 * 60 * 24 * 30);
+
+if (!Number.isFinite(refreshTtlSeconds) || refreshTtlSeconds <= 0) {
+  throw new Error("REFRESH_TOKEN_TTL_SECONDS must be a positive number");
+}
 
 function requireAccessSecret() {
   if (!accessSecret) throw new Error("JWT_ACCESS_SECRET is not configured");

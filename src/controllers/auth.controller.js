@@ -33,9 +33,31 @@ function safeDatabaseError(error) {
   };
 }
 function isEmailDeliveryError(error) { return String(error?.code || "").startsWith("EMAIL_"); }
+function safeRefreshError(error) {
+  const code = String(error?.code || "");
+  const messages = {
+    "22P02": "invalid input syntax",
+    "23505": "unique constraint violation",
+    "23503": "foreign-key constraint violation",
+    "42703": "undefined column",
+    "42P01": "undefined table",
+    "42804": "database type mismatch",
+  };
+  return { code: code || "REFRESH_FAILED", message: messages[code] || "refresh operation failed" };
+}
 const register = asyncHandler(async (req, res) => { const data = credentials(req.body, true); let result; try { result = await service.register(data); } catch (e) { if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) { e.suppressRawLog = true; console.error("[DB] register failed", safeDatabaseError(e)); } if (e.code === "23505") throw new AppError("An account with that email already exists", 409); throw e; } let verificationEmailSent = true; try { await emailAuth.sendVerificationOtp(data.email); } catch (e) { if (!isEmailDeliveryError(e)) throw e; verificationEmailSent = false; if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) console.warn("[EMAIL] verification delivery unavailable", e.code || "EMAIL_PROVIDER_ERROR"); } return success(res, { message: "Account created", data: { ...result, verificationRequired: true, verificationEmailSent } }); });
 const login = asyncHandler(async (req, res) => { const email = normalizeEmail(req.body.email); const password = String(req.body.password || ""); if (!basicEmail(email) || !password) throw new AppError("Invalid email or password", 401); return success(res, { message: "Login successful", data: await service.login({ email, password }) }); });
-const refresh = asyncHandler(async (req, res) => success(res, { message: "Session refreshed", data: await service.refresh(req.body.refreshToken) }));
+const refresh = asyncHandler(async (req, res) => {
+  try {
+    return success(res, { message: "Session refreshed", data: await service.refresh(req.body?.refreshToken) });
+  } catch (error) {
+    if (!error.isOperational || error.statusCode >= 500) {
+      console.error("[AUTH] refresh failed", safeRefreshError(error));
+      error.suppressRawLog = true;
+    }
+    throw error;
+  }
+});
 const logout = asyncHandler(async (req, res) => { await service.logout(req.body.refreshToken); return success(res, { message: "Logged out successfully", data: null }); });
 const me = asyncHandler(async (req, res) => { return success(res, { message: "Authenticated user fetched successfully", data: safeUser(req.user) }); });
 const forgotPassword = asyncHandler(async (req, res) => { const email = normalizeEmail(req.body?.email); if (!basicEmail(email)) throw new AppError("Enter a valid email", 400); try { await emailAuth.requestPasswordResetOtp(email); } catch (e) { if (e.code === "RESET_OTP_COOLDOWN") throw e; if (!isEmailDeliveryError(e)) throw e; if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) console.warn("[EMAIL] password reset delivery unavailable", e.code || "EMAIL_PROVIDER_ERROR"); } return success(res, { message: "If an account exists for this email, a verification code has been sent.", data: { accepted: true } }); });
