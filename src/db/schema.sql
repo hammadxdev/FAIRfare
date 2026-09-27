@@ -3,9 +3,32 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   password_hash TEXT NOT NULL,
+  phone_number TEXT UNIQUE,
+  phone_verified_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at INTEGER NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  used_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS phone_verification_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone_number TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  code_hash TEXT,
+  expires_at INTEGER NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  verified_at INTEGER,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user ON password_reset_tokens(user_id, expires_at);
 
 CREATE TABLE IF NOT EXISTS user_sessions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,6 +38,14 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   revoked_at INTEGER,
   last_used_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS user_identities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL,
+  provider_subject TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(provider, provider_subject)
 );
 
 CREATE TABLE IF NOT EXISTS user_preferences (

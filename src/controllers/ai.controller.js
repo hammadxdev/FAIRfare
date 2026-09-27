@@ -4,7 +4,7 @@ const AppError = require("../utils/AppError");
 const { answer, validateMessage } = require("../services/ai/aiRideAssistant.service");
 const conversations = require("../services/ai/conversation.service");
 
-function idParam(value) { const id = Number(value); if (!Number.isInteger(id) || id < 1) throw new AppError("Invalid conversation id", 400); return id; }
+function idParam(value) { const id = String(value || ""); if (!id) throw new AppError("Invalid conversation id", 400); return id; }
 function conversationChanges(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new AppError("Conversation changes must be an object", 400);
   const keys = Object.keys(body);
@@ -21,30 +21,30 @@ function conversationChanges(body) {
   return changes;
 }
 
-const listConversations = asyncHandler(async (req, res) => success(res, { message: "AI conversations fetched", data: conversations.list(req.user.id) }));
-const createConversation = asyncHandler(async (req, res) => success(res, { message: "AI conversation created", data: conversations.create(req.user.id), statusCode: 201 }));
-const getConversation = asyncHandler(async (req, res) => success(res, { message: "AI conversation fetched", data: conversations.get(req.user.id, idParam(req.params.id)) }));
+const listConversations = asyncHandler(async (req, res) => success(res, { message: "AI conversations fetched", data: await conversations.list(req.user.id) }));
+const createConversation = asyncHandler(async (req, res) => success(res, { message: "AI conversation created", data: await conversations.create(req.user.id), statusCode: 201 }));
+const getConversation = asyncHandler(async (req, res) => success(res, { message: "AI conversation fetched", data: await conversations.get(req.user.id, idParam(req.params.id)) }));
 const updateConversation = asyncHandler(async (req, res) => {
   const conversationId = idParam(req.params.id);
   // Resolve ownership before payload validation so another user's resource
   // remains indistinguishable from a missing resource (404).
-  conversations.get(req.user.id, conversationId);
-  return success(res, { message: "AI conversation updated", data: conversations.update(req.user.id, conversationId, conversationChanges(req.body)) });
+  await conversations.get(req.user.id, conversationId);
+  return success(res, { message: "AI conversation updated", data: await conversations.update(req.user.id, conversationId, conversationChanges(req.body)) });
 });
-const deleteConversation = asyncHandler(async (req, res) => { conversations.remove(req.user.id, idParam(req.params.id)); return success(res, { message: "AI conversation deleted", data: null }); });
+const deleteConversation = asyncHandler(async (req, res) => { await conversations.remove(req.user.id, idParam(req.params.id)); return success(res, { message: "AI conversation deleted", data: null }); });
 
 const chat = asyncHandler(async (req, res) => {
   const error = validateMessage(req.body?.message);
   if (error) throw new AppError(error, 400);
-  const comparisonId = req.body?.comparisonId == null ? null : Number(req.body.comparisonId);
-  if (comparisonId != null && (!Number.isInteger(comparisonId) || comparisonId < 1)) throw new AppError("Invalid comparison id", 400);
-  const conversation = conversations.ensure(req.user.id, req.body?.conversationId == null ? null : idParam(req.body.conversationId));
+  const comparisonId = req.body?.comparisonId == null ? null : String(req.body.comparisonId);
+  if (comparisonId != null && !comparisonId) throw new AppError("Invalid comparison id", 400);
+  const conversation = await conversations.ensure(req.user.id, req.body?.conversationId == null ? null : idParam(req.body.conversationId));
   const text = req.body.message.trim();
-  conversations.addMessage(req.user.id, conversation.id, "USER", text);
-  conversations.titleFirstMessage(req.user.id, conversation.id, text);
+  await conversations.addMessage(req.user.id, conversation.id, "USER", text);
+  await conversations.titleFirstMessage(req.user.id, conversation.id, text);
   const result = await answer({ userId: req.user.id, message: text, comparisonId, conversationId: conversation.id });
-  if (result.available) conversations.addMessage(req.user.id, conversation.id, "ASSISTANT", result.reply, result.modelId);
-  return success(res, { message: "AI Ride Assistant response generated", data: { ...result, conversation: conversations.get(req.user.id, conversation.id) } });
+  if (result.available) await conversations.addMessage(req.user.id, conversation.id, "ASSISTANT", result.reply, result.modelId);
+  return success(res, { message: "AI Ride Assistant response generated", data: { ...result, conversation: await conversations.get(req.user.id, conversation.id) } });
 });
 
 module.exports = { chat, listConversations, createConversation, getConversation, renameConversation: updateConversation, updateConversation, deleteConversation };

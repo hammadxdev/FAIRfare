@@ -1,91 +1,16 @@
-const db = require("../../config/database");
-const AppError = require("../../utils/AppError");
-
-const MAX_TITLE_LENGTH = 60;
-const MAX_CONTEXT_MESSAGES = 12;
-
-function titleFromMessage(message) {
-  const clean = String(message || "").replace(/\s+/g, " ").trim();
-  if (!clean) return "New Chat";
-  return clean.length > MAX_TITLE_LENGTH ? `${clean.slice(0, MAX_TITLE_LENGTH - 3).trim()}...` : clean;
-}
-
-function publicConversation(row) {
-  return { id: row.id, title: row.title, isPinned: Boolean(row.is_pinned), createdAt: row.created_at, updatedAt: row.updated_at };
-}
-
-function getOwned(conversationId, userId) {
-  const row = db.prepare("SELECT id, user_id, title, is_pinned, created_at, updated_at FROM ai_conversations WHERE id = ? AND user_id = ?").get(conversationId, userId);
-  if (!row) throw new AppError("Conversation not found", 404);
-  return row;
-}
-
-function create(userId, title = "New Chat") {
-  const result = db.prepare("INSERT INTO ai_conversations (user_id, title) VALUES (?, ?)").run(userId, String(title).trim() || "New Chat");
-  return publicConversation(db.prepare("SELECT * FROM ai_conversations WHERE id = ?").get(result.lastInsertRowid));
-}
-
-function list(userId) {
-  return db.prepare("SELECT id, title, is_pinned, created_at, updated_at FROM ai_conversations WHERE user_id = ? ORDER BY is_pinned DESC, updated_at DESC, id DESC").all(userId).map(publicConversation);
-}
-
-function get(userId, conversationId) {
-  const conversation = getOwned(conversationId, userId);
-  const messages = db.prepare("SELECT id, role, content, model_id, created_at FROM ai_messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC").all(conversation.id).map((row) => ({ id: row.id, role: row.role, content: row.content, ...(row.model_id ? { modelId: row.model_id } : {}), createdAt: row.created_at }));
-  return { ...publicConversation(conversation), messages };
-}
-
-function rename(userId, conversationId, title) {
-  const clean = String(title || "").replace(/\s+/g, " ").trim();
-  if (!clean || clean.length > MAX_TITLE_LENGTH) throw new AppError(`title must be between 1 and ${MAX_TITLE_LENGTH} characters`, 400);
-  getOwned(conversationId, userId);
-  db.prepare("UPDATE ai_conversations SET title = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?").run(clean, conversationId, userId);
-  return publicConversation(getOwned(conversationId, userId));
-}
-
-function update(userId, conversationId, changes = {}) {
-  const conversation = getOwned(conversationId, userId);
-  const fields = [];
-  const values = [];
-  if (Object.prototype.hasOwnProperty.call(changes, "title")) {
-    const clean = String(changes.title || "").replace(/\s+/g, " ").trim();
-    if (!clean || clean.length > MAX_TITLE_LENGTH) throw new AppError(`title must be between 1 and ${MAX_TITLE_LENGTH} characters`, 400);
-    fields.push("title = ?"); values.push(clean);
-  }
-  if (Object.prototype.hasOwnProperty.call(changes, "isPinned")) {
-    if (typeof changes.isPinned !== "boolean") throw new AppError("isPinned must be a boolean", 400);
-    fields.push("is_pinned = ?"); values.push(changes.isPinned ? 1 : 0);
-  }
-  if (!fields.length) throw new AppError("No conversation changes provided", 400);
-  fields.push("updated_at = datetime('now')");
-  db.prepare(`UPDATE ai_conversations SET ${fields.join(", ")} WHERE id = ? AND user_id = ?`).run(...values, conversationId, userId);
-  return publicConversation(getOwned(conversationId, userId));
-}
-
-function remove(userId, conversationId) { getOwned(conversationId, userId); db.prepare("DELETE FROM ai_conversations WHERE id = ? AND user_id = ?").run(conversationId, userId); }
-
-function ensure(userId, conversationId) {
-  if (conversationId == null) return create(userId);
-  const conversation = getOwned(conversationId, userId);
-  return publicConversation(conversation);
-}
-
-function addMessage(userId, conversationId, role, content, modelId = null) {
-  getOwned(conversationId, userId);
-  const result = db.prepare("INSERT INTO ai_messages (conversation_id, role, content, model_id) VALUES (?, ?, ?, ?)").run(conversationId, role, content, modelId);
-  db.prepare("UPDATE ai_conversations SET updated_at = datetime('now') WHERE id = ? AND user_id = ?").run(conversationId, userId);
-  return db.prepare("SELECT id, role, content, created_at FROM ai_messages WHERE id = ?").get(result.lastInsertRowid);
-}
-
-function titleFirstMessage(userId, conversationId, message) {
-  const row = getOwned(conversationId, userId);
-  if (row.title !== "New Chat") return;
-  db.prepare("UPDATE ai_conversations SET title = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?").run(titleFromMessage(message), conversationId, userId);
-}
-
-function recentMessages(userId, conversationId) {
-  getOwned(conversationId, userId);
-  return db.prepare("SELECT role, content FROM (SELECT role, content, created_at, id FROM ai_messages WHERE conversation_id = ? ORDER BY created_at DESC, id DESC LIMIT ?) ORDER BY created_at ASC, id ASC").all(conversationId, MAX_CONTEXT_MESSAGES);
-}
-
-module.exports = { create, list, get, rename, update, remove, ensure, addMessage, titleFirstMessage, recentMessages, titleFromMessage, MAX_CONTEXT_MESSAGES };
+const { query } = require("../../config/postgres"); const AppError=require("../../utils/AppError");
+const MAX_TITLE_LENGTH=60,MAX_CONTEXT_MESSAGES=12;
+function titleFromMessage(m){const c=String(m||"").replace(/\s+/g," ").trim();return !c?"New Chat":c.length>MAX_TITLE_LENGTH?`${c.slice(0,MAX_TITLE_LENGTH-3).trim()}...`:c;}
+function publicConversation(r){return {id:r.id,title:r.title,isPinned:Boolean(r.is_pinned),createdAt:r.created_at,updatedAt:r.updated_at};}
+async function getOwned(id,userId){const r=(await query("SELECT id,user_id,title,is_pinned,created_at,updated_at FROM ai_conversations WHERE id=$1 AND user_id=$2",[id,userId])).rows[0];if(!r)throw new AppError("Conversation not found",404);return r;}
+async function create(userId,title="New Chat"){const r=(await query("INSERT INTO ai_conversations (user_id,title) VALUES ($1,$2) RETURNING *",[userId,String(title).trim()||"New Chat"])).rows[0];return publicConversation(r);}
+async function list(userId){return (await query("SELECT id,title,is_pinned,created_at,updated_at FROM ai_conversations WHERE user_id=$1 ORDER BY is_pinned DESC,updated_at DESC,id DESC",[userId])).rows.map(publicConversation);}
+async function get(userId,id){const c=await getOwned(id,userId);const messages=(await query("SELECT id,role,content,model_id,created_at FROM ai_messages WHERE conversation_id=$1 ORDER BY created_at ASC,id ASC",[id])).rows.map(r=>({id:r.id,role:r.role,content:r.content,...(r.model_id?{modelId:r.model_id}:{}),createdAt:r.created_at}));return {...publicConversation(c),messages};}
+async function rename(userId,id,title){const clean=String(title||"").replace(/\s+/g," ").trim();if(!clean||clean.length>MAX_TITLE_LENGTH)throw new AppError(`title must be between 1 and ${MAX_TITLE_LENGTH} characters`,400);await getOwned(id,userId);await query("UPDATE ai_conversations SET title=$1,updated_at=now() WHERE id=$2 AND user_id=$3",[clean,id,userId]);return publicConversation(await getOwned(id,userId));}
+async function update(userId,id,changes={}){await getOwned(id,userId);const fields=[],values=[];if(Object.hasOwn(changes,"title")){const c=String(changes.title||"").replace(/\s+/g," ").trim();if(!c||c.length>MAX_TITLE_LENGTH)throw new AppError(`title must be between 1 and ${MAX_TITLE_LENGTH} characters`,400);fields.push(`title=$${values.length+1}`);values.push(c);}if(Object.hasOwn(changes,"isPinned")){if(typeof changes.isPinned!=="boolean")throw new AppError("isPinned must be a boolean",400);fields.push(`is_pinned=$${values.length+1}`);values.push(changes.isPinned);}if(!fields.length)throw new AppError("No conversation changes provided",400);values.push(id,userId);await query(`UPDATE ai_conversations SET ${fields.join(",")},updated_at=now() WHERE id=$${values.length-1} AND user_id=$${values.length}` ,values);return publicConversation(await getOwned(id,userId));}
+async function remove(userId,id){await getOwned(id,userId);await query("DELETE FROM ai_conversations WHERE id=$1 AND user_id=$2",[id,userId]);}
+async function ensure(userId,id){return id==null?create(userId):publicConversation(await getOwned(id,userId));}
+async function addMessage(userId,id,role,content,modelId=null){await getOwned(id,userId);const r=(await query("INSERT INTO ai_messages (conversation_id,role,content,model_id) VALUES ($1,$2,$3,$4) RETURNING id,role,content,created_at",[id,role,content,modelId])).rows[0];await query("UPDATE ai_conversations SET updated_at=now() WHERE id=$1 AND user_id=$2",[id,userId]);return r;}
+async function titleFirstMessage(userId,id,message){const r=await getOwned(id,userId);if(r.title!=="New Chat")return;await query("UPDATE ai_conversations SET title=$1,updated_at=now() WHERE id=$2 AND user_id=$3",[titleFromMessage(message),id,userId]);}
+async function recentMessages(userId,id){await getOwned(id,userId);return (await query("SELECT role,content FROM ai_messages WHERE conversation_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2",[id,MAX_CONTEXT_MESSAGES])).rows.reverse();}
+module.exports={create,list,get,rename,update,remove,ensure,addMessage,titleFirstMessage,recentMessages,titleFromMessage,MAX_CONTEXT_MESSAGES};

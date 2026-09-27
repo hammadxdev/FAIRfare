@@ -1,25 +1,19 @@
+if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+  throw new Error("SQLite is disabled in production; use src/config/postgres.js");
+}
 const path = require("path");
 const fs = require("fs");
 const Database = require("better-sqlite3");
 // Resolve the backend environment from this module's location so `npm start`
 // behaves the same whether launched from D:\\ride or D:\\ride\\backend.
-require("dotenv").config({ path: path.resolve(__dirname, "..", "..", ".env"), quiet: true });
-
 function resolveDbPath() {
   // If DB_PATH is explicitly provided
   if (process.env.DB_PATH) {
-    // Important:
-    // If DB_PATH is absolute like /tmp/fairfair.sqlite, do not resolve it against cwd.
     if (path.isAbsolute(process.env.DB_PATH)) {
       return process.env.DB_PATH;
     }
 
     return path.resolve(process.cwd(), process.env.DB_PATH);
-  }
-
-  // Vercel runtime filesystem is read-only except /tmp
-  if (process.env.VERCEL) {
-    return "/tmp/fairfair.sqlite";
   }
 
   // Local development default

@@ -1,12 +1,12 @@
-const db = require("../../config/database");
+const postgres = require("../../config/postgres");
 const { getConfig, PROVIDER_ID } = require("./indrive.constants");
 const { IndriveError, CODES } = require("./indrive.errors");
 
-function createSessionManager({ client, config = getConfig(), now = () => Date.now(), database = db, logger = console } = {}) {
+function createSessionManager({ client, config = getConfig(), now = () => Date.now(), database = postgres, logger = console } = {}) {
   let refreshPromise = null;
 
-  function load() {
-    const row = database.prepare("SELECT * FROM provider_sessions WHERE provider = ?").get(PROVIDER_ID);
+  async function load() {
+    const row = (await database.query("SELECT * FROM provider_sessions WHERE provider = $1", [PROVIDER_ID])).rows[0];
     if (!row) return null;
     return {
       provider: row.provider,
@@ -18,25 +18,19 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     };
   }
 
-  function save(session) {
-    database.prepare(`
+  async function save(session) {
+    await database.query(`
       INSERT INTO provider_sessions (provider, access_token, refresh_token, access_expires_at, status, updated_at)
-      VALUES (@provider, @access_token, @refresh_token, @access_expires_at, @status, @updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6)
       ON CONFLICT(provider) DO UPDATE SET access_token=excluded.access_token,
         refresh_token=excluded.refresh_token, access_expires_at=excluded.access_expires_at,
         status=excluded.status, updated_at=excluded.updated_at
-    `).run({
-      provider: PROVIDER_ID,
-      access_token: session.accessToken || null,
-      refresh_token: session.refreshToken || null,
-      access_expires_at: session.accessExpiresAt || null,
-      status: session.status,
-      updated_at: now(),
-    });
+    `, [PROVIDER_ID,session.accessToken || null,session.refreshToken || null,session.accessExpiresAt || null,session.status,now()]);
     return session;
   }
 
-  function configuredRefreshToken(session = load()) {
+  async function configuredRefreshToken(session = null) {
+    if (!session) session = await load();
     return session?.refreshToken || config.refreshToken || null;
   }
 
@@ -45,20 +39,20 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
   }
 
   async function refreshSession() {
-    const previous = load();
-    const refreshToken = configuredRefreshToken(previous);
+    const previous = await load();
+    const refreshToken = await configuredRefreshToken(previous);
     if (!refreshToken) {
-      save({ ...(previous || {}), accessToken: previous?.accessToken || null, refreshToken: null, accessExpiresAt: previous?.accessExpiresAt || null, status: "NOT_CONFIGURED" });
+      await save({ ...(previous || {}), accessToken: previous?.accessToken || null, refreshToken: null, accessExpiresAt: previous?.accessExpiresAt || null, status: "NOT_CONFIGURED" });
       throw new IndriveError(CODES.NOT_CONFIGURED, "inDrive refresh token is not configured");
     }
     if (!config.deviceFingerprint || !config.fingerprint) {
-      save({ ...(previous || {}), refreshToken, status: "AUTH_REQUIRED" });
+      await save({ ...(previous || {}), refreshToken, status: "AUTH_REQUIRED" });
       throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive fingerprints are not configured");
     }
     logger.log("[inDrive] refreshing session");
     const response = await client.renew(refreshToken);
     if (response.status === 401 || response.status === 403) {
-      save({ ...(previous || {}), refreshToken, status: "AUTH_REQUIRED" });
+      await save({ ...(previous || {}), refreshToken, status: "AUTH_REQUIRED" });
       throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive session renewal was rejected");
     }
     if (response.status < 200 || response.status >= 300) {
@@ -69,7 +63,7 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     if (!body.access_token || !Number.isFinite(expiresIn) || expiresIn <= 0) {
       throw new IndriveError(CODES.BAD_RESPONSE, "inDrive renewal response is missing a valid access token or expiry");
     }
-    const session = save({
+    const session = await save({
       accessToken: body.access_token,
       refreshToken: body.refresh_token || refreshToken,
       accessExpiresAt: now() + expiresIn * 1000,
@@ -80,7 +74,7 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
   }
 
   async function ensureValidSession({ force = false } = {}) {
-    const session = load();
+    const session = await load();
     if (!force && !session?.accessToken && !configuredRefreshToken(session)) {
       if (!refreshPromise) refreshPromise = refreshSession().finally(() => { refreshPromise = null; });
       return refreshPromise;
@@ -96,9 +90,9 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     return refreshPromise;
   }
 
-  function markAuthRequired() {
-    const session = load() || {};
-    save({ ...session, status: "AUTH_REQUIRED" });
+  async function markAuthRequired() {
+    const session = await load() || {};
+    await save({ ...session, status: "AUTH_REQUIRED" });
   }
 
   async function getStatus() {

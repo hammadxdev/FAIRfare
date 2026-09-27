@@ -8,7 +8,7 @@ let llmClient = defaultLlmClient;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 5;
 
-function safePreferences(userId) { return getPreferences(userId); }
+async function safePreferences(userId) { return getPreferences(userId); }
 
 function comparisonContext(comparison) {
   if (!comparison) return null;
@@ -33,19 +33,19 @@ function comparisonContext(comparison) {
   };
 }
 
-function buildGroundingContext({ userId, message, comparisonId, conversationId } = {}) {
+async function buildGroundingContext({ userId, message, comparisonId, conversationId } = {}) {
   let comparison = null;
-  if (comparisonId) { comparison = getComparisonForUser(comparisonId, userId); if (!comparison) comparison = getHistoryById(Number(comparisonId), userId); }
-  const preferences = safePreferences(userId);
+  if (comparisonId) { comparison = getComparisonForUser(comparisonId, userId); if (!comparison) comparison = await getHistoryById(comparisonId, userId); }
+  const preferences = await safePreferences(userId);
   const lower = String(message || "").toLowerCase();
-  const history = getHistory({ userId, limit: lower.includes("recent") || lower.includes("usually") || lower.includes("compare") ? MAX_HISTORY : 3 });
-  const recentConversation = conversationId ? conversationService.recentMessages(userId, conversationId) : [];
+  const history = await getHistory({ userId, limit: lower.includes("recent") || lower.includes("usually") || lower.includes("compare") ? MAX_HISTORY : 3 });
+  const recentConversation = conversationId ? await conversationService.recentMessages(userId, conversationId) : [];
   if (recentConversation.at(-1)?.role === "USER" && recentConversation.at(-1).content === message) recentConversation.pop();
   return { comparison: comparisonContext(comparison), preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation };
 }
 
 async function answer({ userId, message, comparisonId, conversationId }) {
-  const context = buildGroundingContext({ userId, message, comparisonId, conversationId });
+  const context = await buildGroundingContext({ userId, message, comparisonId, conversationId });
   const publicContext = { comparisonUsed: Boolean(context.comparison), comparisonFreshness: context.comparison?.freshness || null, predictionAvailable: Boolean(context.comparison?.rides?.some((ride) => ride.prediction?.status === "AVAILABLE")), preferencesUsed: true, historyUsed: context.history.length > 0, historyAvailable: context.history.length > 0 };
   try {
     const result = typeof llmClient.completeDetailed === "function" ? await llmClient.completeDetailed({ message, context }) : await llmClient.complete({ message, context });

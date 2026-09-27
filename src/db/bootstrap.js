@@ -4,16 +4,9 @@
 // reset independently — an in-memory flag would then wrongly report "ready"
 // while the underlying database is actually empty, causing
 // "no such table: providers" the moment any controller's top-level
-// db.prepare() runs. Both calls below are already idempotent and cheap
-// (CREATE TABLE IF NOT EXISTS in schema.sql; seedDatabase() checks the real
-// row count before inserting anything), so just always run them.
-function ensureDatabaseReady() {
-  const { runMigrations } = require("./migrate");
-  const { seedDatabase } = require("./seed");
-
-  runMigrations();
-  seedDatabase();
-}
+// Retained only as a compatibility export for older local tooling. The
+// application does not call this function; production uses Supabase directly.
+async function ensureDatabaseReady() { return undefined; }
 
 module.exports = {
   ensureDatabaseReady,

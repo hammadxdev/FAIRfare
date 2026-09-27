@@ -1,4 +1,4 @@
-const db = require("../config/database");
+const { query } = require("../config/postgres");
 const { normalizeVehicleType, resolveProviderCategory } = require("./vehicleType.service");
 
 const MARKET_TIMEZONE = process.env.FAIRFARE_MARKET_TIMEZONE || "Asia/Karachi";
@@ -80,22 +80,19 @@ function createObservationRows({ comparisonId = null, pickup, dropoff, distanceM
   return rows;
 }
 
-function persistFareObservations(input) {
+async function persistFareObservations(input) {
   const rows = createObservationRows(input);
   if (rows.length === 0) return 0;
-  const insert = db.prepare(`
+  const text = `
     INSERT INTO fare_observations
       (data_source, comparison_id, provider_id, provider, provider_category, provider_category_id, provider_category_name, normalized_category, vehicle_type,
        pickup_latitude, pickup_longitude, pickup_zone, destination_latitude, destination_longitude, destination_zone,
        distance_meters, duration_seconds, fare, fare_min, fare_max, currency, fare_type, pickup_eta_seconds,
        observed_at, hour_of_day, day_of_week, is_weekend, raw_response_sanitized)
-    VALUES
-      (@data_source, @comparison_id, @provider_id, @provider, @provider_category, @provider_category_id, @provider_category_name, @normalized_category, @vehicle_type,
-       @pickup_latitude, @pickup_longitude, @pickup_zone, @destination_latitude, @destination_longitude, @destination_zone,
-       @distance_meters, @duration_seconds, @fare, @fare_min, @fare_max, @currency, @fare_type, @pickup_eta_seconds,
-       @observed_at, @hour_of_day, @day_of_week, @is_weekend, @raw_response_sanitized)
-  `);
-  db.transaction(() => rows.forEach((row) => insert.run(row)))();
+      VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,
+       $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28::jsonb)`;
+  for (const row of rows) await query(text, [row.data_source,row.comparison_id,row.provider_id,row.provider,row.provider_category,row.provider_category_id,row.provider_category_name,row.normalized_category,row.vehicle_type,row.pickup_latitude,row.pickup_longitude,row.pickup_zone,row.destination_latitude,row.destination_longitude,row.destination_zone,row.distance_meters,row.duration_seconds,row.fare,row.fare_min,row.fare_max,row.currency,row.fare_type,row.pickup_eta_seconds,new Date(row.observed_at),row.hour_of_day,row.day_of_week,row.is_weekend,row.raw_response_sanitized]);
   return rows.length;
 }
 

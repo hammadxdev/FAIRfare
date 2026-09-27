@@ -7,14 +7,14 @@ const entries = new Map();
 
 function rememberComparison({ userId, comparison }) {
   if (!userId || !comparison?.comparisonId) return;
-  entries.set(Number(comparison.comparisonId), { userId: Number(userId), comparison, expiresAt: Date.now() + TTL_MS });
+  entries.set(String(comparison.comparisonId), { userId: String(userId), comparison, expiresAt: Date.now() + TTL_MS });
   while (entries.size > MAX_ENTRIES) entries.delete(entries.keys().next().value);
 }
 
 function getComparisonForUser(comparisonId, userId) {
-  const id = Number(comparisonId);
+  const id = String(comparisonId);
   const entry = entries.get(id);
-  if (!entry || entry.userId !== Number(userId)) return null;
+  if (!entry || entry.userId !== String(userId)) return null;
   if (entry.expiresAt < Date.now()) { entries.delete(id); return null; }
   return entry.comparison;
 }

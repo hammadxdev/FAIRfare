@@ -1,4 +1,4 @@
-const db = require("../config/database");
+const { query, withTransaction } = require("../config/postgres");
 const { estimateDistanceAndDuration } = require("./distance.service");
 const { applyRecommendation } = require("./recommendation.service");
 const { getAdapter } = require("../providers/provider.registry");
@@ -22,59 +22,25 @@ function dataSourceForAdapter(adapter) {
 // module load — see the comment in app.js's readiness middleware for why a
 // module-load-time prepared statement isn't safe to trust on this platform.
 
-function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results }) {
-  const insertSearchStmt = db.prepare(`
+async function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results }) {
+  return withTransaction(async (client) => {
+  const searchInfo = await client.query(`
     INSERT INTO fare_searches
       (pickup_name, pickup_lat, pickup_lng, dropoff_name, dropoff_lat, dropoff_lng, vehicle_type, distance_km, duration_min)
-    VALUES (@pickup_name, @pickup_lat, @pickup_lng, @dropoff_name, @dropoff_lat, @dropoff_lng, @vehicle_type, @distance_km, @duration_min)
-  `);
-
-  const insertResultStmt = db.prepare(`
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id
+  `, [pickup.name,pickup.lat,pickup.lng,dropoff.name,dropoff.lat,dropoff.lng,vehicleType,distanceKm,durationMin]);
+  const searchId = searchInfo.rows[0].id;
+  for (const result of results) {
+    if (result.fare == null) continue;
+    await client.query(`
     INSERT INTO fare_results
       (search_id, provider_id, estimated_fare, eta_min, is_cheapest, is_fastest, is_recommended, breakdown_json)
-    VALUES (@search_id, @provider_id, @estimated_fare, @eta_min, @is_cheapest, @is_fastest, @is_recommended, @breakdown_json)
-  `);
-
-  const insertAll = db.transaction(() => {
-    const searchInfo = insertSearchStmt.run({
-      pickup_name: pickup.name,
-      pickup_lat: pickup.lat,
-      pickup_lng: pickup.lng,
-      dropoff_name: dropoff.name,
-      dropoff_lat: dropoff.lat,
-      dropoff_lng: dropoff.lng,
-      vehicle_type: vehicleType,
-      distance_km: distanceKm,
-      duration_min: durationMin,
-    });
-
-    const searchId = searchInfo.lastInsertRowid;
-
-    for (const result of results) {
-      if (result.fare === null || result.fare === undefined) continue;
-      insertResultStmt.run({
-        search_id: searchId,
-        provider_id: result.provider.id,
-        estimated_fare: result.fare,
-        eta_min: result.etaMin ?? 0,
-        is_cheapest: result.isCheapest ? 1 : 0,
-        is_fastest: result.isFastest ? 1 : 0,
-        is_recommended: result.isRecommended ? 1 : 0,
-        breakdown_json: JSON.stringify(result.breakdown),
-      });
-    }
-
-    return searchId;
-  });
-
-  return insertAll();
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [searchId,result.provider.id,result.fare,result.etaMin??0,Boolean(result.isCheapest),Boolean(result.isFastest),Boolean(result.isRecommended),JSON.stringify(result.breakdown)]);
+  } return searchId; });
 }
 
 async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
-  const getActiveProvidersStmt = db.prepare(`SELECT * FROM providers WHERE is_active = 1`);
-  const getRateStmt = db.prepare(`SELECT * FROM vehicle_rates WHERE provider_id = ? AND vehicle_type = ?`);
-
-  const providers = getActiveProvidersStmt.all();
+  const providers = (await query(`SELECT * FROM providers WHERE is_active = true`)).rows;
   if (providers.length === 0) {
     throw new AppError("No active providers configured", 500);
   }
@@ -94,7 +60,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   };
 
   const rawResults = await Promise.all(providers.map(async (provider) => {
-    const rate = getRateStmt.get(provider.id, vehicleType);
+    const rate = (await query(`SELECT * FROM vehicle_rates WHERE provider_id = $1 AND vehicle_type = $2`, [provider.id, vehicleType])).rows[0];
     if (!rate) {
       return {
         provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
@@ -151,13 +117,13 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   const available = rawResults.filter((result) => result.fare !== null && result.fare !== undefined);
   const results = [...applyRecommendation(available), ...rawResults.filter((result) => !available.includes(result))];
 
-  const searchId = persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results });
+  const searchId = await persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results });
 
   let comparisonId = null;
   if (available.length > 0) {
-    comparisonId = createComparisonHistory({ userId, pickup, dropoff, distanceKm, durationMin, vehicleType, results });
+    comparisonId = await createComparisonHistory({ userId, pickup, dropoff, distanceKm, durationMin, vehicleType, results });
     try {
-      persistFareObservations({
+      await persistFareObservations({
         comparisonId,
         pickup,
         dropoff,
@@ -217,7 +183,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   // Preferences are read once per authenticated comparison. Personalization
   // is response enrichment only; it does not alter fares, ML inputs, or the
   // historical fare snapshot created above.
-  const preferences = getPreferences(userId);
+  const preferences = await getPreferences(userId);
   const personalizedResults = rankPersonalizedRides({
     results,
     preferences,

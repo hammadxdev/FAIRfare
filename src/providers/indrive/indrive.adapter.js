@@ -37,7 +37,7 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
       if (first.status === 401) {
         const retryToken = await sessionManager.ensureValidSession({ force: true });
         const second = await indriveClient.getPricing(retryToken, buildPricingPayload(route));
-        if (second.status === 401) { sessionManager.markAuthRequired(); throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive pricing authentication failed"); }
+        if (second.status === 401) { await sessionManager.markAuthRequired(); throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive pricing authentication failed"); }
         if (second.status < 200 || second.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive pricing failed", { status: second.status });
         return mapPricingResponse(second.body, route);
       }

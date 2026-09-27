@@ -9,7 +9,8 @@ later without touching the routes/controllers/services layer.
 ## Tech Stack
 
 - Node.js + Express
-- SQLite via `better-sqlite3`
+- PostgreSQL via `pg` for production (Supabase Transaction Pooler)
+- SQLite via `better-sqlite3` remains local/test-only during the migration
 - CORS, dotenv
 - Node's built-in test runner (`node --test`) + `supertest`
 - JWT authentication with rotating refresh sessions
@@ -167,6 +168,13 @@ provider/category identifier. If all quotes are avoided or have invalid fares,
 there is no personalized winner while normal results remain available.
 
 ## Database
+
+Production migration status: the repository is being converted from the
+legacy synchronous SQLite access pattern to an async PostgreSQL repository.
+Production Vercel deployments must provide `DATABASE_URL`; they must not use
+`/tmp/fairfair.sqlite`. The additive compatibility SQL is in
+`src/db/migrations/001_supabase_compatibility.sql` and must be reviewed against
+the already-created Supabase schema before execution.
 
 SQLite file lives at `DB_PATH` (default `./data/fairfair.sqlite`), created
 automatically on first migration.
@@ -540,6 +548,15 @@ pipeline validation but must not be described as real provider observations.
 Yango and Bykea adapters are not implemented here.
 
 ## Notes for Frontend Integration
+
+### Persistent auth sessions
+
+`ACCESS_TOKEN_TTL` remains the short-lived access JWT lifetime. The existing
+`REFRESH_TOKEN_TTL_SECONDS` setting is the single refresh-session lifetime;
+its default is 2,592,000 seconds (30 days). Refresh sessions use a sliding
+policy: a successful atomic rotation updates the stored hash, `last_used_at`,
+and `expires_at` to approximately 30 days from that use. Plaintext refresh
+tokens are never stored.
 
 - All responses share the shape `{ success, message, data }` (or
   `{ success: false, message, errors }` for validation failures).

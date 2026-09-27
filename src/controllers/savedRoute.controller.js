@@ -32,18 +32,18 @@ function normalizedBody(body) {
   return { name: body.name.trim(), labelType: body.labelType, pickup: normalizeLocation(body.pickup, "pickup", []), destination: normalizeLocation(body.destination, "destination", []) };
 }
 
-const list = asyncHandler(async (req, res) => success(res, { message: "Saved routes fetched successfully", data: listSavedRoutes(req.user.id) }));
-const read = asyncHandler(async (req, res) => { const id = Number.parseInt(req.params.id, 10); const route = Number.isInteger(id) ? getSavedRoute(id, req.user.id) : null; if (!route) throw new AppError("Saved route not found", 404); return success(res, { data: route }); });
-const create = asyncHandler(async (req, res) => { const errors = validatePayload(req.body); if (errors.length) throw new AppError("Validation failed", 400, errors); return success(res, { message: "Route saved", data: createSavedRoute({ userId: req.user.id, ...normalizedBody(req.body) }), statusCode: 201 }); });
+const list = asyncHandler(async (req, res) => success(res, { message: "Saved routes fetched successfully", data: await listSavedRoutes(req.user.id) }));
+const read = asyncHandler(async (req, res) => { const route = await getSavedRoute(String(req.params.id), req.user.id); if (!route) throw new AppError("Saved route not found", 404); return success(res, { data: route }); });
+const create = asyncHandler(async (req, res) => { const errors = validatePayload(req.body); if (errors.length) throw new AppError("Validation failed", 400, errors); return success(res, { message: "Route saved", data: await createSavedRoute({ userId: req.user.id, ...normalizedBody(req.body) }), statusCode: 201 }); });
 const update = asyncHandler(async (req, res) => {
-  const id = Number.parseInt(req.params.id, 10); if (!Number.isInteger(id)) throw new AppError("Invalid saved route id", 400);
-  const existing = getSavedRoute(id, req.user.id); if (!existing) throw new AppError("Saved route not found", 404);
+  const id = String(req.params.id); if (!id) throw new AppError("Invalid saved route id", 400);
+  const existing = await getSavedRoute(id, req.user.id); if (!existing) throw new AppError("Saved route not found", 404);
   const body = req.body || {}; const errors = validatePayload(body, { partial: true }); if (errors.length) throw new AppError("Validation failed", 400, errors);
   const changes = { name: body.name?.trim(), labelType: body.labelType };
   if (body.pickup) changes.pickup = normalizeLocation(body.pickup, "pickup", []);
   if (body.destination) changes.destination = normalizeLocation(body.destination, "destination", []);
-  return success(res, { message: "Saved route updated", data: updateSavedRoute({ id, userId: req.user.id, changes }) });
+  return success(res, { message: "Saved route updated", data: await updateSavedRoute({ id, userId: req.user.id, changes }) });
 });
-const remove = asyncHandler(async (req, res) => { const id = Number.parseInt(req.params.id, 10); if (!Number.isInteger(id)) throw new AppError("Invalid saved route id", 400); if (!deleteSavedRoute(id, req.user.id)) throw new AppError("Saved route not found", 404); return success(res, { message: "Saved route deleted", data: null }); });
+const remove = asyncHandler(async (req, res) => { const id = String(req.params.id); if (!id) throw new AppError("Invalid saved route id", 400); if (!await deleteSavedRoute(id, req.user.id)) throw new AppError("Saved route not found", 404); return success(res, { message: "Saved route deleted", data: null }); });
 
 module.exports = { list, read, create, update, remove };

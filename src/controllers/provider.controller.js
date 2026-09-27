@@ -1,4 +1,4 @@
-const db = require("../config/database");
+const { query } = require("../config/postgres");
 const { success } = require("../utils/apiResponse");
 const asyncHandler = require("../utils/asyncHandler");
 const { getProviderStatus } = require("../providers/provider.registry");
@@ -7,9 +7,7 @@ const getProviders = asyncHandler(async (req, res) => {
   // Prepared fresh per request rather than once at module load — see the
   // comment in app.js's readiness middleware for why a module-load-time
   // prepared statement isn't safe to trust on this platform.
-  const providers = db
-    .prepare(`SELECT id, name, display_name, logo_url, deep_link_url FROM providers WHERE is_active = 1 ORDER BY id`)
-    .all()
+  const providers = (await query(`SELECT id, name, display_name, logo_url, deep_link_url FROM providers WHERE is_active = true ORDER BY id`)).rows
     .map((p) => ({
       id: p.id,
       name: p.name,

@@ -1,17 +1,17 @@
-const { ensureDatabaseReady } = require("./db/bootstrap");
 const os = require("os");
-
-ensureDatabaseReady();
+const { environmentDiagnostics } = require("./config/env");
 const { validateAuthConfig } = require("./config/auth");
+const startupDiagnostics = environmentDiagnostics();
+console.log(`[startup] JWT_ACCESS_SECRET: ${startupDiagnostics.jwtAccessSecret}`);
+console.log(`[startup] DATABASE_URL: ${startupDiagnostics.databaseUrl}`);
+console.log(`[startup] AI config: ${startupDiagnostics.aiConfig}`);
 validateAuthConfig();
 
 const app = require("./app");
-const llmClient = require("./services/ai/llmClient");
 
 const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, "0.0.0.0", () => {
-  if (process.env.NODE_ENV !== "production") console.log("[AI] startup configuration", llmClient.safeConfigSummary());
   const interfaces = Object.entries(os.networkInterfaces()).flatMap(([name, entries]) =>
     entries
       .filter((entry) => entry.family === "IPv4" && !entry.internal)

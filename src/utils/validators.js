@@ -72,6 +72,13 @@ function validateAutocompleteQuery(query) {
   if (!query.sessionToken || typeof query.sessionToken !== "string") {
     errors.push("sessionToken is required");
   }
+  const hasLat = query.lat !== undefined && query.lat !== "";
+  const hasLng = query.lng !== undefined && query.lng !== "";
+  if (hasLat !== hasLng) {
+    errors.push("lat and lng must be provided together");
+  } else if (hasLat && (!isValidLat(Number(query.lat)) || !isValidLng(Number(query.lng)))) {
+    errors.push("lat and lng must be valid coordinates");
+  }
   return errors;
 }
 

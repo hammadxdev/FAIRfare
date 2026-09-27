@@ -1,4 +1,4 @@
-const db = require("../config/database");
+const { query } = require("../config/postgres");
 const AppError = require("../utils/AppError");
 
 const VEHICLE_TYPES = new Set(["BIKE", "RICKSHAW", "ECONOMY_CAR", "STANDARD_CAR", "PREMIUM_CAR", "OTHER", "UNKNOWN"]);
@@ -19,7 +19,7 @@ function mapRow(row) {
   return {
     preferredVehicleType: row.preferred_vehicle_type || null,
     avoidedVehicleTypes: parseAvoided(row.avoided_vehicle_types),
-    typicalBudget: row.typical_budget == null ? null : row.typical_budget,
+    typicalBudget: row.typical_budget == null ? null : Number(row.typical_budget),
     ridePriority: row.ride_priority || "BALANCED",
     currency: "PKR",
   };
@@ -45,27 +45,27 @@ function validate(input = {}) {
   return { preferredVehicleType: preferred, avoidedVehicleTypes: avoided, typicalBudget: budget, ridePriority: priority };
 }
 
-function getPreferences(userId) {
-  const row = db.prepare("SELECT * FROM user_preferences WHERE user_id = ?").get(userId);
+async function getPreferences(userId) {
+  const row = (await query("SELECT * FROM user_preferences WHERE user_id = $1", [userId])).rows[0];
   if (!row) {
-    db.prepare("INSERT INTO user_preferences (user_id) VALUES (?)").run(userId);
+    await query("INSERT INTO user_preferences (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING", [userId]);
     return defaults();
   }
   return mapRow(row);
 }
 
-function updatePreferences(userId, input) {
+async function updatePreferences(userId, input) {
   const values = validate(input);
-  db.prepare(`
+  await query(`
     INSERT INTO user_preferences (user_id, preferred_vehicle_type, avoided_vehicle_types, typical_budget, ride_priority, updated_at)
-    VALUES (@user_id, @preferred_vehicle_type, @avoided_vehicle_types, @typical_budget, @ride_priority, datetime('now'))
+    VALUES ($1, $2, $3::jsonb, $4, $5, now())
     ON CONFLICT(user_id) DO UPDATE SET
       preferred_vehicle_type = excluded.preferred_vehicle_type,
       avoided_vehicle_types = excluded.avoided_vehicle_types,
       typical_budget = excluded.typical_budget,
       ride_priority = excluded.ride_priority,
-      updated_at = datetime('now')
-  `).run({ user_id: userId, preferred_vehicle_type: values.preferredVehicleType, avoided_vehicle_types: JSON.stringify(values.avoidedVehicleTypes), typical_budget: values.typicalBudget, ride_priority: values.ridePriority });
+      updated_at = now()
+  `, [userId, values.preferredVehicleType, JSON.stringify(values.avoidedVehicleTypes), values.typicalBudget, values.ridePriority]);
   return getPreferences(userId);
 }
 
