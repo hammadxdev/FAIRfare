@@ -43,7 +43,10 @@ const autocompleteHandler = asyncHandler(async (req, res) => {
     throw new AppError("Validation failed", 400, errors);
   }
 
-  const cacheKey = `${input.trim().toLowerCase()}::${sessionToken}`;
+  const lat = req.query.lat === undefined || req.query.lat === "" ? null : Number(req.query.lat);
+  const lng = req.query.lng === undefined || req.query.lng === "" ? null : Number(req.query.lng);
+  const locationKey = lat == null ? "none" : `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const cacheKey = `${input.trim().toLowerCase()}::${sessionToken}::${locationKey}`;
   const cached = autocompleteCache.get(cacheKey);
   if (cached) {
     logMapRequest("autocomplete", { input, cache: "hit" });
@@ -52,7 +55,7 @@ const autocompleteHandler = asyncHandler(async (req, res) => {
 
   assertUnderDailyLimit();
 
-  const data = await googleMapsService.fetchAutocomplete({ input: input.trim(), sessionToken });
+  const data = await googleMapsService.fetchAutocomplete({ input: input.trim(), sessionToken, lat, lng });
   mapUsageService.recordRequest("autocompleteRequests");
   autocompleteCache.set(cacheKey, data);
   logMapRequest("autocomplete", { input, cache: "miss" });

@@ -4,11 +4,6 @@
 // never hit Google more than necessary.
 const AppError = require("../utils/AppError");
 
-// Sialkot, Pakistan — used to bias/locate results so short queries like
-// "university" resolve to the right country/city instead of a random match
-// worldwide.
-const DEFAULT_BIAS_LOCATION = { lat: 32.4945, lng: 74.5229 };
-const DEFAULT_BIAS_RADIUS_METERS = 50000;
 const DEFAULT_REGION = "pk";
 
 function classifyMapsFailure({ body, response, error } = {}) {
@@ -47,7 +42,7 @@ function getApiKey() {
   return apiKey;
 }
 
-async function fetchAutocomplete({ input, sessionToken }) {
+async function fetchAutocomplete({ input, sessionToken, lat = null, lng = null }) {
   const apiKey = getApiKey();
 
   const params = new URLSearchParams({
@@ -55,9 +50,11 @@ async function fetchAutocomplete({ input, sessionToken }) {
     key: apiKey,
     sessiontoken: sessionToken,
     components: `country:${DEFAULT_REGION}`,
-    location: `${DEFAULT_BIAS_LOCATION.lat},${DEFAULT_BIAS_LOCATION.lng}`,
-    radius: String(DEFAULT_BIAS_RADIUS_METERS),
   });
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    params.set("location", `${lat},${lng}`);
+    params.set("radius", "50000");
+  }
 
   let response;
   let body;
@@ -157,11 +154,15 @@ async function fetchReverseGeocode({ lat, lng }) {
 
   const result = body.results?.[0];
   if (!result) {
-    return { name: "Selected Location", address: "Selected location", lat, lng };
+    return { name: null, address: null, lat, lng };
   }
 
+  const readableName = result.address_components?.find((component) =>
+    component.types?.some((type) => ["point_of_interest", "establishment", "premise", "route", "locality", "sublocality"].includes(type)),
+  )?.long_name || result.formatted_address;
+
   return {
-    name: "Selected Location",
+    name: readableName,
     address: result.formatted_address,
     lat,
     lng,
