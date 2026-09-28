@@ -17,6 +17,7 @@
     "ai:smoke": "node scripts/aiOpenRouterSmoke.js",
     "performance:check": "node evaluation/performance.js",
     "test": "node --test \"src/tests/**/*.test.js\"",
+    "email:preview": "node scripts/previewEmailTemplates.js",
     "test:email-auth": "node scripts/emailAuthSmoke.js"
   },
   "keywords": [],

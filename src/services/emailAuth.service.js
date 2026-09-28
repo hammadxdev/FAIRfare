@@ -5,7 +5,7 @@ const AppError = require("../utils/AppError");
 const { normalizeEmail } = require("../utils/auth");
 const emailConfig = require("../config/email");
 const { getEmailProvider } = require("./email/emailProvider");
-const { verificationEmail, passwordResetEmail } = require("./email/emailTemplates");
+const { verificationEmail, passwordResetEmail, passwordChangedEmail, welcomeEmail } = require("./email/emailTemplates");
 
 function authError(message, statusCode, code) {
   const error = new AppError(message, statusCode);
@@ -40,6 +40,10 @@ function providerFailure(error) {
     return authError("Email delivery is temporarily unavailable", 503, error.code);
   }
   return authError("Email delivery is temporarily unavailable", 503, "EMAIL_PROVIDER_ERROR");
+}
+
+async function sendInformationalEmail(message) {
+  try { await getEmailProvider().send(message); } catch (_) { /* best-effort security/product notification */ }
 }
 
 async function findUser(email) {
@@ -79,6 +83,7 @@ async function verifyEmailOtp(email, code) {
     await client.query("UPDATE email_verification_requests SET verified_at=now(),used_at=now() WHERE id=$1 AND used_at IS NULL", [request.id]);
     await client.query("UPDATE users SET email_verified_at=now(),updated_at=now() WHERE id=$1", [user.id]);
   });
+  await sendInformationalEmail({ to: user.email, ...welcomeEmail(user.name) });
   return { verified: true };
 }
 
@@ -118,7 +123,7 @@ async function verifyPasswordResetOtp(email, code) {
 
 async function resetPassword({ resetToken, newPassword }) {
   const tokenHash = hashResetToken(resetToken || "");
-  const row = (await query("SELECT id,user_id,expires_at,verified_at,used_at FROM password_reset_requests WHERE reset_token_hash=$1", [tokenHash])).rows[0];
+  const row = (await query("SELECT pr.id,pr.user_id,pr.expires_at,pr.verified_at,pr.used_at,u.email,u.name FROM password_reset_requests pr JOIN users u ON u.id=pr.user_id WHERE pr.reset_token_hash=$1", [tokenHash])).rows[0];
   if (!row || !row.verified_at || row.used_at || new Date(row.expires_at).getTime() <= Date.now()) throw authError("That password reset session is invalid or expired", 400, "RESET_TOKEN_INVALID");
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await withTransaction(async (client) => {
@@ -126,6 +131,7 @@ async function resetPassword({ resetToken, newPassword }) {
     await client.query("UPDATE password_reset_requests SET used_at=now() WHERE id=$1 AND used_at IS NULL", [row.id]);
     await client.query("UPDATE user_sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE user_id=$1", [row.user_id]);
   });
+  await sendInformationalEmail({ to: row.email, ...passwordChangedEmail() });
   return { reset: true };
 }
 

@@ -5,6 +5,7 @@ function positiveInt(value, fallback) {
 
 module.exports = {
   from: () => String(process.env.EMAIL_FROM || "").trim(),
+  logoUrl: () => String(process.env.EMAIL_LOGO_URL || "").trim(),
   verificationTtlMinutes: () => positiveInt(process.env.EMAIL_VERIFICATION_OTP_TTL_MINUTES, 10),
   resetTtlMinutes: () => positiveInt(process.env.PASSWORD_RESET_OTP_TTL_MINUTES, 10),
   resendCooldownSeconds: () => positiveInt(process.env.OTP_RESEND_COOLDOWN_SECONDS, 60),

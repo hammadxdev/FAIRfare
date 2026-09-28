@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
 const { query } = require("../config/postgres");
+const emailProvider = require("../services/email/emailProvider");
 
 const email = `auth-${Date.now()}@example.com`;
 const otherEmail = `auth-other-${Date.now()}@example.com`;
@@ -41,4 +42,14 @@ test("protected comparison and history endpoints reject anonymous requests", asy
   assert.equal((await request(app).post("/api/fares/compare").send({})).status, 401);
   assert.equal((await request(app).get("/api/history")).status, 401);
   assert.equal((await request(app).get("/api/history/1")).status, 401);
+});
+
+test("successful password reset is not invalidated by password-changed email failure", async () => {
+  assert.equal((await request(app).post("/api/auth/forgot-password").send({ email })).status, 200);
+  const code = global.__emailTestCodes.get(`${email}:reset`);
+  const verified = await request(app).post("/api/auth/forgot-password/verify").send({ email, code });
+  assert.equal(verified.status, 200);
+  emailProvider.setEmailProviderForTests({ async send() { throw new Error("informational delivery failed"); } });
+  const reset = await request(app).post("/api/auth/reset-password").send({ resetToken: verified.body.data.resetToken, newPassword: "new correct horse", confirmPassword: "new correct horse" });
+  assert.equal(reset.status, 200);
 });

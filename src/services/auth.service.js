@@ -59,5 +59,19 @@ function normalizePhone(value){const n=require("./verificationProvider").normali
 async function setPhone(userId,value){const phone=normalizePhone(value);try{await query("UPDATE users SET phone_number=$1,updated_at=now() WHERE id=$2",[phone,userId]);}catch(e){if(e.code==="23505")throw new AppError("That phone number is already in use",409);throw e;}return phone;}
 async function recordPhoneVerification(phoneNumber, purpose) { await query("INSERT INTO phone_verification_attempts (phone_number,purpose,expires_at) VALUES ($1,$2,now()+interval '10 minutes')", [phoneNumber, purpose]); }
 async function markPhoneVerified(userId, phoneNumber) { await setPhone(userId, phoneNumber); await query("UPDATE users SET phone_verified_at=now() WHERE id=$1", [userId]); }
+function normalizeProfileName(value) {
+  if (typeof value !== "string") throw new AppError("Name is required", 400);
+  const name = value.normalize("NFKC").trim();
+  if (!name) throw new AppError("Name is required", 400);
+  if (name.length > 120) throw new AppError("Name must be 120 characters or fewer", 400);
+  if ([...name].some((character) => /[<>\u0000-\u001F\u007F]/u.test(character))) throw new AppError("Name contains invalid characters", 400);
+  return name;
+}
+async function updateProfile(userId, changes) {
+  const name = normalizeProfileName(changes?.name);
+  const result = await query("UPDATE users SET name=$1, updated_at=now() WHERE id=$2 RETURNING id,name,email,email_verified_at,created_at,updated_at", [name, userId]);
+  if (!result.rows[0]) throw new AppError("Authenticated user not found", 404);
+  return safeUser(result.rows[0]);
+}
 async function googleLogin(idToken){if(!process.env.GOOGLE_OAUTH_CLIENT_ID)throw new AppError("Google authentication is not configured",503,null,"GOOGLE_NOT_CONFIGURED");const response=await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken||"")}`);const claims=await response.json().catch(()=>({}));if(!response.ok||claims.iss!=="https://accounts.google.com"||claims.aud!==process.env.GOOGLE_OAUTH_CLIENT_ID||Number(claims.exp)<=Math.floor(Date.now()/1000)||!claims.sub||!claims.email_verified)throw new AppError("Invalid Google credential",401);const identity=(await query("SELECT user_id FROM user_identities WHERE provider='GOOGLE' AND provider_subject=$1",[claims.sub])).rows[0];if(identity){const u=(await query(`${USER_SELECT} WHERE id=$1`,[identity.user_id])).rows[0];return issueSession(u);}const email=normalizeEmail(claims.email);if((await query(`${USER_SELECT} WHERE lower(email)=lower($1)`,[email])).rows[0])throw new AppError("This email already has a password account. Sign in with email first to link Google.",409);return withTransaction(async c=>{const u=(await c.query("INSERT INTO users (name,email,password_hash) VALUES ($1,$2,$3) RETURNING id,name,email,password_hash,created_at,updated_at",[String(claims.name||claims.email).slice(0,120),email,await bcrypt.hash(crypto.randomBytes(32).toString("hex"),12)])).rows[0];await c.query("INSERT INTO user_identities (user_id,provider,provider_subject) VALUES ($1,'GOOGLE',$2)",[u.id,claims.sub]);return issueSession(u,c);});}
-module.exports={register,login,refresh,logout,requestPasswordReset,resetPassword,normalizePhone,setPhone,recordPhoneVerification,markPhoneVerified,googleLogin};
+module.exports={register,login,refresh,logout,requestPasswordReset,resetPassword,normalizePhone,setPhone,recordPhoneVerification,markPhoneVerified,normalizeProfileName,updateProfile,googleLogin};

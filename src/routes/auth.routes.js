@@ -16,4 +16,5 @@ router.post("/phone/send-code", controller.sendPhoneCode);
 router.post("/phone/verify-code", controller.verifyPhoneCode);
 router.post("/google", controller.google);
 router.get("/me", requireAuth, controller.me);
+router.patch("/me", requireAuth, controller.updateProfile);
 module.exports = router;
