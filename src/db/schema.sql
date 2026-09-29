@@ -218,6 +218,7 @@ CREATE TABLE IF NOT EXISTS ai_messages (
   role TEXT NOT NULL CHECK (role IN ('USER', 'ASSISTANT')),
   content TEXT NOT NULL,
   model_id TEXT,
+  client_message_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -225,3 +226,4 @@ CREATE INDEX IF NOT EXISTS idx_ai_conversations_user_id ON ai_conversations(user
 CREATE INDEX IF NOT EXISTS idx_ai_conversations_updated_at ON ai_conversations(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_messages_conversation_id ON ai_messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_ai_messages_created_at ON ai_messages(created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_messages_conversation_client ON ai_messages(conversation_id, client_message_id) WHERE client_message_id IS NOT NULL;

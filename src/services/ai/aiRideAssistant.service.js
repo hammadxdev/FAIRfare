@@ -52,11 +52,9 @@ async function answer({ userId, message, comparisonId, conversationId }) {
     return { reply: typeof result === "string" ? result : result.text, modelId: typeof result === "string" ? null : result.modelId, fallbackUsed: typeof result === "string" ? false : Boolean(result.fallbackUsed || result.modelId && result.modelId !== defaultLlmClient.config().model), context: publicContext, available: true };
   }
   catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      const code = error.code || "LLM_PROVIDER_ERROR";
-      const reason = error.safeReason || error.message || "unknown AI error";
-      console.warn(`[AI] ${code.toLowerCase().replaceAll("_", " ")}`, { model: defaultLlmClient.config().model, httpStatus: error.statusCode || null, providerCode: code, reason: String(reason).slice(0, 300) });
-    }
+    const code = error.code || "LLM_PROVIDER_ERROR";
+    const reason = error.safeReason || error.message || "unknown AI error";
+    console.warn("[AI] request failed", { model: defaultLlmClient.config().model, httpStatus: error.statusCode || null, providerCode: code, reason: String(reason).slice(0, 300) });
     return { reply: "AI Ride Assistant is temporarily unavailable. Your fare comparison and history are still available.", context: publicContext, available: false, errorCode: error.code || "LLM_PROVIDER_ERROR" };
   }
 }
