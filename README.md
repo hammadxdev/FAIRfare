@@ -392,10 +392,16 @@ and local test runs are free and deterministic.
 
 ## inDrive integration
 
+See the [inDrive Provider Research](docs/providers/indrive.md) document for the
+observed, independently maintained integration contract. It is not an official
+inDrive SDK or API specification.
+
 Set `INDRIVE_MODE=simulated` for deterministic local development. Set
 `INDRIVE_MODE=real` and provide an authorized `INDRIVE_REFRESH_TOKEN`,
 `INDRIVE_DEVICE_FINGERPRINT`, and `INDRIVE_FINGERPRINT` through the backend
-environment only. The seed refresh token is used only when no persisted
+environment only. The official client was observed sending both fingerprint
+headers during renewal, but their strict necessity is not established. The
+seed refresh token is used only when no persisted
 session exists; a rotated refresh token returned by inDrive is persisted and
 becomes authoritative. Access tokens renew inside a five-minute buffer with a
 process-level single-flight lock. A pricing 401 triggers exactly one forced
@@ -517,9 +523,10 @@ returns multiple categories. Failed providers and quotes without a fare never
 create fabricated observations.
 
 Observations retain the provider category ID/name alongside a centralized
-`vehicle_type` normalization. Verified inDrive mappings are order type `2`
-(`Moto` → `BIKE`) and `31` (`Rickshaw` → `RICKSHAW`). Unverified inDrive IDs,
-including `33`, `29`, and `11`, remain `UNKNOWN` with their IDs preserved.
+`vehicle_type` normalization. Verified inDrive mappings are order types `2`
+(`Moto` → `BIKE`), `33` (`Mini` → `ECONOMY_CAR`), `31` (`Rickshaw` →
+`RICKSHAW`), `29` (`Ride AC` → `STANDARD_CAR`), and `11` (`Premium` →
+`PREMIUM_CAR`). Unknown future IDs remain `UNKNOWN` with their IDs preserved.
 Provider-specific category names are never replaced by the normalized value.
 
 Coordinates, numeric route distance/duration, fare/fare-range semantics,
