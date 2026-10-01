@@ -3,7 +3,7 @@ const { normalizeVehicleType, resolveProviderCategory } = require("./vehicleType
 
 const MARKET_TIMEZONE = process.env.FAIRFARE_MARKET_TIMEZONE || "Asia/Karachi";
 const WEEKDAY_NUMBERS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-const SENSITIVE_KEY = /(authorization|oauth|token|secret|password|cookie|session|credential|fingerprint|device|phone|account)/i;
+const SENSITIVE_KEY = /(authorization|oauth|token|secret|password|cookie|session|credential|fingerprint|device|phone|account|profile|advertising|android|gsf|signature)/i;
 
 function deriveTimeFeatures(observedAt) {
   const parts = new Intl.DateTimeFormat("en-US", {

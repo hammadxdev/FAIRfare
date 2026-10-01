@@ -5,6 +5,7 @@ const { IndriveError, CODES } = require("./indrive.errors");
 function headers(config, accessToken) {
   const result = {
     Accept: "application/json",
+    Referer: "order_form",
     "Accept-Language": config.language,
     "X-Os-Type": config.osType,
     "X-App-Flavor": config.appFlavor,

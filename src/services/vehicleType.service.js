@@ -1,6 +1,9 @@
 const INDRIVE_CATEGORY_MAPPINGS = Object.freeze({
   "2": { name: "Moto", vehicleType: "BIKE" },
+  "33": { name: "Mini", vehicleType: "ECONOMY_CAR" },
   "31": { name: "Rickshaw", vehicleType: "RICKSHAW" },
+  "29": { name: "Ride AC", vehicleType: "STANDARD_CAR" },
+  "11": { name: "Premium", vehicleType: "PREMIUM_CAR" },
 });
 
 const REQUEST_VEHICLE_TYPES = Object.freeze({

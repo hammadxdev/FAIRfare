@@ -1,4 +1,4 @@
-const { getConfig, ORDER_TYPE_IDS } = require("./indrive.constants");
+const { getConfig, VEHICLE_TYPE_ORDER_IDS } = require("./indrive.constants");
 const { createIndriveClient } = require("./indrive.client");
 const { createSessionManager } = require("./indrive.auth");
 const { mapPricingResponse } = require("./indrive.mapper");
@@ -6,8 +6,12 @@ const { IndriveError, CODES } = require("./indrive.errors");
 const { calculateFare } = require("../formula");
 
 function buildPricingPayload(route) {
+  const requestedCategory = route.orderTypeId ?? VEHICLE_TYPE_ORDER_IDS[route.vehicleType] ?? VEHICLE_TYPE_ORDER_IDS[String(route.vehicleType || "").toUpperCase()];
+  if (!Number.isInteger(Number(requestedCategory))) {
+    throw new IndriveError(CODES.UNSUPPORTED_CATEGORY, "inDrive category is not supported");
+  }
   return {
-    order_type_ids: ORDER_TYPE_IDS,
+    order_type_id: Number(requestedCategory),
     route: [
       { latitude: Number(route.pickup.latitude), longitude: Number(route.pickup.longitude) },
       { latitude: Number(route.destination.latitude), longitude: Number(route.destination.longitude) },
@@ -29,14 +33,14 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
     async getQuotes({ route, rate, vehicleType }) {
       if (config.mode === "simulated") {
         const quote = calculateFare({ baseFare: rate.base_fare, perKmRate: rate.per_km_rate, perMinRate: rate.per_min_rate, minimumFare: rate.minimum_fare, surgeMultiplier: rate.surge_multiplier, distanceKm: route.distanceMeters / 1000, durationMin: route.durationSeconds / 60 });
-        return [{ providerId: "indrive", providerName: "inDrive", categoryId: vehicleType, categoryName: vehicleType, normalizedCategory: vehicleType.toUpperCase(), fare: quote.finalFare, fareMin: null, fareMax: null, currency: "PKR", fareType: "RECOMMENDED", pickupEtaSeconds: 420, tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, isAvailable: true, deepLink: null, metadata: { simulated: true, breakdown: quote.breakdown } }];
+        return [{ providerId: "indrive", providerName: "inDrive", categoryId: vehicleType, categoryName: vehicleType, normalizedCategory: vehicleType.toUpperCase(), fare: quote.finalFare, fareMin: null, fareMax: null, currency: "PKR", fareType: "RECOMMENDED", pickupEtaSeconds: null, tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, isAvailable: true, deepLink: null, metadata: { simulated: true, breakdown: quote.breakdown } }];
       }
       if (!config.enabled) throw new IndriveError(CODES.UNAVAILABLE, "inDrive is disabled");
       const accessToken = await sessionManager.ensureValidSession();
-      const first = await indriveClient.getPricing(accessToken, buildPricingPayload(route));
+      const first = await indriveClient.getPricing(accessToken, buildPricingPayload({ ...route, vehicleType }));
       if (first.status === 401) {
         const retryToken = await sessionManager.ensureValidSession({ force: true });
-        const second = await indriveClient.getPricing(retryToken, buildPricingPayload(route));
+        const second = await indriveClient.getPricing(retryToken, buildPricingPayload({ ...route, vehicleType }));
         if (second.status === 401) { await sessionManager.markAuthRequired(); throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive pricing authentication failed"); }
         if (second.status < 200 || second.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive pricing failed", { status: second.status });
         return mapPricingResponse(second.body, route);

@@ -2,12 +2,28 @@ const PROVIDER_ID = "indrive";
 const PROVIDER_NAME = "inDrive";
 
 const TOKEN_RENEW_URL = "https://ath-gw-cf.euce1.indriverapp.com/api/auth/v1/token/renew";
-const PRICING_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gateway-backend/api/pricing/v6/price";
+const PRICING_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gateway-backend/api/pricing/v5/price";
 const ORDER_TYPE_IDS = [2, 33, 31, 29, 11];
 const ORDER_TYPE_CATEGORIES = {
   2: { name: "Moto", normalizedCategory: "BIKE" },
+  33: { name: "Mini", normalizedCategory: "ECONOMY_CAR" },
   31: { name: "Rickshaw", normalizedCategory: "RICKSHAW" },
+  29: { name: "Ride AC", normalizedCategory: "STANDARD_CAR" },
+  11: { name: "Premium", normalizedCategory: "PREMIUM_CAR" },
 };
+
+const VEHICLE_TYPE_ORDER_IDS = Object.freeze({
+  BIKE: 2,
+  ECONOMY_CAR: 33,
+  RICKSHAW: 31,
+  STANDARD_CAR: 29,
+  PREMIUM_CAR: 11,
+  bike: 2,
+  mini: 33,
+  rickshaw: 31,
+  car: 29,
+  premium: 11,
+});
 
 function getConfig(env = process.env) {
   return {
@@ -32,5 +48,6 @@ module.exports = {
   PRICING_URL,
   ORDER_TYPE_IDS,
   ORDER_TYPE_CATEGORIES,
+  VEHICLE_TYPE_ORDER_IDS,
   getConfig,
 };

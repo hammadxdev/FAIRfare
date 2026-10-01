@@ -64,14 +64,14 @@ test("multiple returned categories create separate observations and preserve sem
   assert.equal(rows[0].duration_seconds, 2178);
 });
 
-test("unverified inDrive categories remain unknown rather than being guessed", () => {
+test("verified inDrive category 33 preserves its Mini mapping", () => {
   const [row] = createObservationRows({
     ...route,
-    results: [{ provider: { id: 1, name: "indrive" }, quotes: [{ categoryId: "33", categoryName: null, fare: 500 }] }],
+    results: [{ provider: { id: 1, name: "indrive" }, quotes: [{ categoryId: "33", categoryName: "Mini", fare: 500 }] }],
   });
   assert.equal(row.provider_category_id, "33");
-  assert.equal(row.provider_category_name, null);
-  assert.equal(row.vehicle_type, "UNKNOWN");
+  assert.equal(row.provider_category_name, "Mini");
+  assert.equal(row.vehicle_type, "ECONOMY_CAR");
 });
 
 test("time features use the centralized Lahore market timezone", () => {
