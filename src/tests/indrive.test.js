@@ -30,6 +30,20 @@ const config = {
   timeoutMs: 1000, refreshBufferSeconds: 300,
 };
 
+const testRoute = {
+  pickup: { latitude: 31.1, longitude: 74.2 },
+  destination: { latitude: 31.2, longitude: 74.3 },
+  distanceMeters: 4142,
+  durationSeconds: 944,
+};
+
+function createPricingAdapter({ database, now = () => 1_700_000_000_000, configOverrides = {}, renew, getPricing }) {
+  const runtimeConfig = { ...config, ...configOverrides };
+  const client = { renew, getPricing };
+  const session = createSessionManager({ client, config: runtimeConfig, database, now, logger: { log() {} } });
+  return createIndriveAdapter({ config: runtimeConfig, session, client });
+}
+
 test("inDrive session manager reports missing refresh configuration without crashing", async () => {
   const database = createDb();
   const manager = createSessionManager({ config: { ...config, refreshToken: "" }, client: { renew: async () => { throw new Error("must not call"); } }, database, logger: { log() {} } });
@@ -55,6 +69,71 @@ test("concurrent refresh calls are single-flight and rotated refresh token persi
   assert.doesNotMatch(logs.join(" "), /seed-refresh|refresh-2|access-1/);
 });
 
+test("valid persisted session reuses access token without renewal", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "persisted-access", refresh_token: "persisted-refresh", access_expires_at: now() + 900_000, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  let pricingToken;
+  const adapter = createPricingAdapter({ database, now, renew: async () => { renewCalls += 1; }, getPricing: async (token) => { pricingToken = token; return { status: 200, body: { data: [] } }; } });
+  await adapter.getQuotes({ route: testRoute, rate: {}, vehicleType: "bike" });
+  assert.equal(renewCalls, 0);
+  assert.equal(pricingToken, "persisted-access");
+});
+
+test("near-expiry persisted session renews once and pricing uses the new access token", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "near-expiry-access", refresh_token: "persisted-refresh", access_expires_at: now() + 299_000, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  let pricingToken;
+  const adapter = createPricingAdapter({ database, now, renew: async () => { renewCalls += 1; return { status: 200, body: { access_token: "renewed-access", refresh_token: "rotated-refresh", expires_in: 3600 } }; }, getPricing: async (token) => { pricingToken = token; return { status: 200, body: { data: [] } }; } });
+  await adapter.getQuotes({ route: testRoute, rate: {}, vehicleType: "bike" });
+  assert.equal(renewCalls, 1);
+  assert.equal(pricingToken, "renewed-access");
+  assert.equal(database.state.row.refresh_token, "rotated-refresh");
+});
+
+test("expired persisted session renews exactly once", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "persisted-refresh", access_expires_at: now() - 1, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; return { status: 200, body: { access_token: "renewed-access", expires_in: 3600 } }; } } });
+  assert.equal(await manager.ensureValidSession(), "renewed-access");
+  assert.equal(renewCalls, 1);
+});
+
+test("missing session uses bootstrap refresh credential once and creates a session", async () => {
+  const database = createDb();
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async (token) => { renewCalls += 1; assert.equal(token, "seed-refresh"); return { status: 200, body: { access_token: "bootstrapped-access", refresh_token: "bootstrapped-refresh", expires_in: 3600 } }; } } });
+  assert.equal(await manager.ensureValidSession(), "bootstrapped-access");
+  assert.equal(renewCalls, 1);
+  assert.equal(database.state.row.status, "READY");
+  assert.equal(database.state.row.refresh_token, "bootstrapped-refresh");
+});
+
+test("a second fare request reuses the session created by the first request", async () => {
+  const database = createDb();
+  let renewCalls = 0;
+  const pricingTokens = [];
+  const adapter = createPricingAdapter({ database, renew: async () => { renewCalls += 1; return { status: 200, body: { access_token: "bootstrapped-access", refresh_token: "bootstrapped-refresh", expires_in: 3600 } }; }, getPricing: async (token) => { pricingTokens.push(token); return { status: 200, body: { data: [] } }; } });
+  await adapter.getQuotes({ route: testRoute, rate: {}, vehicleType: "bike" });
+  await adapter.getQuotes({ route: testRoute, rate: {}, vehicleType: "bike" });
+  assert.equal(renewCalls, 1);
+  assert.deepEqual(pricingTokens, ["bootstrapped-access", "bootstrapped-access"]);
+});
+
+test("renewal failure has no immediate retry loop", async () => {
+  const database = createDb();
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; return { status: 403, body: { code: "REJECTED" } }; } } });
+  await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_AUTH_REQUIRED");
+  assert.equal(renewCalls, 1);
+  assert.equal(database.state.row.status, "AUTH_REQUIRED");
+});
+
 test("renewal client sends the verified endpoint, body, and observed fingerprint headers", async () => {
   let request;
   const client = createIndriveClient({ config, fetchImpl: async (url, options) => {
@@ -72,6 +151,40 @@ test("renewal client sends the verified endpoint, body, and observed fingerprint
   assert.doesNotMatch(JSON.stringify(request), /live|real-secret|captured/i);
 });
 
+test("renewal sends a fresh local request id and safe diagnostics never expose credentials", async () => {
+  const requests = [];
+  const logs = [];
+  const logger = { log: (...args) => logs.push(args) };
+  const client = createIndriveClient({ config, logger, fetchImpl: async (url, options) => {
+    requests.push({ url, options });
+    return { status: 401, headers: { get: () => "application/json; charset=utf-8" }, text: async () => JSON.stringify({
+      code: "INVALID_REFRESH_TOKEN", message: "refresh token rejected", access_token: "secret-access", refresh_token: "secret-refresh",
+    }) };
+  } });
+  await client.renew("secret-refresh");
+  await client.renew("secret-refresh");
+  const ids = requests.map((request) => request.options.headers["X-Local-Req-Id"]);
+  assert.match(ids[0], /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.match(ids[1], /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.notEqual(ids[0], ids[1]);
+  const serializedLogs = JSON.stringify(logs);
+  assert.doesNotMatch(serializedLogs, /secret-refresh|secret-access|"device"|"finger"/i);
+  assert.match(serializedLogs, /INVALID_REFRESH_TOKEN/);
+  assert.match(serializedLogs, /providerErrorMessage.:null/);
+  assert.match(serializedLogs, /accessTokenReturned/);
+  assert.match(serializedLogs, /refreshTokenReturned/);
+});
+
+test("renewal 401 and 403 remain PROVIDER_AUTH_REQUIRED", async () => {
+  for (const status of [401, 403]) {
+    const manager = createSessionManager({
+      config, database: createDb(), logger: { log() {} },
+      client: { renew: async () => ({ status, body: { code: "REJECTED" } }) },
+    });
+    await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_AUTH_REQUIRED");
+  }
+});
+
 test("pricing payload keeps route values numeric and 401 retries once", async () => {
   const payload = buildPricingPayload({ vehicleType: "bike", pickup: { latitude: 31.1, longitude: 74.2 }, destination: { latitude: 31.2, longitude: 74.3 }, distanceMeters: 4142, durationSeconds: 944 });
   assert.equal(typeof payload.route[0].latitude, "number");
@@ -79,7 +192,8 @@ test("pricing payload keeps route values numeric and 401 retries once", async ()
   assert.equal(payload.geo.distance_meters, 4142);
   const database = createDb();
   let pricingCalls = 0;
-  const session = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async () => ({ status: 200, body: { access_token: "token", expires_in: 3600 } }) } });
+  let renewCalls = 0;
+  const session = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; return { status: 200, body: { access_token: "token", expires_in: 3600 } }; } } });
   const adapter = createIndriveAdapter({ config, session, client: {
     renew: async () => ({ status: 200, body: { access_token: "token", expires_in: 3600 } }),
     getPricing: async () => { pricingCalls += 1; return pricingCalls === 1 ? { status: 401, body: {} } : { status: 200, body: { data: [] } }; },
@@ -87,6 +201,7 @@ test("pricing payload keeps route values numeric and 401 retries once", async ()
   const quotes = await adapter.getQuotes({ route: { ...payload, pickup: { latitude: 31.1, longitude: 74.2 }, destination: { latitude: 31.2, longitude: 74.3 } }, rate: { base_fare: 1, per_km_rate: 1, per_min_rate: 1, minimum_fare: 1, surge_multiplier: 1 }, vehicleType: "bike" });
   assert.deepEqual(quotes, []);
   assert.equal(pricingCalls, 2);
+  assert.equal(renewCalls, 2);
 });
 
 test("pricing client sends required auth headers and a fresh request id", async () => {
