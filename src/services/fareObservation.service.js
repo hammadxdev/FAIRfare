@@ -32,7 +32,7 @@ function quoteList(result) {
   return [result];
 }
 
-function createObservationRows({ comparisonId = null, pickup, dropoff, distanceMeters, durationSeconds, requestedVehicleType, dataSource = "UNKNOWN", results, observedAt = Date.now() }) {
+function createObservationRows({ comparisonId = null, pickup, dropoff, distanceMeters, durationSeconds, requestedVehicleType, dataSource = "UNKNOWN", results, observedAt = Date.now(), weatherContext = null }) {
   const time = deriveTimeFeatures(observedAt);
   const rows = [];
   for (const result of results) {
@@ -73,6 +73,10 @@ function createObservationRows({ comparisonId = null, pickup, dropoff, distanceM
         hour_of_day: time.hourOfDay,
         day_of_week: time.dayOfWeek,
         is_weekend: time.isWeekend,
+        weather_condition: weatherContext?.condition || "UNKNOWN",
+        weather_severity: weatherContext?.weatherSeverity || "UNKNOWN",
+        precipitation_mm: Number.isFinite(Number(weatherContext?.precipitationMm)) ? Number(weatherContext.precipitationMm) : null,
+        temperature_c: Number.isFinite(Number(weatherContext?.temperatureC)) ? Number(weatherContext.temperatureC) : null,
         raw_response_sanitized: sanitizeRawResponse(quote.metadata?.raw),
       });
     }
@@ -88,11 +92,11 @@ async function persistFareObservations(input) {
       (data_source, comparison_id, provider_id, provider, provider_category, provider_category_id, provider_category_name, normalized_category, vehicle_type,
        pickup_latitude, pickup_longitude, pickup_zone, destination_latitude, destination_longitude, destination_zone,
        distance_meters, duration_seconds, fare, fare_min, fare_max, currency, fare_type, pickup_eta_seconds,
-       observed_at, hour_of_day, day_of_week, is_weekend, raw_response_sanitized)
+       observed_at, hour_of_day, day_of_week, is_weekend, weather_condition, weather_severity, precipitation_mm, temperature_c, raw_response_sanitized)
       VALUES
       ($1,$2,$3,$4,$5,$6,$7,$8,$9,
-       $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28::jsonb)`;
-  for (const row of rows) await query(text, [row.data_source,row.comparison_id,row.provider_id,row.provider,row.provider_category,row.provider_category_id,row.provider_category_name,row.normalized_category,row.vehicle_type,row.pickup_latitude,row.pickup_longitude,row.pickup_zone,row.destination_latitude,row.destination_longitude,row.destination_zone,row.distance_meters,row.duration_seconds,row.fare,row.fare_min,row.fare_max,row.currency,row.fare_type,row.pickup_eta_seconds,new Date(row.observed_at),row.hour_of_day,row.day_of_week,row.is_weekend,row.raw_response_sanitized]);
+       $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32::jsonb)`;
+  for (const row of rows) await query(text, [row.data_source,row.comparison_id,row.provider_id,row.provider,row.provider_category,row.provider_category_id,row.provider_category_name,row.normalized_category,row.vehicle_type,row.pickup_latitude,row.pickup_longitude,row.pickup_zone,row.destination_latitude,row.destination_longitude,row.destination_zone,row.distance_meters,row.duration_seconds,row.fare,row.fare_min,row.fare_max,row.currency,row.fare_type,row.pickup_eta_seconds,new Date(row.observed_at),row.hour_of_day,row.day_of_week,row.is_weekend,row.weather_condition,row.weather_severity,row.precipitation_mm,row.temperature_c,row.raw_response_sanitized]);
   return rows.length;
 }
 

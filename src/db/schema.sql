@@ -168,6 +168,10 @@ CREATE TABLE IF NOT EXISTS fare_observations (
   hour_of_day INTEGER,
   day_of_week INTEGER,
   is_weekend INTEGER,
+  weather_condition TEXT DEFAULT 'UNKNOWN',
+  weather_severity TEXT DEFAULT 'UNKNOWN',
+  precipitation_mm REAL,
+  temperature_c REAL,
   raw_response_sanitized TEXT
 );
 

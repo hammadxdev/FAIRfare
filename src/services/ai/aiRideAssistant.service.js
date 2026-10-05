@@ -16,6 +16,7 @@ function comparisonContext(comparison) {
     comparisonId: comparison.comparisonId || null,
     freshness: comparison.comparisonId ? "current_enriched_comparison" : "history_snapshot",
     route: { pickup: comparison.pickup?.name || comparison.pickup?.label, dropoff: comparison.dropoff?.name || comparison.dropoff?.label, distanceKm: comparison.distanceKm ?? (comparison.route?.distanceMeters == null ? null : comparison.route.distanceMeters / 1000), durationMin: comparison.durationMin ?? (comparison.route?.durationSeconds == null ? null : comparison.route.durationSeconds / 60) },
+    weather: comparison.weather ? { condition: comparison.weather.condition || "UNKNOWN", severity: comparison.weather.weatherSeverity || "UNKNOWN", precipitationMm: comparison.weather.precipitationMm ?? null, temperatureC: comparison.weather.temperatureC ?? null, source: comparison.weather.source || "UNKNOWN" } : null,
     rides: (comparison.results || comparison.quotes || []).map((ride) => ({
       provider: ride.provider?.displayName || ride.provider?.name || ride.provider,
       vehicleType: ride.vehicleType || ride.category || ride.categoryName || ride.quotes?.[0]?.categoryName || null,

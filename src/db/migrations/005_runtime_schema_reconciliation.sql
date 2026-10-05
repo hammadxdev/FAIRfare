@@ -149,6 +149,11 @@ ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS destination_latitude numeric;
 ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS destination_longitude numeric;
 ALTER TABLE saved_routes ADD COLUMN IF NOT EXISTS label_type text;
 
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS weather_condition text DEFAULT 'UNKNOWN';
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS weather_severity text DEFAULT 'UNKNOWN';
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS precipitation_mm numeric;
+ALTER TABLE fare_observations ADD COLUMN IF NOT EXISTS temperature_c numeric;
+
 -- Some existing Supabase saved_routes variants use *_lat/*_lng. Preserve
 -- those values while making the runtime's domain column names canonical.
 DO $$

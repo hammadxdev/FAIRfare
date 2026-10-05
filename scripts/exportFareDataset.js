@@ -9,7 +9,7 @@ const columns = [
   "id", "comparison_id", "data_source", "provider_id", "provider", "provider_category_id", "provider_category_name", "vehicle_type",
   "pickup_latitude", "pickup_longitude", "pickup_zone", "destination_latitude", "destination_longitude", "destination_zone",
   "distance_meters", "duration_seconds", "fare", "fare_min", "fare_max", "currency", "fare_type", "pickup_eta_seconds",
-  "observed_at", "hour_of_day", "day_of_week", "is_weekend",
+  "observed_at", "hour_of_day", "day_of_week", "is_weekend", "weather_condition", "weather_severity", "precipitation_mm", "temperature_c",
 ];
 const rows = db.prepare(`SELECT ${columns.join(", ")} FROM fare_observations ORDER BY observed_at ASC, id ASC`).all();
 const csvValue = (value) => {

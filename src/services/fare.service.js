@@ -12,6 +12,7 @@ const { recommendRide } = require("./rideRecommendation.service");
 const { rankPersonalizedRides } = require("./personalizedRideRecommendation.service");
 const { getPreferences } = require("./userPreference.service");
 const { rememberComparison } = require("./currentComparison.service");
+const { resolveWeatherContext } = require("./weatherContext.service");
 
 function dataSourceForAdapter(adapter) {
   return adapter.mode === "real" ? "REAL" : "SIMULATED";
@@ -60,6 +61,9 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
 
   const observedAt = Date.now();
   const simulationContext = deriveTimeFeatures(observedAt);
+  // Weather is contextual enrichment: one pickup lookup is shared by every
+  // provider/category and a failure returns UNKNOWN without blocking fares.
+  const weatherContext = await resolveWeatherContext({ latitude: pickup.lat, longitude: pickup.lng, observedAt });
   const rawResults = await Promise.all(providers.map(async (provider) => {
     const rate = (await query(`SELECT * FROM vehicle_rates WHERE provider_id = $1 AND vehicle_type = $2`, [provider.id, vehicleType])).rows[0];
     if (!rate) {
@@ -73,7 +77,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     try {
       const adapter = getAdapter(provider.name);
       if (typeof adapter.getQuotes === "function") {
-        const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType, observedAt, context: { hour: simulationContext.hourOfDay, dayOfWeek: simulationContext.dayOfWeek, isWeekend: Boolean(simulationContext.isWeekend) } });
+        const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType, observedAt, context: { hour: simulationContext.hourOfDay, dayOfWeek: simulationContext.dayOfWeek, isWeekend: Boolean(simulationContext.isWeekend) }, weather: weatherContext });
         const quote = quotes.find((candidate) => candidate.fare !== null && candidate.fare !== undefined);
         if (!quote) throw new Error("No quote returned");
         return {
@@ -131,6 +135,8 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
         distanceMeters: routeData.distanceMeters,
         durationSeconds: routeData.durationSeconds,
         requestedVehicleType: vehicleType,
+        observedAt,
+        weatherContext,
         results: available,
       });
     } catch (error) {
@@ -164,6 +170,10 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
         hourOfDay: nowFeatures.hourOfDay,
         dayOfWeek: nowFeatures.dayOfWeek,
         isWeekend: nowFeatures.isWeekend,
+        weatherCondition: weatherContext.condition,
+        weatherSeverity: weatherContext.weatherSeverity,
+        precipitationMm: weatherContext.precipitationMm,
+        temperatureC: weatherContext.temperatureC,
         dataSource: result.dataSource || "UNKNOWN",
       });
       result.recommendation = recommendRide({ currentFare: result.fare, prediction: result.prediction });
@@ -199,6 +209,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     vehicleType,
     distanceKm,
     durationMin,
+    weather: weatherContext,
     results: personalizedResults,
   };
   if (comparisonId) rememberComparison({ userId, comparison });

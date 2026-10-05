@@ -566,7 +566,8 @@ authentication.
 
 See [Fair Fare provider simulation](docs/providers/simulation.md) for the
 developer methodology, exact demo coefficients, context modifiers, ETA
-simulation, and provenance rules.
+simulation, weather normalization, weather-aware demo coefficients, and
+provenance rules.
 
 ## Notes for Frontend Integration
 

@@ -4,11 +4,11 @@ from collections import Counter
 
 NUMERIC_FEATURES = [
     "pickup_latitude", "pickup_longitude", "destination_latitude", "destination_longitude",
-    "distance_meters", "duration_seconds", "hour_of_day", "day_of_week", "is_weekend",
+    "distance_meters", "duration_seconds", "hour_of_day", "day_of_week", "is_weekend", "precipitation_mm", "temperature_c",
 ]
 CATEGORICAL_FEATURES = [
     "provider_id", "provider", "provider_category_id", "provider_category_name",
-    "vehicle_type", "pickup_zone", "destination_zone",
+    "vehicle_type", "pickup_zone", "destination_zone", "weather_condition", "weather_severity",
 ]
 FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
