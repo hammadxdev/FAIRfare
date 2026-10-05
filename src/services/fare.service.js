@@ -14,7 +14,6 @@ const { getPreferences } = require("./userPreference.service");
 const { rememberComparison } = require("./currentComparison.service");
 
 function dataSourceForAdapter(adapter) {
-  if (process.env.NODE_ENV === "test") return "TEST";
   return adapter.mode === "real" ? "REAL" : "SIMULATED";
 }
 
@@ -59,6 +58,8 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     durationSeconds: Math.round(durationMin * 60),
   };
 
+  const observedAt = Date.now();
+  const simulationContext = deriveTimeFeatures(observedAt);
   const rawResults = await Promise.all(providers.map(async (provider) => {
     const rate = (await query(`SELECT * FROM vehicle_rates WHERE provider_id = $1 AND vehicle_type = $2`, [provider.id, vehicleType])).rows[0];
     if (!rate) {
@@ -72,7 +73,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     try {
       const adapter = getAdapter(provider.name);
       if (typeof adapter.getQuotes === "function") {
-        const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType, observedAt: Date.now() });
+        const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType, observedAt, context: { hour: simulationContext.hourOfDay, dayOfWeek: simulationContext.dayOfWeek, isWeekend: Boolean(simulationContext.isWeekend) } });
         const quote = quotes.find((candidate) => candidate.fare !== null && candidate.fare !== undefined);
         if (!quote) throw new Error("No quote returned");
         return {
@@ -138,7 +139,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     }
   }
 
-  const nowFeatures = deriveTimeFeatures(Date.now());
+  const nowFeatures = simulationContext;
   await Promise.all(available.map(async (result) => {
     const quote = result.quotes?.find((candidate) => candidate.fare !== null && candidate.fare !== undefined) || result;
     const normalizedType = normalizeVehicleType({

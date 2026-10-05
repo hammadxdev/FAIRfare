@@ -564,6 +564,10 @@ inDrive only; Yango/Bykea report unavailable until a separately approved real
 adapter exists. Provider authentication is independent from Fair Fare user
 authentication.
 
+See [Fair Fare provider simulation](docs/providers/simulation.md) for the
+developer methodology, exact demo coefficients, context modifiers, ETA
+simulation, and provenance rules.
+
 ## Notes for Frontend Integration
 
 ### Persistent auth sessions

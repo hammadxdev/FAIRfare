@@ -30,9 +30,9 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
     id: "indrive", name: "indrive", displayName: "inDrive", mode: config.mode,
     getStatus: sessionManager.getStatus,
     getSessionManager: () => sessionManager,
-    async getQuotes({ route, rate, vehicleType, observedAt }) {
+    async getQuotes({ route, rate, vehicleType, observedAt, context }) {
       if (config.mode === "simulated") {
-        return [{ ...calculateSimulatedFare({ provider: "indrive", vehicleType, rate, route, observedAt }), providerName: "inDrive", tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, deepLink: null }];
+        return [{ ...calculateSimulatedFare({ provider: "indrive", vehicleType, rate, route, observedAt, context }), providerName: "inDrive", tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, deepLink: null }];
       }
       if (!config.enabled) throw new IndriveError(CODES.UNAVAILABLE, "inDrive is disabled");
       const accessToken = await sessionManager.ensureValidSession();
