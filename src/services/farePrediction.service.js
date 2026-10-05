@@ -7,7 +7,7 @@ const MODEL_PATH = process.env.FAIRFARE_MODEL_ARTIFACT || path.join(BACKEND_ROOT
 const METADATA_PATH = process.env.FAIRFARE_MODEL_METADATA || path.join(BACKEND_ROOT, "ml", "artifacts", "fare_model_metadata.json");
 const PREDICT_SCRIPT = path.join(BACKEND_ROOT, "ml", "predict.py");
 const PYTHON = process.env.FAIRFARE_PYTHON || "python";
-const TIMEOUT_MS = Number(process.env.FAIRFARE_PREDICTION_TIMEOUT_MS || 15000);
+const TIMEOUT_MS = Number(process.env.FAIRFARE_PREDICTION_TIMEOUT_MS || 3000);
 
 function unavailable(status, reason) {
   return { status, predictedFare: null, currency: "PKR", model: null, confidence: null, reason };

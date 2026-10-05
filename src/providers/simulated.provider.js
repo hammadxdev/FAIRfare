@@ -1,9 +1,12 @@
 const { calculateSimulatedFare } = require("./simulation.engine");
 
 function modeFor(provider, env = process.env) {
+  const simulationOnly = String(env.FAIRFARE_SIMULATION_ONLY ?? "true").toLowerCase() !== "false";
+  if (simulationOnly) return "simulated";
   const aliases = provider === "quickride" ? ["YANGO_MODE", "QUICKRIDE_MODE"] : ["BYKEA_MODE", "URBANCAB_MODE"];
   const value = aliases.map((key) => env[key]).find(Boolean);
-  return String(value || "simulated").toLowerCase();
+  const requestedMode = String(value || "simulated").toLowerCase();
+  return ["simulated", "real"].includes(requestedMode) ? requestedMode : "simulated";
 }
 
 function createSimulatedProvider({ id, displayName }) {

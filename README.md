@@ -561,7 +561,11 @@ context adjustment; they are Fair Fare demo models, not the providers' pricing
 algorithms. Simulated quotes and fare observations are marked `SIMULATED` and
 must not be presented as confirmed live prices. `REAL` remains available for
 inDrive only; Yango/Bykea report unavailable until a separately approved real
-adapter exists. Provider authentication is independent from Fair Fare user
+adapter exists. `FAIRFARE_SIMULATION_ONLY` defaults to `true`; while it is true,
+missing, invalid, or real-valued provider mode settings fail closed to
+`SIMULATED`, including the provider status endpoint. Real inDrive mode requires
+an explicit `FAIRFARE_SIMULATION_ONLY=false` opt-out in a separately controlled
+environment. Provider authentication is independent from Fair Fare user
 authentication.
 
 See [Fair Fare provider simulation](docs/providers/simulation.md) for the

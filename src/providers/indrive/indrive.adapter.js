@@ -28,7 +28,7 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
   const sessionManager = session || createSessionManager({ client: indriveClient, config });
   return {
     id: "indrive", name: "indrive", displayName: "inDrive", mode: config.mode,
-    getStatus: sessionManager.getStatus,
+    getStatus: () => config.mode === "simulated" ? "READY" : sessionManager.getStatus(),
     getSessionManager: () => sessionManager,
     async getQuotes({ route, rate, vehicleType, observedAt, context, weather }) {
       if (config.mode === "simulated") {

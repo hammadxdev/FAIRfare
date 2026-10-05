@@ -26,9 +26,13 @@ const VEHICLE_TYPE_ORDER_IDS = Object.freeze({
 });
 
 function getConfig(env = process.env) {
+  const requestedMode = String(env.INDRIVE_MODE || "simulated").toLowerCase();
+  const simulationOnly = String(env.FAIRFARE_SIMULATION_ONLY ?? "true").toLowerCase() !== "false";
   return {
     enabled: env.INDRIVE_ENABLED !== "false",
-    mode: String(env.INDRIVE_MODE || "simulated").toLowerCase(),
+    // Demo deployments fail closed to simulation. REAL is reachable only when
+    // explicitly opting out of the global simulation-only guard.
+    mode: simulationOnly ? "simulated" : ["simulated", "real"].includes(requestedMode) ? requestedMode : "simulated",
     refreshToken: env.INDRIVE_REFRESH_TOKEN || "",
     deviceFingerprint: env.INDRIVE_DEVICE_FINGERPRINT || "",
     fingerprint: env.INDRIVE_FINGERPRINT || "",
