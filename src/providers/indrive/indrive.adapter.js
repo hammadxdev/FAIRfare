@@ -3,7 +3,7 @@ const { createIndriveClient } = require("./indrive.client");
 const { createSessionManager } = require("./indrive.auth");
 const { mapPricingResponse } = require("./indrive.mapper");
 const { IndriveError, CODES } = require("./indrive.errors");
-const { calculateFare } = require("../formula");
+const { calculateSimulatedFare } = require("../simulation.engine");
 
 function buildPricingPayload(route) {
   const requestedCategory = route.orderTypeId ?? VEHICLE_TYPE_ORDER_IDS[route.vehicleType] ?? VEHICLE_TYPE_ORDER_IDS[String(route.vehicleType || "").toUpperCase()];
@@ -30,10 +30,9 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
     id: "indrive", name: "indrive", displayName: "inDrive", mode: config.mode,
     getStatus: sessionManager.getStatus,
     getSessionManager: () => sessionManager,
-    async getQuotes({ route, rate, vehicleType }) {
+    async getQuotes({ route, rate, vehicleType, observedAt }) {
       if (config.mode === "simulated") {
-        const quote = calculateFare({ baseFare: rate.base_fare, perKmRate: rate.per_km_rate, perMinRate: rate.per_min_rate, minimumFare: rate.minimum_fare, surgeMultiplier: rate.surge_multiplier, distanceKm: route.distanceMeters / 1000, durationMin: route.durationSeconds / 60 });
-        return [{ providerId: "indrive", providerName: "inDrive", categoryId: vehicleType, categoryName: vehicleType, normalizedCategory: vehicleType.toUpperCase(), fare: quote.finalFare, fareMin: null, fareMax: null, currency: "PKR", fareType: "RECOMMENDED", pickupEtaSeconds: null, tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, isAvailable: true, deepLink: null, metadata: { simulated: true, breakdown: quote.breakdown } }];
+        return [{ ...calculateSimulatedFare({ provider: "indrive", vehicleType, rate, route, observedAt }), providerName: "inDrive", tripDurationSeconds: route.durationSeconds, distanceMeters: route.distanceMeters, deepLink: null }];
       }
       if (!config.enabled) throw new IndriveError(CODES.UNAVAILABLE, "inDrive is disabled");
       const accessToken = await sessionManager.ensureValidSession();

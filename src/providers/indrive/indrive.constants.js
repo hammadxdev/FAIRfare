@@ -28,7 +28,7 @@ const VEHICLE_TYPE_ORDER_IDS = Object.freeze({
 function getConfig(env = process.env) {
   return {
     enabled: env.INDRIVE_ENABLED !== "false",
-    mode: env.INDRIVE_MODE || "simulated",
+    mode: String(env.INDRIVE_MODE || "simulated").toLowerCase(),
     refreshToken: env.INDRIVE_REFRESH_TOKEN || "",
     deviceFingerprint: env.INDRIVE_DEVICE_FINGERPRINT || "",
     fingerprint: env.INDRIVE_FINGERPRINT || "",

@@ -552,7 +552,17 @@ npm run stats:dataset    # prints counts, fare stats, date range, missing fields
 The CSV contains normalized, non-secret columns only and is not generated or
 committed automatically. Current simulated provider comparisons are useful for
 pipeline validation but must not be described as real provider observations.
-Yango and Bykea adapters are not implemented here.
+Yango and Bykea are represented by the existing `quickride` and `urbancab`
+internal provider IDs and now use deterministic Fair Fare simulation adapters.
+Set `INDRIVE_MODE=simulated`, `YANGO_MODE=simulated`, and
+`BYKEA_MODE=simulated` for the FYP/demo configuration. These formulas use
+provider/category rate configuration, route distance/duration, and a stable
+context adjustment; they are Fair Fare demo models, not the providers' pricing
+algorithms. Simulated quotes and fare observations are marked `SIMULATED` and
+must not be presented as confirmed live prices. `REAL` remains available for
+inDrive only; Yango/Bykea report unavailable until a separately approved real
+adapter exists. Provider authentication is independent from Fair Fare user
+authentication.
 
 ## Notes for Frontend Integration
 

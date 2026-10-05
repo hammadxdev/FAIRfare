@@ -72,7 +72,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     try {
       const adapter = getAdapter(provider.name);
       if (typeof adapter.getQuotes === "function") {
-        const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType });
+        const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType, observedAt: Date.now() });
         const quote = quotes.find((candidate) => candidate.fare !== null && candidate.fare !== undefined);
         if (!quote) throw new Error("No quote returned");
         return {
