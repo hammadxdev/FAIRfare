@@ -43,7 +43,7 @@ test("provider status is safe in the default simulated deployment", async () => 
 });
 
 test("weather observation migration contains every runtime column", () => {
-  const migration = fs.readFileSync(path.join(__dirname, "../db/migrations/006_weather_observation_columns.sql"), "utf8");
+  const migration = fs.readFileSync(path.join(__dirname, "../db/migrations/007_weather_observation_columns.sql"), "utf8");
   for (const column of ["weather_condition", "weather_severity", "precipitation_mm", "temperature_c"]) {
     assert.match(migration, new RegExp(`ADD COLUMN IF NOT EXISTS ${column}`));
   }
