@@ -3,6 +3,7 @@ const { getHistory, getHistoryById } = require("../history.service");
 const { getComparisonForUser } = require("../currentComparison.service");
 const defaultLlmClient = require("./llmClient");
 const conversationService = require("./conversation.service");
+const { retrieveFairFareKnowledge } = require("./fairFareKnowledge.service");
 
 let llmClient = defaultLlmClient;
 const MAX_MESSAGE_LENGTH = 1000;
@@ -42,7 +43,7 @@ async function buildGroundingContext({ userId, message, comparisonId, conversati
   const history = await getHistory({ userId, limit: lower.includes("recent") || lower.includes("usually") || lower.includes("compare") ? MAX_HISTORY : 3 });
   const recentConversation = conversationId ? await conversationService.recentMessages(userId, conversationId) : [];
   if (recentConversation.at(-1)?.role === "USER" && recentConversation.at(-1).content === message) recentConversation.pop();
-  return { comparison: comparisonContext(comparison), preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation };
+  return { comparison: comparisonContext(comparison), preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation, fairFareKnowledge: retrieveFairFareKnowledge(message) };
 }
 
 async function answer({ userId, message, comparisonId, conversationId }) {
