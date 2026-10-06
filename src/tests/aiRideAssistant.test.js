@@ -57,5 +57,6 @@ test("disabled or provider failures return safe assistant responses", async () =
   const response = await request(app).post("/api/ai/chat").set("Authorization", authHeader(auth)).send({ message: "Should I book now?" });
   assert.equal(response.status, 200);
   assert.equal(response.body.data.available, false);
-  assert.match(response.body.data.reply, /temporarily unavailable/i);
+  assert.equal(response.body.data.status, "UNAVAILABLE");
+  assert.equal(response.body.data.reply, null);
 });

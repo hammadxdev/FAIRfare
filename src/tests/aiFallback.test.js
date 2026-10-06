@@ -7,8 +7,8 @@ const llm = require("../services/ai/llmClient");
 const assistant = require("../services/ai/aiRideAssistant.service");
 const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
 
-const PRIMARY = "inclusionai/ling-3.0-flash-fin:free";
-const FALLBACKS = ["poolside/laguna-s-2.1:free", "stealth/space-bunny-alpha", "google/gemma-4-31b-it:free"];
+const PRIMARY = "inclusionai/ling-3.1-flash";
+const FALLBACKS = ["nvidia/nemotron-3.5-lightning:free", "google/gemma-4-31b-it:free"];
 
 function configure() {
   process.env.AI_ASSISTANT_ENABLED = "true";
@@ -43,6 +43,22 @@ test("429 falls back in configured order and reports the successful model", asyn
   assert.equal(result.fallbackUsed, true);
 });
 
+test("404 model failure falls back without retrying the invalid model", async () => {
+  const calls = [];
+  llm.setPostJsonForTests(async (_url, _headers, body) => { const model = JSON.parse(body).model; calls.push(model); if (model === PRIMARY) throw providerError("LLM_MODEL_ERROR", 404); return providerSuccess("fallback"); });
+  const result = await llm.completeDetailed({ message: "hello", context: {} });
+  assert.deepEqual(calls, [PRIMARY, FALLBACKS[0]]);
+  assert.equal(result.modelId, FALLBACKS[0]);
+});
+
+test("malformed provider output can use the next configured model", async () => {
+  const calls = [];
+  llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); if (calls.length === 1) return { choices: [] }; return providerSuccess("fallback"); });
+  const result = await llm.completeDetailed({ message: "hello", context: {} });
+  assert.deepEqual(calls, [PRIMARY, FALLBACKS[0]]);
+  assert.equal(result.modelId, FALLBACKS[0]);
+});
+
 test("multiple recoverable failures reach the next model only once", async () => {
   const calls = [];
   llm.setPostJsonForTests(async (_url, _headers, body) => { const model = JSON.parse(body).model; calls.push(model); if (model !== FALLBACKS[1]) throw providerError("LLM_RATE_LIMIT", 429); return providerSuccess("later"); });
@@ -51,11 +67,21 @@ test("multiple recoverable failures reach the next model only once", async () =>
   assert.equal(result.modelId, FALLBACKS[1]);
 });
 
-test("all recoverable failures are bounded to four calls", async () => {
+test("all recoverable failures are bounded to the primary plus two fallbacks", async () => {
   const calls = [];
   llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); throw providerError("LLM_RATE_LIMIT", 429); });
   await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "LLM_RATE_LIMIT" });
   assert.deepEqual(calls, [PRIMARY, ...FALLBACKS]);
+});
+
+test("an invalid primary is skipped when a configured fallback is valid", async () => {
+  process.env.AI_MODEL = "removed/model";
+  process.env.AI_MODEL_FALLBACKS = FALLBACKS.join(",");
+  const calls = [];
+  llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); return providerSuccess("fallback"); });
+  const result = await llm.completeDetailed({ message: "hello", context: {} });
+  assert.deepEqual(calls, [FALLBACKS[0]]);
+  assert.equal(result.modelId, FALLBACKS[0]);
 });
 
 test("401 and 403 stop without fallback", async () => {

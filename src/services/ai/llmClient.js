@@ -77,9 +77,11 @@ async function completeDetailed({ message, context }) {
   const settings = config();
   if (!settings.enabled) throw unavailable("AI_DISABLED", "AI Ride Assistant is disabled", "AI_ASSISTANT_ENABLED is not true");
   if (!settings.apiKey) throw unavailable("AI_NOT_CONFIGURED", "AI Ride Assistant is not configured", "AI_API_KEY is missing");
-  registry.validateConfiguredModels(process.env);
+  const configured = registry.resolveConfiguredModels(process.env);
+  if (configured.invalid.length && process.env.NODE_ENV !== "production") console.warn("[AI] ignoring unrecognized configured models", { models: configured.invalid });
   const history = Array.isArray(context.recentConversation) ? context.recentConversation.map((item) => ({ role: item.role === "ASSISTANT" ? "assistant" : "user", content: item.content })) : [];
-  const models = [...new Set([settings.model, ...(settings.fallbackEnabled ? settings.fallbacks : [])])].slice(0, 4);
+  const models = configured.models;
+  if (!models.length) throw unavailable("LLM_MODEL_ERROR", "No configured AI models are available", "AI_MODEL and AI_MODEL_FALLBACKS contain no allowlisted models");
   let lastError;
   for (let index = 0; index < models.length; index += 1) {
     const model = models[index];
@@ -107,7 +109,7 @@ async function completeDetailed({ message, context }) {
 async function complete(args) { return (await completeDetailed(args)).text; }
 
 function isFallbackEligible(code, statusCode = null) {
-  if (["LLM_RATE_LIMIT", "LLM_MODEL_ERROR", "LLM_NETWORK_ERROR", "LLM_TIMEOUT"].includes(code)) return true;
+  if (["LLM_RATE_LIMIT", "LLM_MODEL_ERROR", "LLM_NETWORK_ERROR", "LLM_TIMEOUT", "LLM_MALFORMED_RESPONSE"].includes(code)) return true;
   return code === "LLM_PROVIDER_ERROR" && Number(statusCode) >= 500 && Number(statusCode) < 600;
 }
 

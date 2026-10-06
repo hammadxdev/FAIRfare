@@ -50,13 +50,13 @@ async function answer({ userId, message, comparisonId, conversationId }) {
   const publicContext = { comparisonUsed: Boolean(context.comparison), comparisonFreshness: context.comparison?.freshness || null, predictionAvailable: Boolean(context.comparison?.rides?.some((ride) => ride.prediction?.status === "AVAILABLE")), preferencesUsed: true, historyUsed: context.history.length > 0, historyAvailable: context.history.length > 0 };
   try {
     const result = typeof llmClient.completeDetailed === "function" ? await llmClient.completeDetailed({ message, context }) : await llmClient.complete({ message, context });
-    return { reply: typeof result === "string" ? result : result.text, modelId: typeof result === "string" ? null : result.modelId, fallbackUsed: typeof result === "string" ? false : Boolean(result.fallbackUsed || result.modelId && result.modelId !== defaultLlmClient.config().model), context: publicContext, available: true };
+    return { reply: typeof result === "string" ? result : result.text, modelId: typeof result === "string" ? null : result.modelId, fallbackUsed: typeof result === "string" ? false : Boolean(result.fallbackUsed || result.modelId && result.modelId !== defaultLlmClient.config().model), context: publicContext, available: true, status: "AVAILABLE" };
   }
   catch (error) {
     const code = error.code || "LLM_PROVIDER_ERROR";
     const reason = error.safeReason || error.message || "unknown AI error";
     console.warn("[AI] request failed", { model: defaultLlmClient.config().model, httpStatus: error.statusCode || null, providerCode: code, reason: String(reason).slice(0, 300) });
-    return { reply: "AI Ride Assistant is temporarily unavailable. Your fare comparison and history are still available.", context: publicContext, available: false, errorCode: error.code || "LLM_PROVIDER_ERROR" };
+    return { reply: null, context: publicContext, available: false, status: "UNAVAILABLE", errorCode: error.code || "LLM_PROVIDER_ERROR" };
   }
 }
 

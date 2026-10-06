@@ -56,6 +56,7 @@ test("AI failure preserves the user message but never stores fake assistant text
   assert.equal(response.status, 200);
   const conversation = response.body.data.conversation;
   assert.equal(response.body.data.available, false);
+  assert.equal(response.body.data.status, "UNAVAILABLE");
   assert.deepEqual(conversation.messages.map((message) => message.role), ["USER"]);
   assert.doesNotMatch(JSON.stringify(conversation), /temporarily unavailable/i);
 });

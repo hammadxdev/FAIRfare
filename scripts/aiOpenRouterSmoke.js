@@ -7,7 +7,7 @@ const dotenvPath = path.resolve(__dirname, "..", ".env");
 require("dotenv").config({ path: dotenvPath, quiet: true });
 const registry = require("../src/services/ai/modelRegistry");
 const client = require("../src/services/ai/llmClient");
-const INITIAL_MODEL = "google/gemma-4-31b-it:free";
+const INITIAL_MODEL = "inclusionai/ling-3.1-flash";
 
 function environmentReport() {
   const key = process.env.AI_API_KEY;
