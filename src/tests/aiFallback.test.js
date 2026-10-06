@@ -17,12 +17,15 @@ function configure() {
   process.env.AI_MODEL_FALLBACK_ENABLED = "true";
   process.env.AI_MODEL_FALLBACKS = FALLBACKS.join(",");
   process.env.AI_REQUEST_TIMEOUT_MS = "1000";
+  process.env.AI_TOTAL_REQUEST_TIMEOUT_MS = "12000";
+  process.env.AI_MAX_MODEL_ATTEMPTS = "4";
+  process.env.AI_MODEL_COOLDOWN_MS = "30000";
 }
 
 function providerSuccess(text = "ok") { return { choices: [{ message: { content: text } }] }; }
 function providerError(code, statusCode) { const error = new Error(code); error.code = code; error.statusCode = statusCode; return error; }
 
-test.beforeEach(() => { configure(); llm.setPostJsonForTests(null); });
+test.beforeEach(() => { configure(); llm.resetModelHealthForTests(); llm.setPostJsonForTests(null); });
 test.afterEach(() => { llm.setPostJsonForTests(null); });
 
 test("primary success makes one provider call", async () => {
@@ -67,6 +70,16 @@ test("multiple recoverable failures reach the next model only once", async () =>
   assert.equal(result.modelId, FALLBACKS[1]);
 });
 
+test("a fourth eligible model can succeed after three failures", async () => {
+  const extended = [FALLBACKS[0], FALLBACKS[1], "dots-studio/dots-3-note-preview:free"];
+  process.env.AI_MODEL_FALLBACKS = extended.join(",");
+  const calls = [];
+  llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); if (calls.length < 4) throw providerError("LLM_RATE_LIMIT", 429); return providerSuccess("fourth"); });
+  const result = await llm.completeDetailed({ message: "hello", context: {} });
+  assert.deepEqual(calls, [PRIMARY, ...extended]);
+  assert.equal(result.modelId, extended[2]);
+});
+
 test("all recoverable failures are bounded to the primary plus two fallbacks", async () => {
   const calls = [];
   llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); throw providerError("LLM_RATE_LIMIT", 429); });
@@ -93,12 +106,47 @@ test("401 and 403 stop without fallback", async () => {
   }
 });
 
+test("disabled AI and invalid API key are terminal without model calls", async () => {
+  let calls = 0;
+  llm.setPostJsonForTests(async () => { calls += 1; return providerSuccess("unexpected"); });
+  process.env.AI_ASSISTANT_ENABLED = "false";
+  await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "AI_DISABLED" });
+  process.env.AI_ASSISTANT_ENABLED = "true";
+  process.env.AI_API_KEY = "";
+  await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "AI_NOT_CONFIGURED" });
+  assert.equal(calls, 0);
+});
+
 test("timeout and network errors can fall back", async () => {
   const calls = [];
   llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); if (calls.length === 1) throw providerError("LLM_TIMEOUT"); return providerSuccess("network fallback"); });
   const result = await llm.completeDetailed({ message: "hello", context: {} });
   assert.deepEqual(calls, [PRIMARY, FALLBACKS[0]]);
   assert.equal(result.modelId, FALLBACKS[0]);
+});
+
+test("total request budget stops a slow fallback chain", async () => {
+  process.env.AI_TOTAL_REQUEST_TIMEOUT_MS = "20";
+  process.env.AI_REQUEST_TIMEOUT_MS = "1000";
+  const calls = [];
+  llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); await new Promise((resolve) => setTimeout(resolve, 50)); return providerSuccess("too late"); });
+  await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "LLM_TOTAL_TIMEOUT" });
+  assert.deepEqual(calls, [PRIMARY]);
+});
+
+test("repeated retryable failures cool a model down and cooldown expires", async () => {
+  process.env.AI_MODEL_COOLDOWN_MS = "10";
+  let calls = [];
+  llm.setPostJsonForTests(async (_url, _headers, body) => { const model = JSON.parse(body).model; calls.push(model); if (model === PRIMARY) throw providerError("LLM_RATE_LIMIT", 429); return providerSuccess("fallback"); });
+  await llm.completeDetailed({ message: "hello", context: {} });
+  assert.equal(llm.healthSnapshotForTests().some((item) => item.model === PRIMARY && item.coolingDown), true);
+  llm.setPostJsonForTests(async (_url, _headers, body) => { calls.push(JSON.parse(body).model); return providerSuccess("after cooldown"); });
+  const skipped = await llm.completeDetailed({ message: "hello", context: {} });
+  assert.equal(skipped.modelId, FALLBACKS[0]);
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  calls = [];
+  const recovered = await llm.completeDetailed({ message: "hello", context: {} });
+  assert.equal(recovered.modelId, PRIMARY);
 });
 
 test("successful fallback persists one user and one assistant with its model", async () => {

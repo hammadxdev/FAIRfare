@@ -4,9 +4,12 @@ const registry = require("../services/ai/modelRegistry");
 const llm = require("../services/ai/llmClient");
 
 test("AI registry contains explicit backend candidates and no secrets", () => {
-  assert.equal(registry.MODELS.length, 3);
+  assert.equal(registry.MODELS.length, 8);
   assert.equal(registry.isAllowlisted("google/gemma-4-31b-it:free"), true);
   assert.equal(registry.isAllowlisted("not-a-real-model"), false);
+  assert.equal(registry.isAllowlisted("voyageai/rerank-2.5"), false);
+  assert.equal(registry.isAllowlisted("respan/span-01-lite"), false);
+  assert.equal(registry.isAllowlisted("thinkingmachines/inkling-small:free"), false);
   assert.equal(Object.values(registry.MODELS).some((model) => Object.keys(model).some((key) => /key|secret|token/i.test(key))), false);
 });
 
@@ -21,5 +24,5 @@ test("default selection is deterministic and fallback is opt-in and bounded", ()
   assert.deepEqual(registry.parseFallbacks({ AI_MODEL_FALLBACKS: "a,b,a", AI_MODEL_FALLBACK_ENABLED: "true" }), ["a", "b"]);
   assert.equal(llm.isFallbackEligible("LLM_AUTH_ERROR"), false);
   assert.equal(llm.isFallbackEligible("LLM_RATE_LIMIT"), true);
-  assert.equal(llm.MAX_FALLBACK_ATTEMPTS, 3);
+  assert.equal(llm.MAX_FALLBACK_ATTEMPTS, 4);
 });

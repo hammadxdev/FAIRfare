@@ -49,7 +49,16 @@ async function main() {
   if (report.initialModel.classification === "AUTH_ERROR" || !["AVAILABLE", "RATE_LIMITED"].includes(report.initialModel.classification)) { console.log(JSON.stringify(report, null, 2)); return; }
   try {
     const catalog = await getJson(catalogUrl, timeoutMs); const ids = new Set((catalog.body?.data || []).map((item) => item.id)); report.catalog = { httpStatus: catalog.status, exactMatches: registry.MODELS.filter((model) => ids.has(model.id)).map((model) => model.id) };
-    for (const model of registry.MODELS) { if (model.id === INITIAL_MODEL) report.models.push(report.initialModel); else if (!ids.has(model.id)) report.models.push({ model: model.id, httpStatus: null, providerReached: true, classification: "MODEL_NOT_FOUND", providerError: "exact model ID was not present in provider catalog", assistantContentPresent: false, latencyMs: 0 }); else report.models.push(await smoke(model.id, endpoint, process.env.AI_API_KEY, timeoutMs, true)); }
+    report.models.push(report.initialModel);
+    for (const model of registry.MODELS.filter((candidate) => candidate.id !== INITIAL_MODEL)) {
+      if (!ids.has(model.id)) {
+        report.models.push({ model: model.id, httpStatus: null, providerReached: true, classification: "MODEL_NOT_FOUND", providerError: "exact model ID was not present in provider catalog", assistantContentPresent: false, latencyMs: 0 });
+        continue;
+      }
+      const result = await smoke(model.id, endpoint, process.env.AI_API_KEY, timeoutMs, true);
+      report.models.push(result);
+      if (result.success) break;
+    }
   } catch (error) { report.catalog = { classification: publicClassification(error), providerError: error.safeReason || null }; }
   console.log(JSON.stringify(report, null, 2));
 }

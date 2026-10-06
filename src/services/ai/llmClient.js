@@ -10,11 +10,35 @@ function config() {
     provider: process.env.AI_PROVIDER || "openai-compatible",
     model: registry.configuredModel(process.env),
     apiKey: process.env.AI_API_KEY,
-    timeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS || 12000),
+    timeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS || 4000),
+    totalTimeoutMs: Number(process.env.AI_TOTAL_REQUEST_TIMEOUT_MS || 12000),
+    maxAttempts: Number(process.env.AI_MAX_MODEL_ATTEMPTS || 4),
+    cooldownMs: Number(process.env.AI_MODEL_COOLDOWN_MS || 30000),
+    unavailableCooldownMs: Number(process.env.AI_MODEL_UNAVAILABLE_COOLDOWN_MS || 300000),
     endpoint: process.env.AI_API_URL || "https://api.openai.com/v1/chat/completions",
     fallbackEnabled: String(process.env.AI_MODEL_FALLBACK_ENABLED || "false").toLowerCase() === "true",
     fallbacks: registry.parseFallbacks(process.env),
   };
+}
+
+const modelHealth = new Map();
+const DEFAULT_MAX_ATTEMPTS = 4;
+
+function now() { return Date.now(); }
+function isCoolingDown(model, at = now()) { return (modelHealth.get(model)?.until || 0) > at; }
+function markModelFailure(model, error, settings, at = now()) {
+  const duration = error.code === "LLM_MODEL_ERROR" ? settings.unavailableCooldownMs : settings.cooldownMs;
+  modelHealth.set(model, { until: at + Math.max(0, duration), code: error.code || "LLM_PROVIDER_ERROR" });
+}
+function clearModelHealth(model) { modelHealth.delete(model); }
+function resetModelHealthForTests() { modelHealth.clear(); }
+function healthSnapshotForTests(at = now()) { return [...modelHealth.entries()].map(([model, health]) => ({ model, ...health, coolingDown: health.until > at })); }
+function positiveInt(value, fallback) { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback; }
+function remainingBudget(startedAt, totalTimeoutMs) { return totalTimeoutMs - (now() - startedAt); }
+function withDeadline(promise, timeoutMs) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(unavailable("LLM_TOTAL_TIMEOUT", "AI request budget exhausted")), timeoutMs); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 function safeConfigSummary(settings = config()) {
@@ -49,7 +73,7 @@ function providerFailure(statusCode, body) {
   let code = "LLM_PROVIDER_ERROR";
   if (statusCode === 401 || statusCode === 403) code = "LLM_AUTH_ERROR";
   else if (statusCode === 404 || /model.*(not found|unavailable|invalid|does not exist)/.test(modelMessage)) code = "LLM_MODEL_ERROR";
-  else if (statusCode === 408 || statusCode === 429) code = "LLM_RATE_LIMIT";
+  else if (statusCode === 408 || statusCode === 429 || /(rate.?limit|quota|capacity|temporarily unavailable|no available provider|exhausted)/.test(modelMessage)) code = "LLM_RATE_LIMIT";
   else if (statusCode < 500 || statusCode >= 600) code = "LLM_REQUEST_ERROR";
   const reason = providerMessage ? sanitizeProviderText(providerMessage) : `HTTP ${statusCode}`;
   const error = unavailable(code, `LLM provider returned ${statusCode}`, reason);
@@ -80,26 +104,32 @@ async function completeDetailed({ message, context }) {
   const configured = registry.resolveConfiguredModels(process.env);
   if (configured.invalid.length && process.env.NODE_ENV !== "production") console.warn("[AI] ignoring unrecognized configured models", { models: configured.invalid });
   const history = Array.isArray(context.recentConversation) ? context.recentConversation.map((item) => ({ role: item.role === "ASSISTANT" ? "assistant" : "user", content: item.content })) : [];
-  const models = configured.models;
+  const models = configured.models.filter((model) => !isCoolingDown(model));
   if (!models.length) throw unavailable("LLM_MODEL_ERROR", "No configured AI models are available", "AI_MODEL and AI_MODEL_FALLBACKS contain no allowlisted models");
+  const startedAt = now();
+  const maxAttempts = Math.min(positiveInt(settings.maxAttempts, DEFAULT_MAX_ATTEMPTS), models.length);
   let lastError;
-  for (let index = 0; index < models.length; index += 1) {
+  for (let index = 0; index < maxAttempts; index += 1) {
     const model = models[index];
+    const remainingMs = remainingBudget(startedAt, positiveInt(settings.totalTimeoutMs, 12000));
+    if (remainingMs <= 0) throw unavailable("LLM_TOTAL_TIMEOUT", "AI request budget exhausted");
     if (process.env.NODE_ENV !== "production") console.warn("[AI] model attempt", { model, attempt: index + 1 });
     const payload = JSON.stringify({ model, temperature: 0.2, messages: [{ role: "system", content: SYSTEM_INSTRUCTIONS }, { role: "system", content: `Fair Fare grounding (authoritative JSON; current data outranks old conversation):\n${JSON.stringify({ ...context, recentConversation: undefined })}` }, ...history, { role: "user", content: message }] });
     try {
-      const response = await (postJsonForTests || postJson)(settings.endpoint, { "Content-Type": "application/json", Authorization: `Bearer ${settings.apiKey}` }, payload, settings.timeoutMs);
+      const response = await withDeadline((postJsonForTests || postJson)(settings.endpoint, { "Content-Type": "application/json", Authorization: `Bearer ${settings.apiKey}` }, payload, Math.min(positiveInt(settings.timeoutMs, 4000), remainingMs)), remainingMs);
       const text = response?.choices?.[0]?.message?.content;
       if (typeof text !== "string" || !text.trim()) throw unavailable("LLM_MALFORMED_RESPONSE", "LLM provider returned no usable text");
-      if (process.env.NODE_ENV !== "production" && index > 0) console.warn("[AI] fallback success", { model, attempt: index + 1 });
+      clearModelHealth(model);
+      console.info("[AI] model success", { model, attempt: index + 1, elapsedMs: now() - startedAt });
       return { text: text.trim(), modelId: model, fallbackUsed: index > 0 };
     } catch (error) {
       lastError = error;
+      if (isFallbackEligible(error.code, error.statusCode)) markModelFailure(model, error, settings);
       const retryable = isFallbackEligible(error.code, error.statusCode);
       if (process.env.NODE_ENV !== "production" && retryable) {
         console.warn("[AI] recoverable model failure", { model, attempt: index + 1, httpStatus: error.statusCode || null, classification: error.code || "LLM_PROVIDER_ERROR" });
       }
-      if (!settings.fallbackEnabled || !retryable || index === models.length - 1) throw error;
+      if (!settings.fallbackEnabled || !retryable || index === maxAttempts - 1 || remainingBudget(startedAt, positiveInt(settings.totalTimeoutMs, 12000)) <= 0) throw error;
       if (process.env.NODE_ENV !== "production") console.warn("[AI] fallback continuing", { nextModel: models[index + 1], attempt: index + 2 });
     }
   }
@@ -115,4 +145,4 @@ function isFallbackEligible(code, statusCode = null) {
 
 function setPostJsonForTests(handler) { postJsonForTests = handler; }
 
-module.exports = { complete, completeDetailed, SYSTEM_INSTRUCTIONS, config, safeConfigSummary, postJson, providerFailure, unavailable, sanitizeProviderText, isFallbackEligible, setPostJsonForTests, MAX_FALLBACK_ATTEMPTS: 3 };
+module.exports = { complete, completeDetailed, SYSTEM_INSTRUCTIONS, config, safeConfigSummary, postJson, providerFailure, unavailable, sanitizeProviderText, isFallbackEligible, setPostJsonForTests, resetModelHealthForTests, healthSnapshotForTests, DEFAULT_MAX_ATTEMPTS, MAX_FALLBACK_ATTEMPTS: DEFAULT_MAX_ATTEMPTS };
