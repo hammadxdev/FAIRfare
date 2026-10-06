@@ -4,6 +4,12 @@ const AppError = require("../utils/AppError");
 const LABEL_TYPES = ["HOME", "WORK", "UNIVERSITY", "FAVORITE", "CUSTOM"];
 const COORDINATE_TOLERANCE = 0.0001;
 
+function duplicateError() {
+  const error = new AppError("This route is already saved", 409);
+  error.code = "ALREADY_SAVED";
+  return error;
+}
+
 function numericCoordinate(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
@@ -43,7 +49,7 @@ async function duplicateExists({ userId, pickup, destination, excludeId = null }
 }
 
 async function createSavedRoute({ userId, name, labelType, pickup, destination }) {
-  if (await duplicateExists({ userId, pickup, destination })) throw new AppError("This route is already saved", 409);
+  if (await duplicateExists({ userId, pickup, destination })) throw duplicateError();
   const result = await query(`INSERT INTO saved_routes
     (user_id, name, label_type, pickup_name, pickup_address, pickup_latitude, pickup_longitude,
      destination_name, destination_address, destination_latitude, destination_longitude)
@@ -58,7 +64,7 @@ async function updateSavedRoute({ id, userId, changes }) {
   const destination = changes.destination || { name: existing.destination_name, address: existing.destination_address, latitude: existing.destination_latitude, longitude: existing.destination_longitude };
   if (changes.pickup || changes.destination) {
     const duplicate = await duplicateExists({ userId, pickup, destination, excludeId: id });
-    if (duplicate) throw new AppError("This route is already saved", 409);
+    if (duplicate) throw duplicateError();
   }
   await query(`UPDATE saved_routes SET name = $1, label_type = $2,
     pickup_name = $3, pickup_address = $4, pickup_latitude = $5, pickup_longitude = $6,

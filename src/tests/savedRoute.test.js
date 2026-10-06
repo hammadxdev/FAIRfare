@@ -77,6 +77,13 @@ test("saved routes are private, client userId cannot bypass ownership, and coord
   assert.equal((await request(app).delete(`/api/saved-routes/${id}`).set("Authorization", authHeader(other))).status, 404);
   const duplicate = await request(app).post("/api/saved-routes").set("Authorization", authHeader(owner)).send({ ...routePayload, name: "Same Route", pickup: { ...routePayload.pickup, latitude: 31.12305 } });
   assert.equal(duplicate.status, 409);
+  assert.equal(duplicate.body.errorCode, "ALREADY_SAVED");
+  const displayOnlyChange = await request(app).post("/api/saved-routes").set("Authorization", authHeader(owner)).send({ ...routePayload, name: "Different label", pickup: { ...routePayload.pickup, name: "Renamed home", address: "A different display address" } });
+  assert.equal(displayOnlyChange.status, 409);
+  const reverse = await request(app).post("/api/saved-routes").set("Authorization", authHeader(owner)).send({ ...routePayload, name: "Reverse", pickup: routePayload.destination, destination: routePayload.pickup });
+  assert.equal(reverse.status, 201);
+  const differentDestination = await request(app).post("/api/saved-routes").set("Authorization", authHeader(owner)).send({ ...routePayload, name: "Different destination", destination: { ...routePayload.destination, latitude: 31.5 } });
+  assert.equal(differentDestination.status, 201);
   const otherCopy = await request(app).post("/api/saved-routes").set("Authorization", authHeader(other)).send(routePayload);
   assert.equal(otherCopy.status, 201);
   assert.equal(Number((await query("SELECT COUNT(*) AS count FROM saved_routes WHERE user_id = $1", [owner.user.id])).rows[0].count) >= 1, true);
