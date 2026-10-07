@@ -51,7 +51,7 @@ async function answer({ userId, message, comparisonId, conversationId }) {
   const publicContext = { comparisonUsed: Boolean(context.comparison), comparisonFreshness: context.comparison?.freshness || null, predictionAvailable: Boolean(context.comparison?.rides?.some((ride) => ride.prediction?.status === "AVAILABLE")), preferencesUsed: true, historyUsed: context.history.length > 0, historyAvailable: context.history.length > 0 };
   try {
     const result = typeof llmClient.completeDetailed === "function" ? await llmClient.completeDetailed({ message, context }) : await llmClient.complete({ message, context });
-    return { reply: typeof result === "string" ? result : result.text, modelId: typeof result === "string" ? null : result.modelId, fallbackUsed: typeof result === "string" ? false : Boolean(result.fallbackUsed || result.modelId && result.modelId !== defaultLlmClient.config().model), context: publicContext, available: true, status: "AVAILABLE" };
+    return { reply: typeof result === "string" ? result : result.text, modelId: typeof result === "string" ? null : result.modelId, provider: typeof result === "string" ? null : result.provider || null, fallbackUsed: typeof result === "string" ? false : Boolean(result.fallbackUsed), context: publicContext, available: true, status: "AVAILABLE" };
   }
   catch (error) {
     const code = error.code || "LLM_PROVIDER_ERROR";
