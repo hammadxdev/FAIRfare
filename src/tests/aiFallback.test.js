@@ -12,6 +12,7 @@ const FALLBACKS = ["nvidia/nemotron-3.5-lightning:free", "google/gemma-4-31b-it:
 
 function configure() {
   process.env.AI_ASSISTANT_ENABLED = "true";
+  process.env.AI_PRIMARY_PROVIDER = "openrouter";
   process.env.AI_API_KEY = "test-key";
   process.env.AI_MODEL = PRIMARY;
   process.env.AI_MODEL_FALLBACK_ENABLED = "true";
@@ -113,6 +114,7 @@ test("disabled AI and invalid API key are terminal without model calls", async (
   await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "AI_DISABLED" });
   process.env.AI_ASSISTANT_ENABLED = "true";
   process.env.AI_API_KEY = "";
+  process.env.GROQ_API_KEY = "";
   await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "AI_NOT_CONFIGURED" });
   assert.equal(calls, 0);
 });

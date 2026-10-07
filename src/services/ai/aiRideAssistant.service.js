@@ -9,6 +9,28 @@ let llmClient = defaultLlmClient;
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_HISTORY = 5;
 
+function responseLanguage(message) {
+  const value = String(message || "").toLowerCase();
+  if (/\b(mujhe|abhi|karni|karun|konsi|kaunsi|sab se|sasti|agar|wait karun|kam ho|book karni)\b/.test(value)) return "roman_urdu";
+  return "english";
+}
+
+function derivedFacts(rides) {
+  const available = rides.filter((ride) => ride.availability === "available");
+  const fareCandidates = available.filter((ride) => typeof ride.fare === "number" && Number.isFinite(ride.fare));
+  const etaCandidates = available.filter((ride) => typeof ride.pickupEtaMin === "number" && Number.isFinite(ride.pickupEtaMin));
+  const flaggedCheapest = fareCandidates.filter((ride) => ride.isCheapest);
+  const flaggedFastest = etaCandidates.filter((ride) => ride.isFastest);
+  const cheapest = (flaggedCheapest.length ? flaggedCheapest : fareCandidates.filter((ride) => ride.fare === Math.min(...fareCandidates.map((item) => item.fare))))[0] || null;
+  const fastest = (flaggedFastest.length ? flaggedFastest : etaCandidates.filter((ride) => ride.pickupEtaMin === Math.min(...etaCandidates.map((item) => item.pickupEtaMin))))[0] || null;
+  const recommendationStatuses = [...new Set(rides.map((ride) => ride.bookWait?.status).filter((status) => status && status !== "INSUFFICIENT_DATA"))];
+  return {
+    cheapest: cheapest ? { provider: cheapest.provider, fare: cheapest.fare, currency: cheapest.currency } : null,
+    fastest: fastest ? { provider: fastest.provider, pickupEtaMin: fastest.pickupEtaMin } : null,
+    bookWaitStatus: recommendationStatuses.length === 1 ? recommendationStatuses[0] : null,
+  };
+}
+
 async function safePreferences(userId) { return getPreferences(userId); }
 
 function comparisonContext(comparison) {
@@ -30,6 +52,8 @@ function comparisonContext(comparison) {
       availability: ride.isAvailable === false || ride.availability === "unavailable" ? "unavailable" : "available",
       prediction: ride.prediction ? { status: ride.prediction.status, predictedFare: ride.prediction.predictedFare ?? null, dataSource: ride.prediction.dataSource || null, model: ride.prediction.model || null } : null,
       bookWait: ride.recommendation ? { status: ride.recommendation.status, currentFare: ride.recommendation.currentFare ?? null, expectedFare: ride.recommendation.expectedFare ?? null, reason: ride.recommendation.reason || null, modelDataSource: ride.recommendation.modelDataSource || null } : null,
+      isCheapest: ride.isCheapest === true,
+      isFastest: ride.isFastest === true,
       personalization: ride.personalization ? { eligible: ride.personalization.eligible, isTopRecommendation: ride.personalization.isTopRecommendation, withinBudget: ride.personalization.withinBudget, preferredVehicleMatch: ride.personalization.preferredVehicleMatch, reasons: ride.personalization.reasons || [], exclusionReason: ride.personalization.exclusionReason || null } : null,
     })),
   };
@@ -43,7 +67,8 @@ async function buildGroundingContext({ userId, message, comparisonId, conversati
   const history = await getHistory({ userId, limit: lower.includes("recent") || lower.includes("usually") || lower.includes("compare") ? MAX_HISTORY : 3 });
   const recentConversation = conversationId ? await conversationService.recentMessages(userId, conversationId) : [];
   if (recentConversation.at(-1)?.role === "USER" && recentConversation.at(-1).content === message) recentConversation.pop();
-  return { comparison: comparisonContext(comparison), preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation, fairFareKnowledge: retrieveFairFareKnowledge(message) };
+  const comparisonData = comparisonContext(comparison);
+  return { responseLanguage: responseLanguage(message), comparison: comparisonData ? { ...comparisonData, derivedFacts: derivedFacts(comparisonData.rides) } : null, preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation, fairFareKnowledge: retrieveFairFareKnowledge(message) };
 }
 
 async function answer({ userId, message, comparisonId, conversationId }) {
@@ -64,4 +89,4 @@ async function answer({ userId, message, comparisonId, conversationId }) {
 function setLlmClientForTests(client) { llmClient = client; }
 function validateMessage(message) { if (typeof message !== "string" || !message.trim()) return "message is required"; if (message.length > MAX_MESSAGE_LENGTH) return `message must be ${MAX_MESSAGE_LENGTH} characters or fewer`; return null; }
 
-module.exports = { answer, buildGroundingContext, comparisonContext, validateMessage, setLlmClientForTests, MAX_MESSAGE_LENGTH };
+module.exports = { answer, buildGroundingContext, comparisonContext, derivedFacts, responseLanguage, validateMessage, setLlmClientForTests, MAX_MESSAGE_LENGTH };
