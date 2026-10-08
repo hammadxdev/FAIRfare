@@ -152,7 +152,7 @@ function rankPersonalizedRides({ results = [], preferences = {}, requestedVehicl
     if (item.preferredVehicleMatch) personalization.reasons.push("Matches your preferred vehicle type.");
     if (normalizedPreferences.typicalBudget != null && item.withinBudget) personalization.reasons.push(`Within your ${normalizedPreferences.currency || "PKR"} ${formatBudget(normalizedPreferences.typicalBudget)} typical budget.`);
     if (item.fare === fareMin) personalization.reasons.push("One of the lowest-fare eligible options.");
-    if (etaAvailable && item.etaMin === etaMin) personalization.reasons.push("Has a faster pickup among eligible options.");
+    if (etaAvailable && item.etaMin === etaMin) personalization.reasons.push("Has a faster unverified simulated pickup estimate among eligible options.");
     return { ...item, personalization };
   });
 

@@ -26,7 +26,7 @@ function derivedFacts(rides) {
   const recommendationStatuses = [...new Set(rides.map((ride) => ride.bookWait?.status).filter((status) => status && status !== "INSUFFICIENT_DATA"))];
   return {
     cheapest: cheapest ? { provider: cheapest.provider, fare: cheapest.fare, currency: cheapest.currency } : null,
-    fastest: fastest ? { provider: fastest.provider, pickupEtaMin: fastest.pickupEtaMin } : null,
+    pickupEstimate: fastest ? { provider: fastest.provider, pickupEtaMin: fastest.pickupEtaMin, verified: false } : null,
     bookWaitStatus: recommendationStatuses.length === 1 ? recommendationStatuses[0] : null,
   };
 }

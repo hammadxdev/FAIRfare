@@ -50,7 +50,7 @@ test("CHEAPEST prioritizes fare but never crosses an avoided vehicle", () => {
 test("FASTEST_PICKUP prioritizes lower ETA", () => {
   const results = rankPersonalizedRides({ results: [ride("fast", 550, "RICKSHAW", 5), ride("cheap", 250, "RICKSHAW", 20)], preferences: preferences({ ridePriority: "FASTEST_PICKUP" }), requestedVehicleType: "rickshaw" });
   assert.equal(results.find((r) => r.personalization.isTopRecommendation).provider.id, "fast");
-  assert.ok(results.find((r) => r.provider.id === "fast").personalization.reasons.some((reason) => /faster pickup/.test(reason)));
+  assert.ok(results.find((r) => r.provider.id === "fast").personalization.reasons.some((reason) => /faster unverified simulated pickup estimate/.test(reason)));
 });
 
 test("BALANCED uses fare, ETA, preference and budget without black-box values", () => {

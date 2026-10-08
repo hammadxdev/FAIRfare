@@ -14,7 +14,7 @@ function context(responseLanguage = "english") {
       ],
       derivedFacts: {
         cheapest: { provider: "inDrive", fare: 280, currency: "PKR" },
-        fastest: { provider: "Bykea", pickupEtaMin: 7 },
+        pickupEstimate: { provider: "Bykea", pickupEtaMin: 7, verified: false },
         bookWaitStatus: "BOOK_NOW",
       },
     },
@@ -36,7 +36,7 @@ test("comparison grounding supplies deterministic cheapest and fastest facts", (
   assert.equal(result.rides[2].isFastest, true);
   assert.deepEqual(derivedFacts(result.rides), {
     cheapest: { provider: "inDrive", fare: 280, currency: "PKR" },
-    fastest: { provider: "Bykea", pickupEtaMin: 7 },
+    pickupEstimate: { provider: "Bykea", pickupEtaMin: 7, verified: false },
     bookWaitStatus: null,
   });
 });
@@ -53,6 +53,20 @@ test("Roman Urdu simple answers mirror language without converting fares to rang
   assert.equal(groundedReply({ text: "English range PKR 280-350", message: "Konsi ride sab se sasti hai?", context: roman }), "inDrive filhal sab se sasti estimated option hai, PKR 280.");
   assert.equal(groundedReply({ text: "English answer", message: "Mujhe abhi ride book karni chahiye ya wait karun?", context: roman }), "Abhi book karna reasonable lagta hai. Fair Fare ka signal sirf advisory hai aur future fare ki guarantee nahi deta.");
   assert.match(groundedReply({ text: "English answer", message: "Agar main wait karun to kya fare kam ho jayega?", context: roman }), /guarantee nahi deta/);
+});
+
+test("pickup ETA questions use the live-availability limitation", () => {
+  const reply = groundedReply({ text: "Bykea arrives in 7 minutes.", message: "Which pickup is fastest?", context: context() });
+  assert.equal(reply, "Fair Fare doesn't currently have live driver pickup times. You can check availability in the provider's app.");
+  assert.doesNotMatch(reply, /driver is|fastest pickup|arriving soon|available now/i);
+});
+
+test("pickup facts remain explicitly unverified while route facts remain available", () => {
+  const result = comparisonContext({ distanceKm: 4.2, durationMin: 18, results: [{ provider: { displayName: "Bykea" }, fare: 300, etaMin: 7, isAvailable: true }] });
+  assert.equal(result.route.distanceKm, 4.2);
+  assert.equal(result.route.durationMin, 18);
+  assert.equal(derivedFacts(result.rides).pickupEstimate.verified, false);
+  assert.match(SYSTEM_INSTRUCTIONS, /does not have live driver locations/i);
 });
 
 test("system policy distinguishes expected fare from future fare and provider offer", () => {
