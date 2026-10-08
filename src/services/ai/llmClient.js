@@ -164,8 +164,11 @@ function setPostJsonForTests(handler) { postJsonForTests = handler; }
 
 function groundedReply({ text, message, context }) {
   const value = String(message || "").toLowerCase();
-  const pickupQuestion = /\b(pickup|driver|arrival|arriving|eta|availability)\b/.test(value)
-    && /\b(when|how long|fast|soon|arriv|available|availability|eta|time|minute|pickup)\b/.test(value);
+  const pickupQuestion = (/\b(pickup|driver|arrival|arriving|eta|availability)\b/.test(value)
+    && /\b(when|how long|fast|soon|arriv|available|availability|eta|time|minute|pickup)\b/.test(value))
+    || (/\b(fastest|quickest)\b/.test(value)
+      && /\b(ride|provider|option|pickup|driver|arrival|eta|availability)\b/.test(value)
+      && !/\b(route|trip|travel|duration)\b/.test(value));
   if (pickupQuestion) return PICKUP_ETA_RESPONSE;
   const comparison = context?.comparison;
   const facts = comparison?.derivedFacts;

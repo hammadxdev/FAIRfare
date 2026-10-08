@@ -61,6 +61,12 @@ test("pickup ETA questions use the live-availability limitation", () => {
   assert.doesNotMatch(reply, /driver is|fastest pickup|arriving soon|available now/i);
 });
 
+test("fastest ride/provider questions cannot turn simulated ETA into a live claim", () => {
+  const expected = "Fair Fare doesn't currently have live driver pickup times. You can check availability in the provider's app.";
+  assert.equal(groundedReply({ text: "Bykea is fastest.", message: "Which ride is fastest?", context: context() }), expected);
+  assert.equal(groundedReply({ text: "Bykea has the fastest pickup.", message: "Which provider has the fastest pickup?", context: context() }), expected);
+});
+
 test("pickup facts remain explicitly unverified while route facts remain available", () => {
   const result = comparisonContext({ distanceKm: 4.2, durationMin: 18, results: [{ provider: { displayName: "Bykea" }, fare: 300, etaMin: 7, isAvailable: true }] });
   assert.equal(result.route.distanceKm, 4.2);
@@ -75,4 +81,6 @@ test("system policy distinguishes expected fare from future fare and provider of
   assert.match(SYSTEM_INSTRUCTIONS, /final provider or driver offer may differ/i);
   assert.match(SYSTEM_INSTRUCTIONS, /does not complete booking/i);
   assert.match(SYSTEM_INSTRUCTIONS, /roman_urdu/i);
+  assert.match(SYSTEM_INSTRUCTIONS, /For any pickup ETA, driver arrival, fastest pickup, or pickup availability question/i);
+  assert.match(SYSTEM_INSTRUCTIONS, /Road distance and travel duration are Geoapify route estimates/i);
 });
