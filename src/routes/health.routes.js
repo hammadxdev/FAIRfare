@@ -10,7 +10,10 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/config", (req, res) => res.json({ success: true, data: {
-  JWT_ACCESS_SECRET: Boolean(process.env.JWT_ACCESS_SECRET), AI_API_KEY: Boolean(process.env.AI_API_KEY),
+  JWT_ACCESS_SECRET: Boolean(process.env.JWT_ACCESS_SECRET),
+  OPENROUTER_API_KEY: Boolean(process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY),
+  AI_API_KEY_LEGACY: Boolean(process.env.AI_API_KEY),
+  GROQ_API_KEY: Boolean(process.env.GROQ_API_KEY),
   GOOGLE_OAUTH: Boolean(process.env.GOOGLE_OAUTH_CLIENT_ID), OTP_PROVIDER: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID), MAPS_KEY: Boolean(process.env.GEOAPIFY_API_KEY || process.env.GOOGLE_MAPS_API_KEY),
 } }));
 

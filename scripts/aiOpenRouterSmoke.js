@@ -1,4 +1,4 @@
-/* Backend-only diagnostic. Never pass or print AI_API_KEY. */
+/* Backend-only diagnostic. Never pass or print provider keys. */
 const fs = require("fs");
 const path = require("path");
 const https = require("https");
@@ -10,7 +10,7 @@ const client = require("../src/services/ai/llmClient");
 const INITIAL_MODEL = "inclusionai/ling-3.1-flash";
 
 function environmentReport() {
-  const key = process.env.AI_API_KEY;
+  const key = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY;
   return { cwd: process.cwd(), dotenvPath, dotenvExists: fs.existsSync(dotenvPath), apiKeyConfigured: Boolean(key), apiKeyLength: key?.length || 0, expectedOpenRouterPrefix: key?.startsWith("sk-or-") || false, surroundingQuotes: Boolean(key && (/^[\"']|[\"']$/.test(key))), surroundingWhitespace: Boolean(key && key !== key.trim()) };
 }
 
@@ -44,8 +44,9 @@ async function smoke(model, endpoint, apiKey, timeoutMs, fullSmoke = false) {
 async function main() {
   const env = environmentReport(); const endpoint = process.env.AI_API_URL || "https://openrouter.ai/api/v1/chat/completions"; const catalogUrl = endpoint.replace(/\/chat\/completions(?:\?.*)?$/, "/models"); const timeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS || 30000);
   const report = { environment: env, apiKeyConfigured: env.apiKeyConfigured, rotationAdvisory: String(process.env.AI_ROTATION_ADVISORY || "false").toLowerCase() === "true", rotationRequired: false, initialModel: null, catalog: null, models: [] };
-  if (!env.apiKeyConfigured) { report.initialModel = { model: INITIAL_MODEL, httpStatus: null, providerReached: false, classification: "KEY_NOT_CONFIGURED", providerError: "AI_API_KEY is missing before any request", assistantContentPresent: false }; report.rotationRequired = report.rotationAdvisory; console.log(JSON.stringify(report, null, 2)); return; }
-  report.initialModel = await smoke(INITIAL_MODEL, endpoint, process.env.AI_API_KEY, timeoutMs);
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.AI_API_KEY;
+  if (!env.apiKeyConfigured) { report.initialModel = { model: INITIAL_MODEL, httpStatus: null, providerReached: false, classification: "KEY_NOT_CONFIGURED", providerError: "OpenRouter API key is missing before any request", assistantContentPresent: false }; report.rotationRequired = report.rotationAdvisory; console.log(JSON.stringify(report, null, 2)); return; }
+  report.initialModel = await smoke(INITIAL_MODEL, endpoint, apiKey, timeoutMs);
   if (report.initialModel.classification === "AUTH_ERROR" || !["AVAILABLE", "RATE_LIMITED"].includes(report.initialModel.classification)) { console.log(JSON.stringify(report, null, 2)); return; }
   try {
     const catalog = await getJson(catalogUrl, timeoutMs); const ids = new Set((catalog.body?.data || []).map((item) => item.id)); report.catalog = { httpStatus: catalog.status, exactMatches: registry.MODELS.filter((model) => ids.has(model.id)).map((model) => model.id) };
@@ -55,7 +56,7 @@ async function main() {
         report.models.push({ model: model.id, httpStatus: null, providerReached: true, classification: "MODEL_NOT_FOUND", providerError: "exact model ID was not present in provider catalog", assistantContentPresent: false, latencyMs: 0 });
         continue;
       }
-      const result = await smoke(model.id, endpoint, process.env.AI_API_KEY, timeoutMs, true);
+      const result = await smoke(model.id, endpoint, apiKey, timeoutMs, true);
       report.models.push(result);
       if (result.success) break;
     }

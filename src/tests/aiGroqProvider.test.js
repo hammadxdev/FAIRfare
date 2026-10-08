@@ -11,6 +11,7 @@ function configure() {
   process.env.GROQ_MODEL = "openai/gpt-oss-120b";
   process.env.GROQ_FALLBACK_MODEL = "openai/gpt-oss-20b";
   process.env.AI_API_KEY = "test-openrouter-key";
+  delete process.env.OPENROUTER_API_KEY;
   process.env.AI_MODEL = "inclusionai/ling-3.1-flash";
   process.env.AI_MODEL_FALLBACK_ENABLED = "true";
   process.env.AI_MODEL_FALLBACKS = OPENROUTER_FALLBACK;
@@ -38,6 +39,15 @@ test("Groq GPT-OSS 120B is primary with hidden low reasoning and bounded output"
   assert.equal(call.body.max_completion_tokens, 450);
   assert.equal(call.headers.Authorization, "Bearer test-groq-key");
   assert.equal(JSON.stringify(call.body).includes("test-groq-key"), false);
+});
+
+test("OPENROUTER_API_KEY is preferred over the legacy AI_API_KEY alias", () => {
+  process.env.OPENROUTER_API_KEY = "canonical-openrouter-key";
+  assert.equal(llm.config().openRouterApiKey, "canonical-openrouter-key");
+});
+
+test("legacy AI_API_KEY still configures OpenRouter when canonical key is absent", () => {
+  assert.equal(llm.config().openRouterApiKey, "test-openrouter-key");
 });
 
 test("Groq 429 uses Retry-After cooldown and then the Groq secondary", async () => {

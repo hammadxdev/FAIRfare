@@ -618,7 +618,9 @@ Book/Wait, and personalization outputs to the configured LLM. The LLM does
 not calculate fares or rerank rides. Current comparisons use a short-lived
 server-owned enriched context; historical entries remain snapshots.
 
-Set `AI_ASSISTANT_ENABLED=true`, `AI_API_KEY`, and optionally `AI_MODEL`,
+Set `AI_ASSISTANT_ENABLED=true`, `GROQ_API_KEY`, and, when OpenRouter fallback
+is enabled, `OPENROUTER_API_KEY`. `AI_API_KEY` remains supported as a legacy
+OpenRouter alias. Optionally set `AI_MODEL`,
 `AI_API_URL`, and `AI_REQUEST_TIMEOUT_MS` in the backend environment. When
 disabled or unconfigured, the endpoint returns a safe unavailable response
 and does not affect fare comparison. Automated tests inject a mock client and

@@ -14,6 +14,7 @@ function configure() {
   process.env.AI_ASSISTANT_ENABLED = "true";
   process.env.AI_PRIMARY_PROVIDER = "openrouter";
   process.env.AI_API_KEY = "test-key";
+  delete process.env.OPENROUTER_API_KEY;
   process.env.AI_MODEL = PRIMARY;
   process.env.AI_MODEL_FALLBACK_ENABLED = "true";
   process.env.AI_MODEL_FALLBACKS = FALLBACKS.join(",");
@@ -114,6 +115,7 @@ test("disabled AI and invalid API key are terminal without model calls", async (
   await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "AI_DISABLED" });
   process.env.AI_ASSISTANT_ENABLED = "true";
   process.env.AI_API_KEY = "";
+  process.env.OPENROUTER_API_KEY = "";
   process.env.GROQ_API_KEY = "";
   await assert.rejects(() => llm.completeDetailed({ message: "hello", context: {} }), { code: "AI_NOT_CONFIGURED" });
   assert.equal(calls, 0);

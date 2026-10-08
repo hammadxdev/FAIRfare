@@ -1,4 +1,4 @@
-/* Same-process backend-client diagnostic. Never print AI_API_KEY or Authorization. */
+/* Same-process backend-client diagnostic. Never print provider keys or Authorization. */
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "..", ".env"), quiet: true });
 const client = require("../src/services/ai/llmClient");
@@ -8,7 +8,7 @@ async function main() {
   const summary = client.safeConfigSummary(settings);
   const started = Date.now();
   let result;
-  if (!settings.apiKey) result = { httpStatus: null, providerReached: false, classification: "KEY_NOT_CONFIGURED", providerError: "AI_API_KEY is missing before request" };
+  if (!settings.apiKey) result = { httpStatus: null, providerReached: false, classification: "KEY_NOT_CONFIGURED", providerError: "OpenRouter API key is missing before request" };
   else {
     try {
       const response = await client.postJson(settings.endpoint, { "Content-Type": "application/json", Authorization: `Bearer ${settings.apiKey}` }, JSON.stringify({ model: settings.model, messages: [{ role: "user", content: "Reply with exactly OK." }] }), settings.timeoutMs);
