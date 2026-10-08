@@ -24,6 +24,15 @@ Vercel dashboard or CLI for the target project and environment.
 | `BYKEA_MODE` | UNVERIFIED | Expected `simulated` |
 | `FAIRFARE_WEATHER_ENABLED` | UNVERIFIED | Expected `true` when weather enrichment is intended |
 
+### Manual Production verification
+
+- [ ] Open the correct Vercel project and select the `Production` environment.
+- [ ] Confirm every required variable name in the table exists; for the OpenRouter requirement, confirm at least one of `OPENROUTER_API_KEY` or legacy `AI_API_KEY` exists.
+- [ ] Confirm non-secret values exactly: `AI_ASSISTANT_ENABLED=true`, `FAIRFARE_SIMULATION_ONLY=true`, `INDRIVE_MODE=simulated`, `YANGO_MODE=simulated`, `BYKEA_MODE=simulated`, and `FAIRFARE_WEATHER_ENABLED=true`.
+- [ ] Confirm secret values are present without copying them into tickets, logs, screenshots, shell history, or chat.
+- [ ] Confirm the variables are scoped to Production, then redeploy only through the normal release process after the checklist is approved.
+- [ ] Treat `vercel env ls` as name/scope evidence only; do not use local `.env` or an unscoped environment listing as proof of Production values.
+
 ## AI provider behavior
 
 - Groq is primary when `GROQ_API_KEY` is configured.
@@ -126,6 +135,16 @@ FROM pg_indexes
 WHERE schemaname = 'public'
   AND indexname IN ('idx_ai_messages_conversation_client',
                     'idx_fare_observations_observed_at');
+
+SELECT CASE WHEN EXISTS (
+  SELECT 1
+  FROM pg_indexes
+  WHERE schemaname = 'public'
+    AND indexname = 'idx_ai_messages_conversation_client'
+    AND indexdef ILIKE '%CREATE UNIQUE INDEX%'
+    AND indexdef ILIKE '%(conversation_id, client_message_id)%'
+    AND indexdef ILIKE '%client_message_id IS NOT NULL%'
+) THEN 'PRESENT' ELSE 'MISSING' END AS migration_006_idempotency_index;
 
 SELECT table_name, column_name, data_type, column_default
 FROM information_schema.columns

@@ -5,10 +5,10 @@ function configuredThreshold() {
   return Number.isFinite(value) && value > 0 && value < 100 ? value : DEFAULT_THRESHOLD_PERCENT;
 }
 
-function insufficientData(reason = "Not enough prediction data for a fare recommendation.", prediction = null) {
+function insufficientData(reason = "Not enough prediction data for a fare recommendation.", prediction = null, currentFare = null) {
   return {
     status: "INSUFFICIENT_DATA",
-    currentFare: null,
+    currentFare,
     expectedFare: null,
     difference: null,
     percentageDifference: null,
@@ -23,7 +23,7 @@ function recommendRide({ currentFare, prediction }) {
     return insufficientData("Current fare is unavailable for a fare recommendation.", prediction);
   }
   if (!prediction || prediction.status !== "AVAILABLE" || typeof prediction.predictedFare !== "number" || !Number.isFinite(prediction.predictedFare) || prediction.predictedFare <= 0) {
-    return insufficientData(undefined, prediction);
+    return insufficientData(undefined, prediction, currentFare);
   }
 
   const expectedFare = prediction.predictedFare;

@@ -15,6 +15,7 @@ const { rememberComparison } = require("./currentComparison.service");
 const { resolveWeatherContext } = require("./weatherContext.service");
 
 function dataSourceForAdapter(adapter) {
+  if (process.env.NODE_ENV === "test") return "TEST";
   return adapter.mode === "real" ? "REAL" : "SIMULATED";
 }
 

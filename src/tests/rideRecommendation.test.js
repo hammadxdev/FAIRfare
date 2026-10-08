@@ -19,7 +19,7 @@ test("close and exact fares are NEUTRAL", () => {
 test("prediction unavailable statuses produce INSUFFICIENT_DATA", () => {
   for (const status of ["MODEL_NOT_TRAINED", "UNSUPPORTED_CATEGORY", "PREDICTION_FAILED"]) {
     const result = recommendRide({ currentFare: 420, prediction: prediction(null, { status }) });
-    assert.equal(result.status, "INSUFFICIENT_DATA"); assert.equal(result.modelDataSource, "SIMULATED");
+    assert.equal(result.status, "INSUFFICIENT_DATA"); assert.equal(result.modelDataSource, "SIMULATED"); assert.equal(result.currentFare, 420);
   }
   assert.equal(recommendRide({ currentFare: 420, prediction: null }).status, "INSUFFICIENT_DATA");
 });

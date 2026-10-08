@@ -30,7 +30,7 @@ test("one successful quote creates one observation with numeric route and histor
     route: { distanceKm: 19.124, durationMin: 36.3 },
   });
   assert.equal(response.status, 200);
-  const row = (await query("SELECT * FROM fare_observations WHERE pickup_latitude = $1 ORDER BY id DESC LIMIT 1", [route.pickup.lat])).rows[0];
+  const row = (await query("SELECT * FROM fare_observations WHERE comparison_id = $1 LIMIT 1", [response.body.data.comparisonId])).rows[0];
   assert.ok(row);
   assert.equal(typeof row.distance_meters, "number");
   assert.equal(typeof row.duration_seconds, "number");
