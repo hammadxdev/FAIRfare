@@ -7,7 +7,7 @@ const {
   validateReverseGeocodeQuery,
   validateRouteRequest,
 } = require("../utils/validators");
-const googleMapsService = require("../services/googleMaps.service");
+const mapsService = require("../services/maps");
 const mapUsageService = require("../services/mapUsage.service");
 const { decodePolyline } = require("../services/polyline.service");
 const {
@@ -25,7 +25,7 @@ function logMapRequest(endpoint, meta) {
 
 function assertUnderDailyLimit() {
   if (mapUsageService.hasReachedLimit()) {
-    throw new AppError("Daily Google Maps request limit reached for demo safety.", 429);
+    throw new AppError("Daily map provider request limit reached for demo safety.", 429);
   }
 }
 
@@ -46,19 +46,19 @@ const autocompleteHandler = asyncHandler(async (req, res) => {
   const lat = req.query.lat === undefined || req.query.lat === "" ? null : Number(req.query.lat);
   const lng = req.query.lng === undefined || req.query.lng === "" ? null : Number(req.query.lng);
   const locationKey = lat == null ? "none" : `${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const cacheKey = `${input.trim().toLowerCase()}::${sessionToken}::${locationKey}`;
+  const cacheKey = `${input.trim().toLowerCase()}::${locationKey}`;
   const cached = autocompleteCache.get(cacheKey);
   if (cached) {
-    logMapRequest("autocomplete", { input, cache: "hit" });
+    logMapRequest("autocomplete", { queryLength: input.trim().length, cache: "hit" });
     return success(res, { data: cached });
   }
 
   assertUnderDailyLimit();
 
-  const data = await googleMapsService.fetchAutocomplete({ input: input.trim(), sessionToken, lat, lng });
+  const data = await mapsService.fetchAutocomplete({ input: input.trim(), sessionToken, lat, lng });
   mapUsageService.recordRequest("autocompleteRequests");
   autocompleteCache.set(cacheKey, data);
-  logMapRequest("autocomplete", { input, cache: "miss" });
+  logMapRequest("autocomplete", { queryLength: input.trim().length, cache: "miss" });
 
   return success(res, { data });
 });
@@ -74,16 +74,16 @@ const placeDetailsHandler = asyncHandler(async (req, res) => {
   const cacheKey = placeId;
   const cached = placeDetailsCache.get(cacheKey);
   if (cached) {
-    logMapRequest("place-details", { placeId, cache: "hit" });
+    logMapRequest("place-details", { cache: "hit" });
     return success(res, { data: cached });
   }
 
   assertUnderDailyLimit();
 
-  const data = await googleMapsService.fetchPlaceDetails({ placeId, sessionToken });
+  const data = await mapsService.fetchPlaceDetails({ placeId, sessionToken });
   mapUsageService.recordRequest("placeDetailsRequests");
   placeDetailsCache.set(cacheKey, data);
-  logMapRequest("place-details", { placeId, cache: "miss" });
+  logMapRequest("place-details", { cache: "miss" });
 
   return success(res, { data });
 });
@@ -107,7 +107,7 @@ const reverseGeocodeHandler = asyncHandler(async (req, res) => {
 
   assertUnderDailyLimit();
 
-  const data = await googleMapsService.fetchReverseGeocode({ lat, lng });
+  const data = await mapsService.fetchReverseGeocode({ lat, lng });
   mapUsageService.recordRequest("reverseGeocodeRequests");
   reverseGeocodeCache.set(cacheKey, data);
   logMapRequest("reverse-geocode", { cache: "miss" });
@@ -135,7 +135,7 @@ const routeHandler = asyncHandler(async (req, res) => {
 
   assertUnderDailyLimit();
 
-  const { distanceMeters, durationSeconds, encodedPolyline } = await googleMapsService.computeRoute({
+  const { distanceMeters, durationSeconds, encodedPolyline } = await mapsService.computeRoute({
     origin,
     destination,
     vehicleType,

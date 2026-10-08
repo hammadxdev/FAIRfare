@@ -1,4 +1,4 @@
-// Simple in-memory TTL cache used to avoid repeat Google Maps calls for the
+// Simple in-memory TTL cache used to avoid repeat map-provider calls for the
 // same input. No external cache (Redis etc.) needed for FYP-demo scale.
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
@@ -33,7 +33,7 @@ class TTLCache {
   }
 }
 
-const cacheEnabled = process.env.GOOGLE_MAPS_ENABLE_CACHE !== "false";
+const cacheEnabled = process.env.MAPS_ENABLE_CACHE !== "false" && process.env.GOOGLE_MAPS_ENABLE_CACHE !== "false";
 
 // One cache per endpoint so keys/TTLs can differ and a clear() on one
 // doesn't wipe the others.

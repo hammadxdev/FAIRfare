@@ -1,7 +1,7 @@
-// In-memory Google Maps usage tracking. Resets when the process restarts or
+// In-memory map-provider usage tracking. Resets when the process restarts or
 // when the calendar date changes — good enough for FYP-demo safety, not a
-// substitute for real Google Cloud quota/billing alerts.
-const dailyLimit = Number(process.env.GOOGLE_MAPS_DAILY_REQUEST_LIMIT || 500);
+// substitute for provider quota alerts.
+const dailyLimit = Number(process.env.MAPS_DAILY_REQUEST_LIMIT || process.env.GOOGLE_MAPS_DAILY_REQUEST_LIMIT || 500);
 
 const REQUEST_TYPES = [
   "autocompleteRequests",
@@ -30,7 +30,7 @@ function getTotal() {
   return REQUEST_TYPES.reduce((sum, type) => sum + usage[type], 0);
 }
 
-// Only call this right before making a real Google API call (not on cache hits).
+// Only call this right before making a real provider API call (not on cache hits).
 function recordRequest(type) {
   resetIfNewDay();
   usage[type] += 1;
@@ -48,6 +48,8 @@ function getUsageSummary() {
     placeDetailsRequests: usage.placeDetailsRequests,
     reverseGeocodeRequests: usage.reverseGeocodeRequests,
     routeRequests: usage.routeRequests,
+    totalMapRequests: getTotal(),
+    // Preserve the old response field for existing diagnostics consumers.
     totalGoogleRequests: getTotal(),
     dailyLimit,
   };

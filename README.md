@@ -290,7 +290,15 @@ If `route` is omitted, the endpoint behaves exactly as before (haversine
 estimate). If `route` is present, both `distanceKm` and `durationMin` must be
 positive numbers or the request fails validation.
 
-## Google Maps Setup
+## Active Geoapify Maps Setup
+
+Fair Fare V1 uses Geoapify for autocomplete, place details, reverse geocoding,
+and road routing. Set `MAPS_PROVIDER=geoapify` and `GEOAPIFY_API_KEY` in the
+backend environment; the key never ships to mobile. The legacy Google section
+below is retained as parked historical setup only and is not used by the
+normal runtime.
+
+## Legacy Google Maps Setup
 
 The map module (`/api/maps/*`) proxies four Google Maps Platform APIs so the
 API key **never** ships to the frontend. In [Google Cloud Console](https://console.cloud.google.com/):
@@ -697,8 +705,8 @@ restarts, attach a persistent volume/disk and point `DB_PATH` at it.
 1. Push this backend to your host of choice (or connect the repo).
 2. Set the start command to `npm start` and build command to `npm install && npm run migrate && npm run seed`.
 3. Set environment variables on the host (never commit real values):
-   `GOOGLE_MAPS_API_KEY`, `GOOGLE_MAPS_DAILY_REQUEST_LIMIT`,
-   `GOOGLE_MAPS_ENABLE_CACHE`, and optionally `PORT`/`DB_PATH` if the host
+   `GEOAPIFY_API_KEY`, `MAPS_DAILY_REQUEST_LIMIT`, `MAPS_ENABLE_CACHE`,
+   and optionally `PORT`/`DB_PATH` if the host
    requires specific values.
 4. Once live, note the public URL (e.g. `https://fairfare-backend.example.com`)
    — the mobile app needs `https://fairfare-backend.example.com/api` as its

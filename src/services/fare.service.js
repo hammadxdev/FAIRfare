@@ -45,7 +45,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     throw new AppError("No active providers configured", 500);
   }
 
-  // Prefer real Google route distance/duration when the frontend has it;
+  // Prefer real map-provider route distance/duration when the frontend has it;
   // otherwise fall back to the haversine-based estimate.
   const { distanceKm, durationMin } =
     route && route.distanceKm && route.durationMin
