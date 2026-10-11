@@ -167,34 +167,75 @@ function setPostJsonForTests(handler) { postJsonForTests = handler; }
 
 function groundedReply({ text, message, context }) {
   const value = String(message || "").toLowerCase();
+  const comparison = context?.comparison;
+  const rides = Array.isArray(comparison?.rides)
+    ? comparison.rides.filter((ride) => ride?.availability !== "unavailable" && Number.isFinite(Number(ride.fare)))
+    : [];
+  const roman = context?.responseLanguage === "roman_urdu";
+  const hasAssistantContext = typeof context?.responseLanguage === "string";
+  const mentionsGarrison = /lahore\s+garrison|garrison\s+(jana|jaana|university|club)/.test(value);
+  const exactGarrisonPlace = /garrison\s+university|garrison\s+club/.test(value);
+  if (hasAssistantContext && !comparison && mentionsGarrison && !exactGarrisonPlace) {
+    return roman
+      ? "Lahore Garrison se aap University, Club ya kisi aur jagah jana chahte hain? Exact destination select kar dein."
+      : "Do you mean Lahore Garrison University, Lahore Garrison Club, or another destination? Please select the exact drop-off place.";
+  }
+  if (hasAssistantContext && !comparison && (/\b(jana|jaana|go|travel|destination|drop.?off|kiraya|fare)\b/.test(value) || /\b(cheapest|sasti|kitna|how much|book now|should i book)\b/.test(value))) {
+    return roman
+      ? "Pehle Home par pickup aur exact drop-off select karke vehicle choose karein, phir Compare Fares dabayein. Us comparison ke baad main estimates samjha sakta hoon."
+      : "Please select your pickup and exact drop-off on Home, choose a vehicle, and tap Compare Fares. Then I can explain the estimates for that route.";
+  }
   const pickupQuestion = (/\b(pickup|driver|arrival|arriving|eta|availability)\b/.test(value)
     && /\b(when|how long|fast|soon|arriv|available|availability|eta|time|minute|pickup)\b/.test(value))
     || (/\b(fastest|quickest)\b/.test(value)
       && /\b(ride|provider|option|pickup|driver|arrival|eta|availability)\b/.test(value)
       && !/\b(route|trip|travel|duration)\b/.test(value));
   if (pickupQuestion) return PICKUP_ETA_RESPONSE;
-  const comparison = context?.comparison;
   const facts = comparison?.derivedFacts;
   if (!facts) return text;
-  const roman = context?.responseLanguage === "roman_urdu";
   const bookWaitStatus = facts.bookWaitStatus || comparison.bookWait?.status;
-  const cheapest = facts.cheapest;
+  const cheapest = facts.cheapest || (rides.length ? rides.reduce((best, ride) => Number(ride.fare) < Number(best.fare) ? ride : best) : null);
   const money = (fact) => fact ? `${fact.currency || "PKR"} ${fact.fare}` : null;
+  const comparisonSummary = rides.length > 1 ? ` Compared estimates: ${rides.map((ride) => `${ride.provider} ${ride.currency || "PKR"} ${ride.fare}`).join(", ")}.` : "";
   if (/\b(cheapest|cheapest fare|sasti|sab se sasti)\b/.test(value) && cheapest) {
     return roman ? `${cheapest.provider} filhal sab se sasti estimated option hai, ${money(cheapest)}.` : `${cheapest.provider} is currently estimated as the cheapest at ${money(cheapest)}.`;
+  }
+  if (/\b(bike|rickshaw)\b/.test(value) && /\b(sasta|cheaper|cheap|fare|kiraya)\b/.test(value) && rides.length) {
+    const candidates = rides.filter((ride) => /bike|rickshaw/i.test(`${ride.vehicleType || ""} ${ride.provider || ""}`));
+    if (candidates.length) {
+      const cheapestVehicle = candidates.reduce((best, ride) => Number(ride.fare) < Number(best.fare) ? ride : best);
+      return roman
+        ? `${cheapestVehicle.vehicleType || "Yeh option"} ka estimated fare ${money(cheapestVehicle)} hai. Final offer provider app mein check karein.`
+        : `${cheapestVehicle.vehicleType || "This option"} is currently estimated at ${money(cheapestVehicle)} among the compared options. Check the provider app for the final offer.`;
+    }
+  }
+  if (/\b(kitna|how much|fare|kiraya|price|cost)\b/.test(value) && !/\b(wait|later|future|kam ho|cheaper later|cheaper)\b/.test(value) && rides.length) {
+    const summary = rides.map((ride) => `${ride.provider} ${ride.currency || "PKR"} ${ride.fare}`).join(", ");
+    return roman ? `Is comparison mein estimates: ${summary}. Yeh live booking price ya availability nahi hai.` : `This comparison has these simulated fare estimates: ${summary}. They are not live booking prices or availability.`;
+  }
+  if (/\b(compare|options|which ride|kaunsi ride)\b/.test(value) && rides.length) {
+    const summary = rides.map((ride) => `${ride.provider} ${ride.currency || "PKR"} ${ride.fare}`).join(", ");
+    return roman ? `Is route ke estimates: ${summary}. Sab se sasta option ${cheapest?.provider || "available option"} hai; final availability provider app mein check karein.` : `For this route, the simulated estimates are: ${summary}. The lowest estimate is ${cheapest?.provider || "the available cheapest option"}; check the provider app for live availability.`;
+  }
+  if (/\b(book now|should i book|book karni|book karun|wait karun)\b/.test(value) && !bookWaitStatus && rides.length) {
+    return roman
+      ? "Is comparison mein fares available hain, lekin booking recommendation ka valid model signal nahi mila. Fresh comparison banayein; final availability aur offer provider app mein check karein."
+      : "This comparison has fare estimates, but no valid booking recommendation signal. Run a fresh comparison for the model signal, and check the provider app for live availability and the final offer.";
   }
   if (/\b(wait|later|future|kam ho|cheaper later|cheaper)\b/.test(value) && /\b(fare|price|kam|cheaper)\b/.test(value)) {
     return roman ? "Nahi, Fair Fare future fare kam hone ki guarantee nahi deta. Expected fare sirf model reference hai." : "No—Fair Fare cannot guarantee that the fare will be cheaper later. The expected fare is only a model reference.";
   }
   if (/\b(book now|should i book|book karni|book karun|wait karun)\b/.test(value) && bookWaitStatus) {
     if (roman) {
-      if (bookWaitStatus === "BOOK_NOW") return "Abhi book karna reasonable lagta hai. Fair Fare ka signal sirf advisory hai aur future fare ki guarantee nahi deta.";
-      if (bookWaitStatus === "WAIT") return "Wait karna consider kiya ja sakta hai. Fair Fare ka signal sirf advisory hai; future fare kam hoga, iski guarantee nahi.";
-      return "Current fare ke hawale se signal neutral hai. Fair Fare future fare ki guarantee nahi deta.";
+      const cheapestText = cheapest ? ` Sab se sasta estimate ${cheapest.provider} ka ${money(cheapest)} hai.` : "";
+      if (bookWaitStatus === "BOOK_NOW") return `Abhi book karna reasonable lagta hai.${cheapestText}${comparisonSummary} Fair Fare ka signal sirf advisory hai aur future fare ki guarantee nahi deta.`;
+      if (bookWaitStatus === "WAIT") return `Wait karna consider kiya ja sakta hai.${cheapestText}${comparisonSummary} Fair Fare ka signal sirf advisory hai; future fare kam hoga, iski guarantee nahi.`;
+      return `Current fare ke hawale se signal neutral hai.${cheapestText}${comparisonSummary} Fair Fare future fare ki guarantee nahi deta.`;
     }
-    if (bookWaitStatus === "BOOK_NOW") return "Booking now looks reasonable. Fair Fare's signal is advisory and does not guarantee a future fare.";
-    if (bookWaitStatus === "WAIT") return "Waiting may be worth considering. Fair Fare's signal is advisory and does not guarantee a lower future fare.";
-    return "The current signal is neutral. Fair Fare does not guarantee what the fare will be later.";
+    const cheapestText = cheapest ? ` The lowest current simulated estimate is ${cheapest.provider} at ${money(cheapest)}.` : "";
+    if (bookWaitStatus === "BOOK_NOW") return `Booking now looks reasonable.${cheapestText}${comparisonSummary} Fair Fare's signal is advisory and does not guarantee a future fare.`;
+    if (bookWaitStatus === "WAIT") return `Waiting may be worth considering.${cheapestText}${comparisonSummary} Fair Fare's signal is advisory and does not guarantee a lower future fare.`;
+    return `The current signal is neutral.${cheapestText}${comparisonSummary} Fair Fare does not guarantee what the fare will be later.`;
   }
   return text;
 }

@@ -36,6 +36,19 @@ test("missing model returns MODEL_NOT_TRAINED without throwing", async () => {
   assert.equal(result.predictedFare, null);
 });
 
+test("Vercel uses the portable model and preserves unavailable fallback", async () => {
+  process.env.VERCEL = "1";
+  try {
+    const result = await predictFare(input, { nodeModelPath: "missing/fare_model.json" });
+    assert.equal(result.status, "MODEL_NOT_TRAINED");
+    const available = await predictFare(input);
+    assert.equal(available.status, "AVAILABLE");
+    assert.equal(available.dataSource, "SIMULATED");
+  } finally {
+    delete process.env.VERCEL;
+  }
+});
+
 test("prediction smoke path returns a safe structured result when model is available", async () => {
   const response = await request(app).post("/api/predictions/fare").send(input);
   assert.equal(response.status, 200);

@@ -1,4 +1,7 @@
 {
+  "includeFiles": [
+    "ml/node_artifacts/synthetic_600/fare_model.json"
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]

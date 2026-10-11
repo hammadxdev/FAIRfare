@@ -3,7 +3,7 @@ const { estimateDistanceAndDuration } = require("./distance.service");
 const { applyRecommendation } = require("./recommendation.service");
 const { getAdapter } = require("../providers/provider.registry");
 const AppError = require("../utils/AppError");
-const { createComparisonHistory } = require("./history.service");
+const { createComparisonHistory, updateComparisonEnrichment } = require("./history.service");
 const { persistFareObservations } = require("./fareObservation.service");
 const { deriveTimeFeatures } = require("./fareObservation.service");
 const { normalizeVehicleType } = require("./vehicleType.service");
@@ -190,6 +190,10 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     const source = available.find((candidate) => candidate.provider.id === result.provider.id);
     if (source?.prediction) result.prediction = source.prediction;
     if (source?.recommendation) result.recommendation = source.recommendation;
+  }
+
+  if (comparisonId) {
+    await updateComparisonEnrichment({ id: comparisonId, userId, results });
   }
 
   // Preferences are read once per authenticated comparison. Personalization

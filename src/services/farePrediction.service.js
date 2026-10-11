@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
+const nodeFareModel = require("./nodeFareModel.service");
 
 const BACKEND_ROOT = path.resolve(__dirname, "../..");
 const MODEL_PATH = process.env.FAIRFARE_MODEL_ARTIFACT || path.join(BACKEND_ROOT, "ml", "artifacts", "fare_model.joblib");
@@ -8,6 +9,7 @@ const METADATA_PATH = process.env.FAIRFARE_MODEL_METADATA || path.join(BACKEND_R
 const PREDICT_SCRIPT = path.join(BACKEND_ROOT, "ml", "predict.py");
 const PYTHON = process.env.FAIRFARE_PYTHON || "python";
 const TIMEOUT_MS = Number(process.env.FAIRFARE_PREDICTION_TIMEOUT_MS || 3000);
+const NODE_MODEL_PATH = process.env.FAIRFARE_NODE_MODEL_ARTIFACT || path.join(BACKEND_ROOT, "ml", "node_artifacts", "synthetic_600", "fare_model.json");
 
 function unavailable(status, reason) {
   return { status, predictedFare: null, currency: "PKR", model: null, confidence: null, reason };
@@ -27,6 +29,7 @@ function predictFare(input, options = {}) {
   const invalid = validatePredictionInput(input);
   if (invalid) return Promise.resolve(unavailable("PREDICTION_FAILED", invalid));
   if (process.env.FAIRFARE_DISABLE_PREDICTIONS === "true") return Promise.resolve(unavailable("MODEL_NOT_TRAINED", "Prediction disabled by configuration"));
+  if (process.env.VERCEL === "1") return Promise.resolve(predictWithNodeModel(input, options.nodeModelPath || NODE_MODEL_PATH));
   const modelPath = options.modelPath || MODEL_PATH;
   const metadataPath = options.metadataPath || METADATA_PATH;
   if (!fs.existsSync(modelPath) || !fs.existsSync(metadataPath)) return Promise.resolve(unavailable("MODEL_NOT_TRAINED", "No trained fare model artifact is available"));
@@ -60,9 +63,20 @@ function predictFare(input, options = {}) {
   });
 }
 
+function predictWithNodeModel(input, modelPath) {
+  try {
+    const model = nodeFareModel.loadModel(modelPath);
+    if (input.vehicleType && model.supportedVehicleTypes.length && !model.supportedVehicleTypes.includes(input.vehicleType)) return unavailable("UNSUPPORTED_CATEGORY", "Vehicle type is not represented in the selected training data");
+    const prediction = nodeFareModel.predict(input, model);
+    return { status: "AVAILABLE", predictedFare: Number(prediction.toFixed(2)), currency: "PKR", model: { version: model.modelVersion, type: model.modelType }, confidence: null, dataSource: model.dataSource };
+  } catch (error) {
+    return unavailable("MODEL_NOT_TRAINED", "Node model artifact is unavailable or could not run");
+  }
+}
+
 function modelMetadata() {
   if (!fs.existsSync(METADATA_PATH)) return null;
   try { return JSON.parse(fs.readFileSync(METADATA_PATH, "utf8")); } catch { return null; }
 }
 
-module.exports = { MODEL_PATH, METADATA_PATH, validatePredictionInput, predictFare, modelMetadata };
+module.exports = { MODEL_PATH, METADATA_PATH, NODE_MODEL_PATH, validatePredictionInput, predictFare, modelMetadata, predictWithNodeModel };

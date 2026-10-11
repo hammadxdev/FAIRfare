@@ -23,7 +23,7 @@ function derivedFacts(rides) {
   const flaggedFastest = etaCandidates.filter((ride) => ride.isFastest);
   const cheapest = (flaggedCheapest.length ? flaggedCheapest : fareCandidates.filter((ride) => ride.fare === Math.min(...fareCandidates.map((item) => item.fare))))[0] || null;
   const fastest = (flaggedFastest.length ? flaggedFastest : etaCandidates.filter((ride) => ride.pickupEtaMin === Math.min(...etaCandidates.map((item) => item.pickupEtaMin))))[0] || null;
-  const recommendationStatuses = [...new Set(rides.map((ride) => ride.bookWait?.status).filter((status) => status && status !== "INSUFFICIENT_DATA"))];
+  const recommendationStatuses = [...new Set(rides.filter((ride) => ride.enrichmentStatus !== "stale").map((ride) => ride.bookWait?.status).filter((status) => status && status !== "INSUFFICIENT_DATA"))];
   return {
     cheapest: cheapest ? { provider: cheapest.provider, fare: cheapest.fare, currency: cheapest.currency } : null,
     pickupEstimate: fastest ? { provider: fastest.provider, pickupEtaMin: fastest.pickupEtaMin, verified: false } : null,
@@ -37,7 +37,7 @@ function comparisonContext(comparison) {
   if (!comparison) return null;
   return {
     comparisonId: comparison.comparisonId || null,
-    freshness: comparison.comparisonId ? "current_enriched_comparison" : "history_snapshot",
+    freshness: comparison.comparisonId ? "current_enriched_comparison" : (comparison.enrichmentStatus === "stale" ? "history_snapshot_stale" : "history_snapshot"),
     route: { pickup: comparison.pickup?.name || comparison.pickup?.label, dropoff: comparison.dropoff?.name || comparison.dropoff?.label, distanceKm: comparison.distanceKm ?? (comparison.route?.distanceMeters == null ? null : comparison.route.distanceMeters / 1000), durationMin: comparison.durationMin ?? (comparison.route?.durationSeconds == null ? null : comparison.route.durationSeconds / 60) },
     weather: comparison.weather ? { condition: comparison.weather.condition || "UNKNOWN", severity: comparison.weather.weatherSeverity || "UNKNOWN", precipitationMm: comparison.weather.precipitationMm ?? null, temperatureC: comparison.weather.temperatureC ?? null, source: comparison.weather.source || "UNKNOWN" } : null,
     rides: (comparison.results || comparison.quotes || []).map((ride) => ({
@@ -52,6 +52,7 @@ function comparisonContext(comparison) {
       availability: ride.isAvailable === false || ride.availability === "unavailable" ? "unavailable" : "available",
       prediction: ride.prediction ? { status: ride.prediction.status, predictedFare: ride.prediction.predictedFare ?? null, dataSource: ride.prediction.dataSource || null, model: ride.prediction.model || null } : null,
       bookWait: ride.recommendation ? { status: ride.recommendation.status, currentFare: ride.recommendation.currentFare ?? null, expectedFare: ride.recommendation.expectedFare ?? null, reason: ride.recommendation.reason || null, modelDataSource: ride.recommendation.modelDataSource || null } : null,
+      enrichmentStatus: comparison.enrichmentStatus || null,
       isCheapest: ride.isCheapest === true,
       isFastest: ride.isFastest === true,
       personalization: ride.personalization ? { eligible: ride.personalization.eligible, isTopRecommendation: ride.personalization.isTopRecommendation, withinBudget: ride.personalization.withinBudget, preferredVehicleMatch: ride.personalization.preferredVehicleMatch, reasons: ride.personalization.reasons || [], exclusionReason: ride.personalization.exclusionReason || null } : null,

@@ -44,14 +44,14 @@ test("comparison grounding supplies deterministic cheapest and fastest facts", (
 test("grounded simple answers preserve scalar fares and advisory Book/Wait semantics", () => {
   const english = context();
   assert.equal(groundedReply({ text: "invented PKR 280-350 range", message: "Which ride is cheapest?", context: english }), "inDrive is currently estimated as the cheapest at PKR 280.");
-  assert.equal(groundedReply({ text: "Book immediately", message: "Should I book now?", context: english }), "Booking now looks reasonable. Fair Fare's signal is advisory and does not guarantee a future fare.");
+  assert.match(groundedReply({ text: "Book immediately", message: "Should I book now?", context: english }), /^Booking now looks reasonable\..*PKR 280.*does not guarantee a future fare\.$/);
   assert.equal(groundedReply({ text: "It will be cheaper", message: "Will this definitely be cheaper later?", context: english }), "No—Fair Fare cannot guarantee that the fare will be cheaper later. The expected fare is only a model reference.");
 });
 
 test("Roman Urdu simple answers mirror language without converting fares to ranges", () => {
   const roman = context("roman_urdu");
   assert.equal(groundedReply({ text: "English range PKR 280-350", message: "Konsi ride sab se sasti hai?", context: roman }), "inDrive filhal sab se sasti estimated option hai, PKR 280.");
-  assert.equal(groundedReply({ text: "English answer", message: "Mujhe abhi ride book karni chahiye ya wait karun?", context: roman }), "Abhi book karna reasonable lagta hai. Fair Fare ka signal sirf advisory hai aur future fare ki guarantee nahi deta.");
+  assert.match(groundedReply({ text: "English answer", message: "Mujhe abhi ride book karni chahiye ya wait karun?", context: roman }), /^Abhi book karna reasonable lagta hai\..*PKR 280.*guarantee nahi deta\.$/);
   assert.match(groundedReply({ text: "English answer", message: "Agar main wait karun to kya fare kam ho jayega?", context: roman }), /guarantee nahi deta/);
 });
 

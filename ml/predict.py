@@ -28,6 +28,8 @@ def main():
         "destination_longitude": "destinationLongitude", "destination_zone": "destinationZone",
         "distance_meters": "distanceMeters", "duration_seconds": "durationSeconds",
         "hour_of_day": "hourOfDay", "day_of_week": "dayOfWeek", "is_weekend": "isWeekend",
+        "weather_condition": "weatherCondition", "weather_severity": "weatherSeverity",
+        "precipitation_mm": "precipitationMm", "temperature_c": "temperatureC",
     }
     row = {key: payload.get(aliases.get(key, key)) for key in artifact["features"]}
     if row.get("provider") in (None, ""):
