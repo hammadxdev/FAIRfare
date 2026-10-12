@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
 const mapsService = require("../services/maps");
+const { validateRouteCoordinates } = require("../services/polyline.service");
 
 // Never let these tests hit real Google APIs: every test either exercises a
 // validation path that returns before any Google call, or monkey-patches
@@ -192,8 +193,8 @@ test("route endpoint response is normalized when Geoapify service is mocked", as
   const res = await request(app)
     .post("/api/maps/route")
     .send({
-      origin: { lat: 32.4945, lng: 74.5229 },
-      destination: { lat: 32.5201, lng: 74.56 },
+      origin: { lat: 38.5, lng: -120.2 },
+      destination: { lat: 43.252, lng: -126.453 },
       vehicleType: "bike",
     });
 
@@ -202,6 +203,27 @@ test("route endpoint response is normalized when Geoapify service is mocked", as
   assert.equal(res.body.data.durationMin, 18);
   assert.ok(Array.isArray(res.body.data.polylineCoordinates));
   assert.ok(res.body.data.polylineCoordinates.length > 0);
+});
+
+test("route endpoint returns controlled failure for corrupt decoded geometry", async () => {
+  mapsService.computeRoute = async () => ({
+    distanceMeters: 4600,
+    durationSeconds: 420,
+    // Precision-5 encoding of the reported out-of-bounds coordinates.
+    encodedPolyline: ">__o{j_@~~nxsR__unvx@",
+  });
+
+  const res = await request(app)
+    .post("/api/maps/route")
+    .send({
+      origin: { lat: 31.474559870753506, lng: 74.41546671755498 },
+      destination: { lat: 31.4637789, lng: 74.4431405 },
+      vehicleType: "rickshaw",
+    });
+
+  assert.equal(res.status, 502);
+  assert.equal(res.body.success, false);
+  assert.equal(res.body.message, "Route provider returned invalid road geometry.");
 });
 
 test("route endpoint reports the invalid coordinate field without coordinate values", async () => {

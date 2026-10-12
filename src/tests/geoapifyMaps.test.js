@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const maps = require("../services/maps");
+const { decodePolyline } = require("../services/polyline.service");
 
 const originalFetch = global.fetch;
 const originalKey = process.env.GEOAPIFY_API_KEY;
@@ -127,6 +128,9 @@ test("Geoapify routing normalizes meters, seconds, and MultiLineString geometry"
   assert.equal(result.distanceMeters, 7669);
   assert.equal(result.durationSeconds, 554.872);
   assert.ok(result.encodedPolyline.length > 0);
+  const decoded = decodePolyline(result.encodedPolyline);
+  assert.deepEqual(decoded[0], { latitude: 31.47, longitude: 74.34 });
+  assert.deepEqual(decoded.at(-1), { latitude: 31.49, longitude: 74.36 });
   assert.equal(requested.origin, "https://api.geoapify.com");
 });
 
@@ -136,6 +140,27 @@ test("Geoapify bike routing uses motorcycle road mode", async () => {
   global.fetch = async (url) => { requested = new URL(url); return response({ features: [{ properties: { distance: 100, time: 10 }, geometry: { type: "LineString", coordinates: [[74.3, 31.5], [74.31, 31.51]] } }] }); };
   await maps.computeRoute({ origin: { lat: 31.5, lng: 74.3 }, destination: { lat: 31.51, lng: 74.31 }, vehicleType: "bike" });
   assert.equal(requested.searchParams.get("mode"), "motorcycle");
+});
+
+test("Geoapify routing accepts a nested route geometry and reports endpoint diagnostics", async () => {
+  process.env.GEOAPIFY_API_KEY = "test-key";
+  global.fetch = async () => response({ route: { properties: { distance: 1400, time: 180 }, geometry: { type: "LineString", coordinates: [[74.3, 31.5], [74.31, 31.51]] } } });
+  const result = await maps.computeRoute({ origin: { lat: 31.5, lng: 74.3 }, destination: { lat: 31.51, lng: 74.31 }, vehicleType: "rickshaw" });
+  assert.equal(result.distanceMeters, 1400);
+  assert.ok(result.encodedPolyline.length > 0);
+});
+
+test("all supported vehicle types use compatible route profiles", async () => {
+  process.env.GEOAPIFY_API_KEY = "test-key";
+  const modes = [];
+  global.fetch = async (url) => {
+    modes.push(new URL(url).searchParams.get("mode"));
+    return response({ features: [{ properties: { distance: 1000, time: 60 }, geometry: { type: "LineString", coordinates: [[74.3, 31.5], [74.31, 31.51]] } }] });
+  };
+  for (const vehicleType of ["bike", "rickshaw", "mini", "car"]) {
+    await maps.computeRoute({ origin: { lat: 31.5, lng: 74.3 }, destination: { lat: 31.51, lng: 74.31 }, vehicleType });
+  }
+  assert.deepEqual(modes, ["motorcycle", "drive", "drive", "drive"]);
 });
 
 test("Geoapify failures are safe and active mode never calls Google", async () => {

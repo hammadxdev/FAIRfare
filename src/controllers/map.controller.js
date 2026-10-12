@@ -9,7 +9,7 @@ const {
 } = require("../utils/validators");
 const mapsService = require("../services/maps");
 const mapUsageService = require("../services/mapUsage.service");
-const { decodePolyline } = require("../services/polyline.service");
+const { decodePolyline, validateRouteCoordinates } = require("../services/polyline.service");
 const {
   autocompleteCache,
   placeDetailsCache,
@@ -131,8 +131,13 @@ const routeHandler = asyncHandler(async (req, res) => {
   const cacheKey = `${origin.lat},${origin.lng}|${destination.lat},${destination.lng}|${routingProfile}|short`;
   const cached = routeCache.get(cacheKey);
   if (cached) {
-    logMapRequest("route", { vehicleType, cache: "hit" });
-    return success(res, { data: cached });
+    const cachedPoints = Array.isArray(cached.polylineCoordinates) ? cached.polylineCoordinates : decodePolyline(cached.encodedPolyline);
+    const cachedValidation = validateRouteCoordinates(cachedPoints, origin, destination, cached.distanceMeters, cached.durationSeconds);
+    if (cachedValidation.valid) {
+      logMapRequest("route", { vehicleType, cache: "hit" });
+      return success(res, { data: { ...cached, polylineCoordinates: cachedPoints } });
+    }
+    routeCache.delete(cacheKey);
   }
 
   assertUnderDailyLimit();
@@ -152,6 +157,30 @@ const routeHandler = asyncHandler(async (req, res) => {
     encodedPolyline,
     polylineCoordinates: decodePolyline(encodedPolyline),
   };
+
+  const routeValidation = validateRouteCoordinates(
+    data.polylineCoordinates,
+    origin,
+    destination,
+    data.distanceMeters,
+    data.durationSeconds
+  );
+  if (!routeValidation.valid) {
+    if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+      console.warn("[maps] route response rejected", {
+        vehicleType,
+        reason: routeValidation.reason,
+        pointCount: data.polylineCoordinates.length,
+        startSnapMeters: routeValidation.startSnapMeters ?? null,
+        endSnapMeters: routeValidation.endSnapMeters ?? null,
+        toleranceMeters: routeValidation.toleranceMeters ?? null,
+      });
+    }
+    throw new AppError("Route provider returned invalid road geometry.", 502);
+  }
+  if (!Number.isFinite(data.durationMin) || data.durationMin <= 0) {
+    throw new AppError("Route provider returned invalid road duration.", 502);
+  }
 
   routeCache.set(cacheKey, data);
   logMapRequest("route", { vehicleType, cache: "miss" });

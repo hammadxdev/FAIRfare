@@ -297,8 +297,19 @@ function routeCoordinates(geometry) {
     .map(([lng, lat]) => ({ latitude: Number(lat), longitude: Number(lng) }));
 }
 
+function routeEndpointDiagnostics(coordinates, origin, destination) {
+  const start = coordinates[0] ? { lat: coordinates[0].latitude, lng: coordinates[0].longitude } : null;
+  const end = coordinates.at(-1) ? { lat: coordinates.at(-1).latitude, lng: coordinates.at(-1).longitude } : null;
+  return {
+    startSnapMeters: haversineMeters(start, origin),
+    endSnapMeters: haversineMeters(end, destination),
+  };
+}
+
 function encodeCoordinate(value) {
-  let current = Math.round(value * 1e5);
+  // `encodePolyline` passes an already-scaled precision-5 integer delta.
+  // Scaling here again corrupts every decoded coordinate.
+  let current = Math.round(value);
   current = current < 0 ? ~(current << 1) : current << 1;
   let encoded = "";
   while (current >= 0x20) {
@@ -330,22 +341,37 @@ async function computeRoute({ origin, destination, vehicleType }) {
     type: "short",
     format: "geojson",
   }, "routing");
-  const feature = body.features?.[0];
-  const coordinates = routeCoordinates(feature?.geometry);
-  const distanceMeters = Number(feature?.properties?.distance);
-  const durationSeconds = Number(feature?.properties?.time);
+  const feature = body.features?.[0] || body.route || body;
+  const geometry = feature?.geometry || body.geometry;
+  const properties = feature?.properties || body.properties || {};
+  const coordinates = routeCoordinates(geometry);
+  const distanceMeters = Number(properties.distance ?? body.distance);
+  const durationSeconds = Number(properties.time ?? body.time ?? body.duration);
+  const endpointDiagnostics = routeEndpointDiagnostics(coordinates, origin, destination);
+  const geometryValid = coordinates.length >= 2;
+  const rejectionReason = !feature
+    ? "missing-feature"
+    : !Number.isFinite(distanceMeters) || distanceMeters <= 0
+      ? "invalid-distance"
+      : !Number.isFinite(durationSeconds) || durationSeconds <= 0
+        ? "invalid-duration"
+        : !geometryValid
+          ? "invalid-geometry"
+          : null;
   console.log("[maps] routing provider result", {
     mode: travelModeForVehicle(vehicleType),
     type: "short",
     origin: { lat: origin.lat, lng: origin.lng },
     destination: { lat: destination.lat, lng: destination.lng },
-    geometryType: feature?.geometry?.type || null,
+    geometryType: geometry?.type || null,
     geometryPoints: coordinates.length,
     distanceMeters: Number.isFinite(distanceMeters) ? distanceMeters : null,
     durationSeconds: Number.isFinite(durationSeconds) ? durationSeconds : null,
-    geometryValid: coordinates.length >= 2,
+    geometryValid,
+    ...endpointDiagnostics,
+    rejectionReason,
   });
-  if (!feature || !Number.isFinite(distanceMeters) || distanceMeters <= 0 || !Number.isFinite(durationSeconds) || durationSeconds <= 0 || coordinates.length < 2) {
+  if (rejectionReason) {
     throw new AppError("Geoapify routing returned no usable road route.", 502);
   }
   return { distanceMeters, durationSeconds, encodedPolyline: encodePolyline(coordinates) };
@@ -362,6 +388,7 @@ module.exports = {
   routeCoordinates,
   encodePolyline,
   travelModeForVehicle,
+  routeEndpointDiagnostics,
   fetchNearbyNamedPlaces,
   mergeSearchResults,
   searchText,
