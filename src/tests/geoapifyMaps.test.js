@@ -44,6 +44,14 @@ test("result ranking and deduplication utility remains available for compatible 
   assert.equal(results.filter((item) => item.mainText === "Brims Cafe").length, 1);
 });
 
+test("autocomplete scoring tolerates one bounded typo without broad fuzzy matches", () => {
+  assert.equal(maps.levenshteinDistance("garrizon", "garrison"), 1);
+  assert.ok(maps.fuzzyTokenSimilarity("garrizon", "garrison") > 0.8);
+  assert.equal(maps.fuzzyTokenSimilarity("brims", "university"), 0);
+  assert.ok(maps.searchRelevance({ name: "Lahore Garrison University", address: "Lahore" }, "Lahore garrizon university") > maps.searchRelevance({ name: "Garrison Academy", address: "Lahore" }, "Lahore garrizon university"));
+  assert.ok(maps.searchRelevance({ name: "Lahore Garrison University", address: "Lahore" }, "LGU") > maps.searchRelevance({ name: "Garrison Academy", address: "Lahore" }, "LGU"));
+});
+
 test("ordinary autocomplete makes one geocoder request even with GPS", async () => {
   process.env.GEOAPIFY_API_KEY = "test-key";
   let calls = 0;
@@ -56,6 +64,22 @@ test("ordinary autocomplete makes one geocoder request even with GPS", async () 
   const results = await maps.fetchAutocomplete({ input: "Bri", lat: 31.52, lng: 74.35 });
   assert.equal(calls, 1);
   assert.equal(results[0].placeId, "address-1");
+});
+
+test("full autocomplete queries are ranked by token coverage, not provider order", async () => {
+  process.env.GEOAPIFY_API_KEY = "test-key";
+  let requested;
+  global.fetch = async (url) => {
+    requested = new URL(url);
+    return response({ features: [
+      { properties: { place_id: "academy", name: "Garrison Academy", formatted: "Garrison Academy, Lahore", lat: 31.5001, lon: 74.3001 } },
+      { properties: { place_id: "university", name: "Lahore Garrison University", formatted: "Lahore Garrison University, Lahore", lat: 31.52, lon: 74.35 } },
+    ] });
+  };
+  const results = await maps.fetchAutocomplete({ input: "Lahore garrison university", lat: 31.5, lng: 74.3 });
+  assert.equal(requested.searchParams.get("text"), "Lahore garrison university");
+  assert.equal(requested.searchParams.get("limit"), "10");
+  assert.equal(results[0].mainText, "Lahore Garrison University");
 });
 
 test("no GPS keeps address autocomplete compatible and avoids Places", async () => {

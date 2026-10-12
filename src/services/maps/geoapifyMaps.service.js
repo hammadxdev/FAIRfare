@@ -56,6 +56,12 @@ async function requestGeoapify(path, params, operation) {
   }
 
   if (!response.ok) {
+    console.warn("[maps] Geoapify provider error", {
+      operation,
+      status: response.status,
+      providerCode: body?.code || body?.error_code || body?.statusCode || null,
+      message: safeProviderMessage(body, `HTTP ${response.status}`),
+    });
     throw new AppError(`Geoapify ${operation} failed: ${safeProviderMessage(body, `HTTP ${response.status}`)}`, 502);
   }
   if (body?.error) {
@@ -90,12 +96,17 @@ function assertCoordinates(lat, lng) {
 }
 
 async function fetchAutocomplete({ input, sessionToken: _sessionToken, lat = null, lng = null }) {
-  const params = { text: input, filter: COUNTRY_FILTER, limit: 5 };
+  // Preserve the complete query and give local ranking a useful candidate
+  // window without issuing a second provider request.
+  const params = { text: input, filter: COUNTRY_FILTER, limit: 10 };
   if (isValidLatitude(lat) && isValidLongitude(lng)) params.bias = `proximity:${lng},${lat}`;
   const body = await requestGeoapify("/v1/geocode/autocomplete", params, "autocomplete");
   return (body.features || [])
     .map(normalizeFeature)
-    .filter((item) => item.description && item.lat !== null && item.lng !== null);
+    .filter((item) => item.description && item.lat !== null && item.lng !== null)
+    .map((item, index) => ({ ...item, relevanceScore: searchRelevance(item, input), _index: index }))
+    .sort((a, b) => b.relevanceScore - a.relevanceScore || a._index - b._index)
+    .map(({ relevanceScore: _relevanceScore, _index: _providerIndex, ...item }) => item);
 }
 
 function haversineMeters(a, b) {
@@ -108,19 +119,90 @@ function haversineMeters(a, b) {
 }
 
 function searchText(value) {
-  return String(value || "").normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return String(value || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function searchTokens(value) {
+  return searchText(value).split(" ").filter(Boolean);
+}
+
+function maxTypoDistance(token) {
+  if (token.length < 4) return 0;
+  return token.length >= 7 ? 2 : 1;
+}
+
+function levenshteinDistance(left, right) {
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= left.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= right.length; column += 1) {
+      current[column] = Math.min(current[column - 1] + 1, previous[column] + 1, previous[column - 1] + (left[row - 1] === right[column - 1] ? 0 : 1));
+    }
+    previous = current;
+  }
+  return previous[right.length];
+}
+
+function fuzzyTokenSimilarity(queryToken, candidateToken) {
+  if (queryToken.length < 4 || candidateToken.length < 4) return 0;
+  const distance = levenshteinDistance(queryToken, candidateToken);
+  const limit = Math.max(maxTypoDistance(queryToken), maxTypoDistance(candidateToken));
+  return distance <= limit ? 1 - distance / Math.max(queryToken.length, candidateToken.length) : 0;
+}
+
+function bestTokenSimilarity(queryToken, candidateTokens) {
+  return candidateTokens.reduce((best, candidateToken) => {
+    if (candidateToken === queryToken) return 1;
+    if (candidateToken.startsWith(queryToken)) return Math.max(best, 0.94);
+    return Math.max(best, fuzzyTokenSimilarity(queryToken, candidateToken));
+  }, 0);
+}
+
+function isInitialismMatch(queryTokens, nameTokens) {
+  if (queryTokens.length !== 1 || queryTokens[0].length < 2) return false;
+  return nameTokens.map((token) => token[0]).join("") === queryTokens[0];
+}
+
+function orderedTokenMatches(queryTokens, candidateTokens) {
+  let cursor = 0;
+  let matched = 0;
+  for (const queryToken of queryTokens) {
+    const index = candidateTokens.findIndex((candidate, position) => position >= cursor && candidate.startsWith(queryToken));
+    if (index < 0) continue;
+    matched += 1;
+    cursor = index + 1;
+  }
+  return matched;
 }
 
 function searchRelevance(item, input) {
   const query = searchText(input);
   const name = searchText(item.name || item.mainText || item.description);
   const address = searchText(item.address || item.secondaryText);
+  const queryTokens = searchTokens(input);
+  const nameTokens = searchTokens(item.name || item.mainText || item.description);
+  const allTokens = searchTokens(`${item.name || item.mainText || item.description} ${item.address || item.secondaryText}`);
   if (!query) return 0;
-  if (name === query) return 1000;
-  if (name.startsWith(query)) return 800;
-  if (name.includes(query)) return 650;
-  if (address.includes(query)) return 250;
-  return 0;
+  let score = 0;
+  if (name === query) score += 2000;
+  else if (name.startsWith(query)) score += 1400;
+  else if (name.includes(query)) score += 1100;
+  const matchedNameTokens = queryTokens.filter((token) => nameTokens.some((candidate) => candidate === token || candidate.startsWith(token))).length;
+  const matchedAnyTokens = queryTokens.filter((token) => allTokens.some((candidate) => candidate === token || candidate.startsWith(token))).length;
+  const fuzzyNameScore = queryTokens.reduce((total, token) => total + bestTokenSimilarity(token, nameTokens), 0);
+  score += matchedNameTokens * 260;
+  score += orderedTokenMatches(queryTokens, nameTokens) * 140;
+  score += matchedAnyTokens * 45;
+  if (queryTokens.length && matchedNameTokens === queryTokens.length) score += 500;
+  if (queryTokens.length && matchedAnyTokens === queryTokens.length) score += 150;
+  score -= (queryTokens.length - matchedAnyTokens) * 500;
+  score += Math.round(fuzzyNameScore * 110);
+  if (isInitialismMatch(queryTokens, nameTokens)) score += 1600;
+  if (address.includes(query)) score += 180;
+  return score;
 }
 
 function normalizePlaceFeature(feature) {
@@ -252,6 +334,17 @@ async function computeRoute({ origin, destination, vehicleType }) {
   const coordinates = routeCoordinates(feature?.geometry);
   const distanceMeters = Number(feature?.properties?.distance);
   const durationSeconds = Number(feature?.properties?.time);
+  console.log("[maps] routing provider result", {
+    mode: travelModeForVehicle(vehicleType),
+    type: "short",
+    origin: { lat: origin.lat, lng: origin.lng },
+    destination: { lat: destination.lat, lng: destination.lng },
+    geometryType: feature?.geometry?.type || null,
+    geometryPoints: coordinates.length,
+    distanceMeters: Number.isFinite(distanceMeters) ? distanceMeters : null,
+    durationSeconds: Number.isFinite(durationSeconds) ? durationSeconds : null,
+    geometryValid: coordinates.length >= 2,
+  });
   if (!feature || !Number.isFinite(distanceMeters) || distanceMeters <= 0 || !Number.isFinite(durationSeconds) || durationSeconds <= 0 || coordinates.length < 2) {
     throw new AppError("Geoapify routing returned no usable road route.", 502);
   }
@@ -271,4 +364,8 @@ module.exports = {
   travelModeForVehicle,
   fetchNearbyNamedPlaces,
   mergeSearchResults,
+  searchText,
+  levenshteinDistance,
+  fuzzyTokenSimilarity,
+  searchRelevance,
 };
