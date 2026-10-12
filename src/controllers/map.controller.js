@@ -23,8 +23,9 @@ function logMapRequest(endpoint, meta) {
   console.log(`[maps] ${endpoint}`, { ...meta, at: new Date().toISOString() });
 }
 
-function assertUnderDailyLimit() {
-  if (mapUsageService.hasReachedLimit()) {
+function assertUnderDailyLimit(requiredRequests = 1) {
+  const usage = mapUsageService.getUsageSummary();
+  if (usage.totalMapRequests + requiredRequests > usage.dailyLimit) {
     throw new AppError("Daily map provider request limit reached for demo safety.", 429);
   }
 }
@@ -126,7 +127,8 @@ const routeHandler = asyncHandler(async (req, res) => {
 
   const { origin, destination, vehicleType } = req.body;
 
-  const cacheKey = `${origin.lat},${origin.lng}|${destination.lat},${destination.lng}|${vehicleType}`;
+  const routingProfile = vehicleType === "bike" ? "motorcycle" : "drive";
+  const cacheKey = `${origin.lat},${origin.lng}|${destination.lat},${destination.lng}|${routingProfile}|short`;
   const cached = routeCache.get(cacheKey);
   if (cached) {
     logMapRequest("route", { vehicleType, cache: "hit" });

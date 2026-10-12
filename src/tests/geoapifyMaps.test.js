@@ -17,18 +17,54 @@ test.afterEach(() => {
 
 test("Geoapify autocomplete normalizes coordinates and uses valid proximity bias", async () => {
   process.env.GEOAPIFY_API_KEY = "test-key";
-  let requested;
+  const requested = [];
   global.fetch = async (url) => {
-    requested = new URL(url);
+    const parsed = new URL(url);
+    requested.push(parsed);
     return response({ features: [{ properties: { place_id: "geo-1", name: "Emporium", formatted: "Emporium, Lahore", address_line2: "Lahore, Pakistan", lat: 31.47, lon: 74.34 } }] });
   };
 
   const results = await maps.fetchAutocomplete({ input: "Emporium", sessionToken: "ignored", lat: 31.47, lng: 74.34 });
-  assert.equal(requested.pathname, "/v1/geocode/autocomplete");
-  assert.equal(requested.searchParams.get("bias"), "proximity:74.34,31.47");
+  assert.equal(requested[0].pathname, "/v1/geocode/autocomplete");
+  assert.equal(requested[0].searchParams.get("bias"), "proximity:74.34,31.47");
+  assert.equal(requested.length, 1);
   assert.equal(results[0].placeId, "geo-1");
   assert.equal(results[0].lat, 31.47);
   assert.equal(results[0].lng, 74.34);
+  assert.equal(results[0].source, "geoapify-geocoder");
+});
+
+test("result ranking and deduplication utility remains available for compatible callers", () => {
+  const results = maps.mergeSearchResults([
+    { placeId: "far-exact", mainText: "Brims", address: "Lahore", lat: 31.60, lng: 74.40, source: "geoapify-places" },
+    { placeId: "near-prefix", mainText: "Brims Cafe", address: "Lahore", lat: 31.5005, lng: 74.3005, source: "geoapify-places" },
+    { placeId: "near-duplicate", mainText: "Brims Cafe", address: "Lahore", lat: 31.50051, lng: 74.30051, source: "geoapify-geocoder" },
+  ], "Brims", { lat: 31.5, lng: 74.3 });
+  assert.equal(results[0].mainText, "Brims");
+  assert.equal(results.filter((item) => item.mainText === "Brims Cafe").length, 1);
+});
+
+test("ordinary autocomplete makes one geocoder request even with GPS", async () => {
+  process.env.GEOAPIFY_API_KEY = "test-key";
+  let calls = 0;
+  global.fetch = async (url) => {
+    calls += 1;
+    const parsed = new URL(url);
+    if (parsed.pathname === "/v1/geocode/autocomplete") return response({ features: [{ properties: { place_id: "address-1", name: "Bri Street", formatted: "Bri Street, Lahore", lat: 31.52, lon: 74.35 } }] });
+    return response({ features: [] });
+  };
+  const results = await maps.fetchAutocomplete({ input: "Bri", lat: 31.52, lng: 74.35 });
+  assert.equal(calls, 1);
+  assert.equal(results[0].placeId, "address-1");
+});
+
+test("no GPS keeps address autocomplete compatible and avoids Places", async () => {
+  process.env.GEOAPIFY_API_KEY = "test-key";
+  let requested;
+  global.fetch = async (url) => { requested = new URL(url); return response({ features: [{ properties: { place_id: "address-1", name: "Lahore", formatted: "Lahore, Pakistan", lat: 31.52, lon: 74.35 } }] }); };
+  const results = await maps.fetchAutocomplete({ input: "Lahore", sessionToken: "x" });
+  assert.equal(requested.pathname, "/v1/geocode/autocomplete");
+  assert.equal(results[0].source, "geoapify-geocoder");
 });
 
 test("malformed autocomplete bias is ignored safely", async () => {
@@ -63,6 +99,7 @@ test("Geoapify routing normalizes meters, seconds, and MultiLineString geometry"
   const result = await maps.computeRoute({ origin: { lat: 31.47, lng: 74.34 }, destination: { lat: 31.49, lng: 74.36 }, vehicleType: "car" });
   assert.equal(requested.pathname, "/v1/routing");
   assert.equal(requested.searchParams.get("mode"), "drive");
+  assert.equal(requested.searchParams.get("type"), "short");
   assert.equal(result.distanceMeters, 7669);
   assert.equal(result.durationSeconds, 554.872);
   assert.ok(result.encodedPolyline.length > 0);

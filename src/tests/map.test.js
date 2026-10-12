@@ -94,19 +94,19 @@ test("autocomplete works without location context and does not invent coordinate
 
 test("Geoapify autocomplete uses proximity bias only for valid coordinates", async () => {
   process.env.GEOAPIFY_API_KEY = "test-key";
-  let requestedUrl;
+  const requestedUrls = [];
   global.fetch = async (url) => {
-    requestedUrl = String(url);
+    requestedUrls.push(String(url));
     return { ok: true, status: 200, json: async () => ({ type: "FeatureCollection", features: [] }) };
   };
 
   await mapsService.fetchAutocomplete({ input: "KFC", sessionToken: "session-geo-location-1", lat: 31.5204, lng: 74.3587 });
-  const withLocation = new URL(requestedUrl);
+  const withLocation = new URL(requestedUrls[0]);
   assert.equal(withLocation.searchParams.get("bias"), "proximity:74.3587,31.5204");
   assert.equal(withLocation.searchParams.get("filter"), "countrycode:pk");
 
   await mapsService.fetchAutocomplete({ input: "KFC", sessionToken: "session-geo-location-2" });
-  const withoutLocation = new URL(requestedUrl);
+  const withoutLocation = new URL(requestedUrls[1]);
   assert.equal(withoutLocation.searchParams.has("bias"), false);
 });
 
