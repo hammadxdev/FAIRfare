@@ -23,9 +23,32 @@ test("booking question with comparison stays grounded in advisory facts", () => 
   assert.match(reply, /does not guarantee a future fare/);
 });
 
-test("booking and fare questions without comparison guide the user to Home", () => {
+test("comparison-only booking questions without comparison explain the missing context", () => {
   const reply = groundedReply({ text: "generic", message: "Should I book now?", context: { responseLanguage: "english", comparison: null } });
-  assert.match(reply, /select your pickup.*drop-off.*Compare Fares/i);
+  assert.match(reply, /current route comparison|route and vehicle details/i);
+});
+
+test("general cheapest-time question gets a direct answer without route context", () => {
+  const reply = groundedReply({ text: "generic", message: "When are rides usually cheapest?", context: { responseLanguage: "english", comparison: null } });
+  assert.match(reply, /outside peak demand|peak/i);
+  assert.doesNotMatch(reply, /select your pickup.*Compare Fares/i);
+});
+
+test("trip planning without comparison gives guidance rather than refusal", () => {
+  const reply = groundedReply({ text: "generic", message: "I want to go from Punjab Small Society to Lahore Garrison University.", context: { responseLanguage: "english", comparison: null } });
+  assert.match(reply, /budget|comfort|bike|rickshaw|car/i);
+  assert.doesNotMatch(reply, /Please select your pickup.*Compare Fares/i);
+});
+
+test("Chungi to railway station route planning does not require a fare comparison", () => {
+  const reply = groundedReply({ text: "generic", message: "I want to go from Chungi to railway station", context: { responseLanguage: "english", comparison: null } });
+  assert.match(reply, /pickup|destination|budget|comfort|bike|rickshaw|car/i);
+  assert.doesNotMatch(reply, /Please select your pickup.*Compare Fares/i);
+});
+
+test("general vehicle and surge questions do not require a comparison", () => {
+  assert.match(groundedReply({ text: "generic", message: "What is surge pricing?", context: { responseLanguage: "english", comparison: null } }), /demand|price/i);
+  assert.match(groundedReply({ text: "generic", message: "Which vehicle suits short trips?", context: { responseLanguage: "english", comparison: null } }), /bike|rickshaw|short trips/i);
 });
 
 test("bike versus rickshaw and fare questions use current comparison estimates", () => {
@@ -35,8 +58,31 @@ test("bike versus rickshaw and fare questions use current comparison estimates",
 
 test("exact university route without comparison is actionable and does not invent a fare", () => {
   const reply = groundedReply({ text: "generic", message: "Mujhe Lahore Garrison University jana hai.", context: { responseLanguage: "roman_urdu", comparison: null } });
-  assert.match(reply, /pickup.*drop-off.*Compare Fares/i);
+  assert.match(reply, /pickup|destination|bike|rickshaw|car/i);
   assert.doesNotMatch(reply, /PKR|fare is/);
+});
+
+test("general Roman Urdu pricing question is answered without fabricated numbers", () => {
+  const reply = groundedReply({ text: "generic", message: "Ride sab se sasti kab hoti hai?", context: { responseLanguage: "roman_urdu", comparison: null } });
+  assert.match(reply, /off-peak|rush hour|demand/i);
+  assert.doesNotMatch(reply, /PKR\s*\d/);
+});
+
+test("follow-up questions are not replaced by the no-comparison setup message", () => {
+  const reply = groundedReply({
+    text: "At night, demand and availability can vary, so prices may be different.",
+    message: "What about at night?",
+    context: {
+      responseLanguage: "english",
+      comparison: null,
+      recentConversation: [
+        { role: "USER", content: "When are rides usually cheapest?" },
+        { role: "ASSISTANT", content: "Rides are often cheaper outside peak demand." },
+      ],
+    },
+  });
+  assert.match(reply, /night|demand|availability/i);
+  assert.doesNotMatch(reply, /select your pickup.*Compare Fares/i);
 });
 
 test("ambiguous Lahore Garrison destination requires clarification", () => {
