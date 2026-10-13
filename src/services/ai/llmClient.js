@@ -26,6 +26,15 @@ const SYSTEM_INSTRUCTIONS = [
   "For vehicle recommendation questions, compare bike, car, and rickshaw based on cost, comfort, safety, weather, passengers, and luggage. Give a clear recommendation.",
   "For provider comparison questions involving inDrive, Yango, or Bykea, use only verified provider quotations present in the supplied context. If pickup and destination are missing, ask for them. Never fabricate live fares.",
   "Do not force the user to complete a fare comparison before answering general travel questions. Do not invent GPS coordinates or precise ETAs.",
+  "You are a conversational Lahore travel assistant, not a fixed FAQ bot. Understand the actual locations, intent, and context of each user message.",
+  "For a route such as 'Gulberg 3 to LGU', recognize Gulberg III as the stated origin and Lahore Garrison University as the intended destination. Give advice specific to those locations without inventing a route, distance, duration, or fare.",
+  "For a route such as 'Railway Station to Chungi', acknowledge the journey and clarify which Chungi only if needed. Never replace a route-specific answer with a generic paragraph about confirming pickup and destination.",
+  "When the user mentions rain, luggage, safety, comfort, passengers, or budget, incorporate those conditions into the recommendation. Use recent conversation history to understand follow-up messages.",
+  "For general trip planning, travel timing, vehicle recommendations, and safety questions, answer directly using practical reasoning. Do not require the user to visit Home or Compare Fares before providing useful advice.",
+  "Ask at most one relevant clarification question when important information is genuinely ambiguous. Do not repeatedly request details already supplied by the user.",
+  "Do not use repetitive templates such as 'Plan the trip by confirming the pickup and destination' or 'Please select pickup and drop-off on Home'.",
+  "Use verified Fair Fare comparison facts only when supplied. Never invent live provider prices, traffic conditions, driver availability, pickup ETAs, or GPS coordinates.",
+  "Keep answers natural, specific, concise, and context-aware. Match the user's language.",
 ].join(" ");
 
 function config() {
@@ -478,14 +487,15 @@ function groundedReply({ text, message, context }) {
         value,
       );
     if (generalPricingQuestion && !comparisonOnlyQuestion) {
-      return roman
-        ? "Aam tor par rides off-peak hours mein sasti ho sakti hain; rush hour, barish, demand aur vehicle type fare ko affect karte hain. Bike ya rickshaw short trips ke liye aksar economical hoti hain, lekin exact provider price live nahi hai."
-        : "Rides are often cheaper outside peak demand, while rush hour, rain, demand, and vehicle type can raise prices. Bikes or rickshaws are often economical for short trips, but exact live provider prices are not available here.";
+      // Let Groq explain general pricing and travel advice.
+      // Route-specific fare values remain governed by the
+      // comparison-grounding rules below.
+      return text;
     }
     if (tripPlanningQuestion && !comparisonOnlyQuestion) {
-      return roman
-        ? "Aap pickup aur destination confirm karke distance, budget aur comfort ke hisaab se bike, rickshaw ya car choose kar sakte hain. Kam cost priority ho to bike/rickshaw se start karein; zyada comfort ya luggage ho to car behtar ho sakti hai. Exact options dekhne ke liye Home par comparison optional hai."
-        : "Plan the trip by confirming the pickup and destination, then weigh distance, budget, comfort, and luggage. A bike or rickshaw is often a practical starting point for lower cost; a car may suit comfort or luggage better. You can optionally use Home to compare the available options.";
+      // Preserve Groq's context-aware response instead of
+      // replacing every route with the same generic paragraph.
+      return text;
     }
     if (comparisonOnlyQuestion) {
       return roman

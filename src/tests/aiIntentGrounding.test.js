@@ -29,26 +29,26 @@ test("comparison-only booking questions without comparison explain the missing c
 });
 
 test("general cheapest-time question gets a direct answer without route context", () => {
-  const reply = groundedReply({ text: "generic", message: "When are rides usually cheapest?", context: { responseLanguage: "english", comparison: null } });
+  const reply = groundedReply({ text: "Rides can be cheaper outside peak demand, though rain and demand may affect costs. Exact provider prices aren't available here.", message: "When are rides usually cheapest?", context: { responseLanguage: "english", comparison: null } });
   assert.match(reply, /outside peak demand|peak/i);
   assert.doesNotMatch(reply, /select your pickup.*Compare Fares/i);
 });
 
 test("trip planning without comparison gives guidance rather than refusal", () => {
-  const reply = groundedReply({ text: "generic", message: "I want to go from Punjab Small Society to Lahore Garrison University.", context: { responseLanguage: "english", comparison: null } });
+  const reply = groundedReply({ text: "For Punjab Small Society to Lahore Garrison University, consider comfort and luggage when choosing a vehicle. I don't have verified route distance or fare data.", message: "I want to go from Punjab Small Society to Lahore Garrison University.", context: { responseLanguage: "english", comparison: null } });
   assert.match(reply, /budget|comfort|bike|rickshaw|car/i);
   assert.doesNotMatch(reply, /Please select your pickup.*Compare Fares/i);
 });
 
 test("Chungi to railway station route planning does not require a fare comparison", () => {
-  const reply = groundedReply({ text: "generic", message: "I want to go from Chungi to railway station", context: { responseLanguage: "english", comparison: null } });
-  assert.match(reply, /pickup|destination|budget|comfort|bike|rickshaw|car/i);
+  const reply = groundedReply({ text: "I can help plan the journey from Railway Station to Chungi. Which Chungi do you mean? I can't give an exact distance or fare without verified route details.", message: "I want to go from Railway Station to Chungi", context: { responseLanguage: "english", comparison: null } });
+  assert.match(reply, /Railway Station.*Chungi|Chungi/i);
   assert.doesNotMatch(reply, /Please select your pickup.*Compare Fares/i);
 });
 
 test("general vehicle and surge questions do not require a comparison", () => {
-  assert.match(groundedReply({ text: "generic", message: "What is surge pricing?", context: { responseLanguage: "english", comparison: null } }), /demand|price/i);
-  assert.match(groundedReply({ text: "generic", message: "Which vehicle suits short trips?", context: { responseLanguage: "english", comparison: null } }), /bike|rickshaw|short trips/i);
+  assert.equal(groundedReply({ text: "Surge pricing means prices can rise when demand is high.", message: "What is surge pricing?", context: { responseLanguage: "english", comparison: null } }), "Surge pricing means prices can rise when demand is high.");
+  assert.equal(groundedReply({ text: "For short trips, a bike or rickshaw may be practical, while a car offers more comfort.", message: "Which vehicle suits short trips?", context: { responseLanguage: "english", comparison: null } }), "For short trips, a bike or rickshaw may be practical, while a car offers more comfort.");
 });
 
 test("bike versus rickshaw and fare questions use current comparison estimates", () => {
@@ -57,13 +57,13 @@ test("bike versus rickshaw and fare questions use current comparison estimates",
 });
 
 test("exact university route without comparison is actionable and does not invent a fare", () => {
-  const reply = groundedReply({ text: "generic", message: "Mujhe Lahore Garrison University jana hai.", context: { responseLanguage: "roman_urdu", comparison: null } });
-  assert.match(reply, /pickup|destination|bike|rickshaw|car/i);
+  const reply = groundedReply({ text: "Gulberg III se Lahore Garrison University ke liye car barish mein zyada comfortable ho sakti hai, jabke rickshaw budget ke liye practical option ho sakta hai. Verified distance aur fare mere paas nahi hain.", message: "Gulberg 3 se LGU jana hai.", context: { responseLanguage: "roman_urdu", comparison: null } });
+  assert.match(reply, /Gulberg III.*Lahore Garrison University/i);
   assert.doesNotMatch(reply, /PKR|fare is/);
 });
 
 test("general Roman Urdu pricing question is answered without fabricated numbers", () => {
-  const reply = groundedReply({ text: "generic", message: "Ride sab se sasti kab hoti hai?", context: { responseLanguage: "roman_urdu", comparison: null } });
+  const reply = groundedReply({ text: "Aksar off-peak waqt ride sasti ho sakti hai, lekin rush hour aur demand se price badal sakti hai. Exact live provider price available nahi.", message: "Ride sab se sasti kab hoti hai?", context: { responseLanguage: "roman_urdu", comparison: null } });
   assert.match(reply, /off-peak|rush hour|demand/i);
   assert.doesNotMatch(reply, /PKR\s*\d/);
 });
