@@ -1,0 +1,11 @@
+const { Router } = require("express");
+const { requireAuth } = require("../middlewares/auth.middleware");
+const controller = require("../controllers/tripAwareAi.controller");
+const router = Router();
+router.post("/chat", requireAuth, controller.chat);
+router.get("/conversations", requireAuth, controller.listConversations);
+router.post("/conversations", requireAuth, controller.createConversation);
+router.get("/conversations/:id", requireAuth, controller.getConversation);
+router.patch("/conversations/:id", requireAuth, controller.renameConversation);
+router.delete("/conversations/:id", requireAuth, controller.deleteConversation);
+module.exports = router;

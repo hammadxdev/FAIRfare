@@ -174,7 +174,15 @@ legacy synchronous SQLite access pattern to an async PostgreSQL repository.
 Production Vercel deployments must provide `DATABASE_URL`; they must not use
 `/tmp/fairfair.sqlite`. The additive compatibility SQL is in
 `src/db/migrations/001_supabase_compatibility.sql` and must be reviewed against
-the already-created Supabase schema before execution.
+the already-created Supabase schema before any separately approved execution.
+
+The production schema has already been inspected with the read-only
+`PRODUCTION_SCHEMA_READONLY_CHECK.sql` release checker. That inspection
+validated the existing `ai_messages_role_check` constraint, which permits only
+the `USER` and `ASSISTANT` roles. No production migration is currently
+approved or required for this release; in particular,
+`009_production_schema_gaps.sql` is not part of the release procedure.
+The final read-only Supabase checker returned **246 PASS, 0 MISSING**.
 
 SQLite file lives at `DB_PATH` (default `./data/fairfair.sqlite`), created
 automatically on first migration.
@@ -194,7 +202,7 @@ cd backend
 npm install
 cp .env.example .env
 
-npm run migrate   # creates tables
+npm run migrate   # local/development database setup only
 npm run seed      # inserts 3 providers + rates for bike/rickshaw/mini/car
 
 npm run dev        # http://localhost:4000 (nodemon)
@@ -207,6 +215,12 @@ npm start
 ```bash
 npm test
 ```
+
+Release-gate evidence for the unrestricted Windows PowerShell backend suite is
+**252 passed, 0 failed, 0 skipped** (exit code 0). The complete log is retained
+locally at `release-evidence/backend-suite-unrestricted.log` and is ignored by
+Git; it is not a release file. Dataset validation also passed, with
+`FAIR_FARE_DATASET_MODE=legacy` and no approved coverage enabled.
 
 Tests run against an isolated SQLite file (`data/test.sqlite`), migrated and
 seeded automatically via `src/tests/setup.js`. Covers: health check, providers
@@ -604,8 +618,12 @@ tokens are never stored.
 - Authenticated fare comparison, history, and preference requests require
   `Authorization: Bearer <accessToken>`. The mobile client stores the session
   in Expo SecureStore and refreshes expired access tokens once.
-- CORS is open (`cors()` with no restrictions) for the current FYP development
-  setup; tighten it before production deployment.
+- Browser CORS is controlled by the comma-separated `FAIRFARE_ALLOWED_ORIGINS`
+  environment variable. Native mobile requests without an `Origin` header
+  remain allowed. Leave the variable empty to allow native/no-Origin requests
+  only; do not use `*` for credentialed browser access. Internal health
+  diagnostics require the server-only `HEALTH_DIAGNOSTICS_TOKEN` header and
+  are disabled when that variable is unset.
 - Base URL during development: `http://localhost:4000` (or your machine's LAN
   IP if testing on a physical device — set `PORT` in `.env` if 4000 is taken).
 

@@ -1,0 +1,7 @@
+﻿event_type,pricing_multiplier,requires_verified_source,apply_as_automatic_surcharge,handling
+protest,1.0,True,False,check_verified_closure_then_reroute
+road_closure,1.0,True,False,reroute_using_validated_road_network
+cricket_match,1.0,True,False,consider_local_demand_only_if_calibrated
+university_exam,1.0,True,False,consider_zone_and_schedule
+religious_procession,1.0,True,False,verify_road_restrictions
+flooding,1.0,True,False,safety_warning_and_route_restriction

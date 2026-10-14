@@ -59,4 +59,5 @@ test("disabled or provider failures return safe assistant responses", async () =
   assert.equal(response.body.data.available, false);
   assert.equal(response.body.data.status, "UNAVAILABLE");
   assert.equal(response.body.data.reply, null);
+  assert.doesNotMatch(JSON.stringify(response.body), /Please select your pickup.*Compare Fares/i);
 });

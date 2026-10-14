@@ -12,6 +12,38 @@ const registry = {
   urbancab,
 };
 
+const PROVIDER_DISPLAY_NAMES = Object.freeze({
+  indrive: "inDrive",
+  quickride: "Yango",
+  urbancab: "Bykea",
+});
+
+const PROVIDER_ALIASES = Object.freeze({
+  indrive: "indrive",
+  "in-drive": "indrive",
+  "in drive": "indrive",
+  yango: "quickride",
+  quickride: "quickride",
+  "quick ride": "quickride",
+  bykea: "urbancab",
+  urbancab: "urbancab",
+  "urban cab": "urbancab",
+});
+
+function canonicalProviderId(value) {
+  const key = String(value || "").trim().toLowerCase();
+  return PROVIDER_ALIASES[key] || null;
+}
+
+function providerDisplayName(value) {
+  const id = canonicalProviderId(value);
+  return id ? PROVIDER_DISPLAY_NAMES[id] : null;
+}
+
+function supportedProviderDisplayNames() {
+  return Object.freeze(Object.values(PROVIDER_DISPLAY_NAMES));
+}
+
 function getAdapter(name) {
   const adapter = registry[name];
   if (!adapter) {
@@ -33,4 +65,13 @@ function getProviderStatus() {
   })));
 }
 
-module.exports = { getAdapter, getAllAdapters, getProviderStatus };
+module.exports = {
+  getAdapter,
+  getAllAdapters,
+  getProviderStatus,
+  PROVIDER_DISPLAY_NAMES,
+  PROVIDER_ALIASES,
+  canonicalProviderId,
+  providerDisplayName,
+  supportedProviderDisplayNames,
+};

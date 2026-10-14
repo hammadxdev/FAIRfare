@@ -10,6 +10,7 @@
     "seed": "node src/db/seed.js",
     "export:dataset": "node scripts/exportFareDataset.js",
     "stats:dataset": "node scripts/fareDatasetStats.js",
+    "validate:dataset:v1": "node fairFareDatasetValidator.js",
     "ml:train:simulated": "node scripts/exportFareDataset.js && python ml/train.py --csv data/exports/fare_observations.csv --source SIMULATED",
     "ml:evaluate": "python ml/evaluate.py --metadata ml/artifacts/fare_model_metadata.json",
     "ml:test-prediction": "python ml/smoke_prediction.py",

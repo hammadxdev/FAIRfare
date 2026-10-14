@@ -4,7 +4,12 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "ml/node_artifacts/synthetic_600/fare_model.json"
+      "includeFiles": [
+        "ml/node_artifacts/synthetic_600/fare_model.json",
+        "COVERAGE_EVIDENCE_REGISTER.csv",
+        "src/data/Fair_Fare_Synthetic_Dataset_v1/*.csv",
+        "src/data/Fair_Fare_Synthetic_Dataset_v1/*.json"
+      ]
     }
   }
 }

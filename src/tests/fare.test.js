@@ -105,3 +105,37 @@ test("fare comparison rejects invalid route override", async () => {
   assert.ok(res.body.errors.some((e) => e.includes("route.distanceKm")));
   assert.ok(res.body.errors.some((e) => e.includes("route.durationMin")));
 });
+
+test("legacy mode preserves the existing public comparison", async () => {
+  const previous = process.env.FAIR_FARE_DATASET_MODE;
+  process.env.FAIR_FARE_DATASET_MODE = "legacy";
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
+  if (previous === undefined) delete process.env.FAIR_FARE_DATASET_MODE; else process.env.FAIR_FARE_DATASET_MODE = previous;
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.results.length, 3);
+  assert.equal(res.body.data.coverage.mode, "legacy");
+  assert.equal(res.body.data.datasetPreview, undefined);
+});
+
+test("preview mode keeps public results unchanged and adds isolated diagnostics", async () => {
+  const previous = process.env.FAIR_FARE_DATASET_MODE;
+  process.env.FAIR_FARE_DATASET_MODE = "preview";
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
+  if (previous === undefined) delete process.env.FAIR_FARE_DATASET_MODE; else process.env.FAIR_FARE_DATASET_MODE = previous;
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.results.length, 3);
+  assert.equal(res.body.data.datasetPreview.length, 3);
+  assert.ok(res.body.data.datasetPreview.every((item) => item.estimate?.experimental === true && item.estimate?.notPublicResult === true));
+  assert.deepEqual([...res.body.data.results.map((item) => item.provider.name)].sort(), ["indrive", "quickride", "urbancab"]);
+});
+
+test("verified mode excludes the dataset's unverified coverage", async () => {
+  const previous = process.env.FAIR_FARE_DATASET_MODE;
+  process.env.FAIR_FARE_DATASET_MODE = "verified";
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
+  if (previous === undefined) delete process.env.FAIR_FARE_DATASET_MODE; else process.env.FAIR_FARE_DATASET_MODE = previous;
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.results.length, 0);
+  assert.ok(res.body.data.coverage.providers.every((item) => item.supported === false));
+  assert.ok(res.body.data.coverage.providers.every((item) => /UNVERIFIED/.test(item.status)));
+});

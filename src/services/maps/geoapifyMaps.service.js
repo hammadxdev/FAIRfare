@@ -82,6 +82,14 @@ function normalizeFeature(feature) {
     address: properties.formatted || properties.address_line2 || properties.address_line1 || "",
     city: properties.city || properties.town || properties.municipality || "",
     locality: properties.suburb || properties.district || properties.neighbourhood || properties.city || "",
+    municipality: properties.municipality || "",
+    county: properties.county || properties.district || "",
+    state: properties.state || properties.state_district || "",
+    country: properties.country || "",
+    countryCode: properties.country_code || "",
+    resultType: properties.result_type || properties.resultType || "",
+    category: properties.category || "",
+    confidence: Number.isFinite(Number(properties.rank?.confidence)) ? Number(properties.rank.confidence) : (Number.isFinite(Number(properties.confidence)) ? Number(properties.confidence) : null),
     distanceMeters: Number.isFinite(Number(properties.distance)) ? Number(properties.distance) : null,
     source: "geoapify-geocoder",
     lat: isValidLatitude(lat) ? lat : null,
@@ -272,6 +280,8 @@ async function fetchPlaceDetails({ placeId }) {
     placeId: normalized.placeId || placeId,
     name: normalized.mainText || normalized.address,
     address: normalized.address,
+    ...(normalized.city ? { city: normalized.city } : {}),
+    ...(normalized.locality ? { locality: normalized.locality } : {}),
     lat: normalized.lat,
     lng: normalized.lng,
   };
@@ -283,7 +293,14 @@ async function fetchReverseGeocode({ lat, lng }) {
   const feature = body.features?.[0];
   if (!feature) return { name: null, address: null, lat, lng };
   const normalized = normalizeFeature(feature);
-  return { name: normalized.mainText || normalized.address, address: normalized.address, lat, lng };
+  return {
+    name: normalized.mainText || normalized.address,
+    address: normalized.address,
+    ...(normalized.city ? { city: normalized.city } : {}),
+    ...(normalized.locality ? { locality: normalized.locality } : {}),
+    lat,
+    lng,
+  };
 }
 
 function travelModeForVehicle(vehicleType) {

@@ -1,0 +1,5 @@
+﻿vehicle_type,base_pkr,per_km_pkr,per_min_pkr,min_fare_pkr,pricing_source,calibration_status,model_version
+bike,50,18,1.5,80,illustrative_not_provider_rates,not_calibrated,synthetic_v1
+rickshaw,80,25,2,130,illustrative_not_provider_rates,not_calibrated,synthetic_v1
+economy_car,120,35,4,200,illustrative_not_provider_rates,not_calibrated,synthetic_v1
+premium_car,200,50,5,350,illustrative_not_provider_rates,not_calibrated,synthetic_v1

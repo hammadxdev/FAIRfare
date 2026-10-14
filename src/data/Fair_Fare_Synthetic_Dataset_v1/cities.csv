@@ -1,0 +1,22 @@
+﻿city_id,city,province,coverage_evidence,coverage_verified,city_status,is_synthetic
+PK001,Lahore,Punjab,previous_conversation_unverified,False,provisional,False
+PK002,Karachi,Sindh,previous_conversation_unverified,False,provisional,False
+PK003,Islamabad,ICT,previous_conversation_unverified,False,provisional,False
+PK004,Rawalpindi,Punjab,previous_conversation_unverified,False,provisional,False
+PK005,Faisalabad,Punjab,previous_conversation_unverified,False,provisional,False
+PK006,Multan,Punjab,previous_conversation_unverified,False,provisional,False
+PK007,Hyderabad,Sindh,previous_conversation_unverified,False,provisional,False
+PK008,Peshawar,Khyber Pakhtunkhwa,previous_conversation_unverified,False,provisional,False
+PK009,Sialkot,Punjab,previous_conversation_unverified,False,provisional,False
+PK010,Sahiwal,Punjab,previous_conversation_unverified,False,provisional,False
+PK011,Abbottabad,Khyber Pakhtunkhwa,previous_conversation_unverified,False,provisional,False
+PK012,Gujranwala,Punjab,previous_conversation_unverified,False,provisional,False
+PK013,Larkana,Sindh,previous_conversation_unverified,False,provisional,False
+PK014,Kamoke,Punjab,previous_conversation_unverified,False,provisional,False
+PK015,Sheikhupura,Punjab,previous_conversation_unverified,False,provisional,False
+PK016,Hafizabad,Punjab,previous_conversation_unverified,False,provisional,False
+PK017,Okara,Punjab,previous_conversation_unverified,False,provisional,False
+PK018,Wah,Punjab,previous_conversation_unverified,False,provisional,False
+PK019,Taxila,Punjab,previous_conversation_unverified,False,provisional,False
+PK020,Quetta,Balochistan,previous_conversation_unverified,False,provisional,False
+PK021,Raiwind,Punjab,previous_conversation_unverified,False,provisional,False

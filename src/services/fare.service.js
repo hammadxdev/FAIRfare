@@ -13,6 +13,7 @@ const { rankPersonalizedRides } = require("./personalizedRideRecommendation.serv
 const { getPreferences } = require("./userPreference.service");
 const { rememberComparison } = require("./currentComparison.service");
 const { resolveWeatherContext } = require("./weatherContext.service");
+const { getDatasetMode, resolveTripCoverage, estimateDatasetFare } = require("./fairFareDataset.service");
 
 function dataSourceForAdapter(adapter) {
   if (process.env.NODE_ENV === "test") return "TEST";
@@ -41,6 +42,9 @@ async function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceK
 }
 
 async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
+  if (route?.compareFaresEligible === false) {
+    throw new AppError("Fare comparison is blocked until the selected locations are confirmed for this route.", 422, [route.eligibilityReason || "ROUTE_NOT_ELIGIBLE"]);
+  }
   const providers = (await query(`SELECT * FROM providers WHERE is_active = true`)).rows;
   if (providers.length === 0) {
     throw new AppError("No active providers configured", 500);
@@ -62,16 +66,55 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
 
   const observedAt = Date.now();
   const simulationContext = deriveTimeFeatures(observedAt);
+  const datasetMode = getDatasetMode();
   // Weather is contextual enrichment: one pickup lookup is shared by every
   // provider/category and a failure returns UNKNOWN without blocking fares.
   const weatherContext = await resolveWeatherContext({ latitude: pickup.lat, longitude: pickup.lng, observedAt });
   const rawResults = await Promise.all(providers.map(async (provider) => {
+    const coverage = resolveTripCoverage({ pickup, dropoff, provider: provider.name, vehicleType });
+    if (datasetMode === "verified" && !coverage.supported) {
+      return {
+        provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
+        fare: null, etaMin: null, isAvailable: false,
+        availability: "unverified", error: coverage.status, coverage,
+        badges: [], breakdown: null,
+      };
+    }
+    if (datasetMode === "verified") {
+      const estimate = estimateDatasetFare({
+        vehicleType,
+        distanceKm,
+        durationMin,
+        hourOfDay: simulationContext.hourOfDay,
+        dayOfWeek: simulationContext.dayOfWeek,
+        weather: weatherContext,
+      });
+      if (!estimate) {
+        return {
+          provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
+          fare: null, etaMin: null, isAvailable: false,
+          availability: "unverified", error: "VEHICLE_MODEL_UNAVAILABLE", coverage,
+          badges: [], breakdown: null,
+        };
+      }
+      const adapter = getAdapter(provider.name);
+      const etaMin = typeof adapter.getPickupEtaMin === "function" ? adapter.getPickupEtaMin(vehicleType) : null;
+      const quote = { providerId: provider.name, providerName: provider.display_name, categoryId: vehicleType, categoryName: vehicleType, fare: estimate.fare, fareMin: null, fareMax: null, currency: estimate.currency, fareType: estimate.fareType, pickupEtaSeconds: etaMin == null ? null : etaMin * 60, isAvailable: true, metadata: estimate.metadata };
+      return {
+        provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
+        fare: estimate.fare, etaMin, isAvailable: true, fareMin: null, fareMax: null,
+        currency: estimate.currency, fareType: estimate.fareType, breakdown: estimate.metadata.breakdown,
+        uncertaintyMarginPkr: estimate.uncertaintyMarginPkr, metadata: estimate.metadata, quotes: [quote],
+        dataSource: "SYNTHETIC_DATASET", coverage,
+      };
+    }
+
     const rate = (await query(`SELECT * FROM vehicle_rates WHERE provider_id = $1 AND vehicle_type = $2`, [provider.id, vehicleType])).rows[0];
     if (!rate) {
       return {
         provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
         fare: null, etaMin: null, isAvailable: false,
-        error: "PROVIDER_BAD_RESPONSE", badges: [], breakdown: null,
+        error: "PROVIDER_BAD_RESPONSE", coverage, badges: [], breakdown: null,
       };
     }
 
@@ -121,7 +164,24 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   }));
 
   const available = rawResults.filter((result) => result.fare !== null && result.fare !== undefined);
-  const results = [...applyRecommendation(available), ...rawResults.filter((result) => !available.includes(result))];
+  // Only verified mode changes the public result set. Legacy and preview retain
+  // the existing provider response contract; preview adds diagnostics below.
+  const results = datasetMode === "verified"
+    ? [...applyRecommendation(available), ...rawResults.filter((result) => !available.includes(result) && (!result.coverage || result.coverage.supported))]
+    : [...applyRecommendation(available), ...rawResults.filter((result) => !available.includes(result))];
+
+  const datasetPreview = datasetMode === "preview"
+    ? providers.map((provider) => {
+      const coverage = resolveTripCoverage({ pickup, dropoff, provider: provider.name, vehicleType });
+      const estimate = estimateDatasetFare({ vehicleType, distanceKm, durationMin, hourOfDay: simulationContext.hourOfDay, dayOfWeek: simulationContext.dayOfWeek, weather: weatherContext });
+      return {
+        provider: { id: provider.name, displayName: provider.display_name },
+        coverage,
+        estimate: estimate ? { ...estimate, experimental: true, notPublicResult: true } : null,
+        provenance: "Synthetic Fair Fare dataset; not an observed provider quotation",
+      };
+    })
+    : null;
 
   const searchId = await persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results });
 
@@ -215,8 +275,18 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     distanceKm,
     durationMin,
     weather: weatherContext,
+    coverage: {
+      mode: datasetMode,
+      city: rawResults.find((result) => result.coverage?.city)?.coverage?.city || null,
+      pickupCity: rawResults.find((result) => result.coverage)?.coverage?.pickupCity || null,
+      dropoffCity: rawResults.find((result) => result.coverage)?.coverage?.dropoffCity || null,
+      intercity: rawResults.some((result) => result.coverage?.intercity === true),
+      providers: rawResults.map((result) => ({ provider: result.provider.name, displayName: result.provider.displayName, status: result.coverage?.status || (result.fare != null ? "LEGACY_APPROVED" : "UNKNOWN"), supported: result.coverage?.supported === true })),
+      provenance: "Fair Fare synthetic dataset v1; not live provider availability",
+    },
     results: personalizedResults,
   };
+  if (datasetPreview) comparison.datasetPreview = datasetPreview;
   if (comparisonId) rememberComparison({ userId, comparison });
   return comparison;
 }

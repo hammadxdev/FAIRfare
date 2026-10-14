@@ -1,0 +1,6 @@
+﻿weather,illustrative_multiplier,bike_safety_warning,verified_live,is_synthetic
+clear,1.0,False,False,True
+light_rain,1.03,True,False,True
+heavy_rain,1.07,True,False,True
+fog,1.0,True,False,True
+extreme_heat,1.02,True,False,True

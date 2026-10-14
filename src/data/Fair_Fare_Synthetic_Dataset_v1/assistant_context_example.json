@@ -1,0 +1,26 @@
+{
+  "city": "Lahore",
+  "origin": {
+    "name": "Gulberg III",
+    "resolution": "example_only"
+  },
+  "destination": {
+    "name": "Lahore Garrison University",
+    "resolution": "example_only"
+  },
+  "route": {
+    "distance_km": null,
+    "duration_min": null,
+    "source": "geoapify_pending"
+  },
+  "providers": [],
+  "coverage_status": "verification_required",
+  "weather": {
+    "status": "not_checked"
+  },
+  "events": {
+    "status": "not_checked"
+  },
+  "fare_estimates": [],
+  "assistant_policy": "Do not invent provider availability, routes, prices, live traffic, pickup ETAs, or active closures."
+}
