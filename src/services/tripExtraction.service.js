@@ -11,6 +11,8 @@ function cleanLocation(value) {
 function extractTripLocations(message) {
   const text = String(message || "").trim();
   const patterns = [
+    { pattern: /^\s*(?:no|nah|actually)\s*[,:-]?\s*from\s+(.+?)[?.!,]?$/i, pickup: 1, destination: null, name: "change_pickup" },
+    { pattern: /^\s*(?:no|nah|actually|just|only)\s*[,:-]?\s*(?:(?:just|only)\s+)?(?:the\s+)?(.+?)[?.!,]?$/i, pickup: null, destination: 1, name: "change_destination" },
     { pattern: /\b(?:change|switch|update)\s+(?:the\s+)?destination\s+(?:to|as)\s+(.+?)(?:[?.!,]|$)/i, pickup: null, destination: 1, name: "change_destination" },
     { pattern: /\b(?:change|switch|update)\s+(?:the\s+)?pickup\s+(?:to|as)\s+(.+?)(?:[?.!,]|$)/i, pickup: 1, destination: null, name: "change_pickup" },
     { pattern: /^\s*(?:destination|drop(?:-?off)?)\s+(.+?)\s+(?:kar\s+do|change\s+it|set\s+it)\s*[?.!,]?$/i, pickup: null, destination: 1, name: "change_destination" },

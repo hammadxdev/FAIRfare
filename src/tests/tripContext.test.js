@@ -34,6 +34,15 @@ test("partial pickup and destination changes preserve the other endpoint", async
   assert.equal(pickupChange.extracted.destination, "LGU");
 });
 
+test("natural correction phrases preserve the unchanged endpoint", async () => {
+  const destinationChange = await buildConversationTripContext({ message: "No just the Punjab Mall", recentMessages: [{ role: "USER", content: "I wanna go from LGU to Punjab Small Society" }], tripResolver: resolver });
+  assert.equal(destinationChange.extracted.pickup, "LGU");
+  assert.equal(destinationChange.extracted.destination, "Punjab Mall");
+  const pickupChange = await buildConversationTripContext({ message: "Actually from LGU", recentMessages: [{ role: "USER", content: "I wanna go from DHA Phase 6 to Punjab Mall" }], tripResolver: resolver });
+  assert.equal(pickupChange.extracted.pickup, "LGU");
+  assert.equal(pickupChange.extracted.destination, "Punjab Mall");
+});
+
 test("a new conversation does not inherit a previous conversation trip", async () => {
   const result = await buildConversationTripContext({ message: "Bike pe kitna hoga?", recentMessages: [], tripResolver: resolver });
   assert.equal(result.status, "NO_TRIP");

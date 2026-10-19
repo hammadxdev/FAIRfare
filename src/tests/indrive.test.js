@@ -10,6 +10,7 @@ function createDb() {
   return {
     state,
     async query(text, params) {
+      if (/pg_advisory_xact_lock/i.test(text)) return { rows: [] };
       if (/^SELECT \* FROM provider_sessions/i.test(text)) return { rows: state.row ? [{ ...state.row }] : [] };
       state.row = {
         provider: params[0],
@@ -17,11 +18,29 @@ function createDb() {
         refresh_token: params[2],
         access_expires_at: params[3],
         status: params[4],
-        updated_at: params[5],
+        rotation_version: params[5],
+        last_rotated_at: params[6],
+        updated_at: params[7],
       };
       return { rows: [], rowCount: 1 };
     },
   };
+}
+
+function createAuthoritativeDb(initial = null) {
+  const db = createDb();
+  db.state.row = initial;
+  let queue = Promise.resolve();
+  db.withTransaction = async (work) => {
+    let release;
+    const turn = new Promise((resolve) => { release = resolve; });
+    const previous = queue;
+    queue = queue.then(() => turn);
+    await previous;
+    try { return await work({ query: db.query.bind(db) }); }
+    finally { release(); }
+  };
+  return db;
 }
 
 const config = {
@@ -29,6 +48,11 @@ const config = {
   appVersion: "android 5.157.0", language: "en_US", osType: "android", appFlavor: "indriver",
   timeoutMs: 1000, refreshBufferSeconds: 300,
 };
+
+function syntheticJwt(exp) {
+  const part = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  return `${part({ alg: "RS256", typ: "JWT" })}.${part({ exp })}.signature`;
+}
 
 const testRoute = {
   pickup: { latitude: 31.1, longitude: 74.2 },
@@ -81,6 +105,53 @@ test("valid persisted session reuses access token without renewal", async () => 
   assert.equal(pricingToken, "persisted-access");
 });
 
+test("valid JWT with two hours remaining does not renew", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: syntheticJwt(1_700_007_200), refresh_token: "persisted-refresh", access_expires_at: null, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  assert.equal(await manager.ensureValidSession(), database.state.row.access_token);
+  assert.equal(renewCalls, 0);
+  manager.stop();
+});
+
+test("valid JWT with thirty minutes remaining does not renew", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: syntheticJwt(1_700_001_800), refresh_token: "persisted-refresh", access_expires_at: null, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  await manager.start();
+  assert.equal(renewCalls, 0);
+  assert.equal(await manager.getStatus(), "READY");
+  manager.stop();
+});
+
+test("unknown expiry preserves the current access token without a renewal loop", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "opaque-access", refresh_token: "persisted-refresh", access_expires_at: null, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  assert.equal(await manager.ensureValidSession(), "opaque-access");
+  assert.equal(await manager.getStatus(), "EXPIRY_UNKNOWN");
+  assert.equal(renewCalls, 0);
+  manager.stop();
+});
+
+test("newer configured JWT is preferred over an older persisted JWT", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: syntheticJwt(1_700_001_000), refresh_token: "old-refresh", access_expires_at: null, status: "READY", updated_at: now() };
+  const newer = syntheticJwt(1_700_007_200);
+  let renewCalls = 0;
+  const manager = createSessionManager({ config: { ...config, accessToken: newer, refreshToken: "new-refresh" }, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  assert.equal(await manager.ensureValidSession(), newer);
+  assert.equal(renewCalls, 0);
+  manager.stop();
+});
+
 test("near-expiry persisted session renews once and pricing uses the new access token", async () => {
   const database = createDb();
   const now = () => 1_700_000_000_000;
@@ -112,6 +183,90 @@ test("missing session uses bootstrap refresh credential once and creates a sessi
   assert.equal(renewCalls, 1);
   assert.equal(database.state.row.status, "READY");
   assert.equal(database.state.row.refresh_token, "bootstrapped-refresh");
+});
+
+test("startup reuses a valid persisted session without refreshing", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "startup-access", refresh_token: "startup-refresh", access_expires_at: now() + 900_000, status: "READY", updated_at: now() };
+  let renewCalls = 0;
+  const manager = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  await manager.start();
+  assert.equal(await manager.ensureValidSession(), "startup-access");
+  assert.equal(renewCalls, 0);
+  manager.stop();
+});
+
+test("startup refreshes a near-expiry session and persists rotation", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "old-access", refresh_token: "old-refresh", access_expires_at: now() + 299_000, status: "READY", updated_at: now() };
+  let renewedWith;
+  const manager = createSessionManager({
+    config, database, now, logger: { log() {} },
+    client: { renew: async (refreshToken) => { renewedWith = refreshToken; return { status: 200, body: { access_token: "new-access", refresh_token: "new-refresh", expires_in: 10800 } }; } },
+  });
+  await manager.start();
+  assert.equal(renewedWith, "old-refresh");
+  assert.equal(database.state.row.access_token, "new-access");
+  assert.equal(database.state.row.refresh_token, "new-refresh");
+  manager.stop();
+});
+
+test("rotated credentials survive a session-manager restart", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  const first = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => ({ status: 200, body: { access_token: "rotated-access", refresh_token: "rotated-refresh", expires_in: 3600 } }) } });
+  await first.ensureValidSession();
+  first.stop();
+  let secondRenewals = 0;
+  const second = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => { secondRenewals += 1; } } });
+  assert.equal(await second.ensureValidSession(), "rotated-access");
+  assert.equal(database.state.row.refresh_token, "rotated-refresh");
+  assert.equal(secondRenewals, 0);
+  second.stop();
+});
+
+test("database token diagnostics are sanitized and identify PostgreSQL as the source", async () => {
+  const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "database-access", refresh_token: "database-refresh", access_expires_at: 1_700_001_800_000, status: "READY", rotation_version: 4, last_rotated_at: 1_700_000_100_000, updated_at: 1_700_000_100_000 };
+  const manager = createSessionManager({ config, database, now: () => 1_700_000_000_000, logger: { log() {} }, client: {} });
+  assert.deepEqual(await manager.getTokenDiagnostics(), {
+    tokenPresent: true, refreshTokenPresent: true, accessExpiresAt: 1_700_001_800_000,
+    expiryKnown: true, source: "postgresql", rotationVersion: 4, status: "READY",
+  });
+  assert.doesNotMatch(JSON.stringify(await manager.getTokenDiagnostics()), /database-access|database-refresh/);
+});
+
+test("database failure fails safely without using configured credentials", async () => {
+  let renewCalls = 0;
+  const database = { query: async () => { throw new Error("database unavailable"); } };
+  const manager = createSessionManager({ config: { ...config, accessToken: "configured-access", refreshToken: "configured-refresh" }, database, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  await assert.rejects(manager.ensureValidSession(), /database unavailable/);
+  assert.equal(renewCalls, 0);
+});
+
+test("each request resolves the latest database access token", async () => {
+  const database = createDb();
+  const now = () => 1_700_000_000_000;
+  database.state.row = { provider: "indrive", access_token: "database-access-1", refresh_token: "database-refresh", access_expires_at: now() + 7_200_000, status: "READY", updated_at: now() };
+  const manager = createSessionManager({ config, database, now, logger: { log() {} }, client: {} });
+  assert.equal(await manager.ensureValidSession(), "database-access-1");
+  database.state.row.access_token = "database-access-2";
+  database.state.row.access_expires_at = now() + 7_200_000;
+  assert.equal(await manager.ensureValidSession(), "database-access-2");
+});
+
+test("PostgreSQL transaction lock prevents two managers from rotating the same session", async () => {
+  const database = createAuthoritativeDb({ provider: "indrive", access_token: "old-access", refresh_token: "old-refresh", access_expires_at: 1_699_999_000_000, status: "READY", updated_at: 1_700_000_000_000 });
+  let renewCalls = 0;
+  const makeManager = () => createSessionManager({ config, database, now: () => 1_700_000_000_000, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; await new Promise((resolve) => setTimeout(resolve, 3)); return { status: 200, body: { access_token: "rotated-access", refresh_token: "rotated-refresh", expires_in: 3600 } }; } } });
+  const [first, second] = [makeManager(), makeManager()];
+  const tokens = await Promise.all([first.ensureValidSession(), second.ensureValidSession()]);
+  assert.deepEqual(tokens, ["rotated-access", "rotated-access"]);
+  assert.equal(renewCalls, 1);
+  assert.equal(database.state.row.rotation_version, 1);
+  first.stop(); second.stop();
 });
 
 test("a second fare request reuses the session created by the first request", async () => {
@@ -146,6 +301,7 @@ test("renewal client sends the verified endpoint, body, and observed fingerprint
   assert.equal(request.url, "https://ath-gw-cf.euce1.indriverapp.com/api/auth/v1/token/renew");
   assert.equal(request.options.method, "POST");
   assert.deepEqual(JSON.parse(request.options.body), { refresh_token: "synthetic-refresh" });
+  assert.equal(request.options.headers.Authorization, undefined);
   assert.equal(request.options.headers["X-Device-Fingerprint"], "device");
   assert.equal(request.options.headers["X-Fingerprint"], "finger");
   assert.doesNotMatch(JSON.stringify(request), /live|real-secret|captured/i);
@@ -257,6 +413,10 @@ test("verified single-category response normalizes money and preserves fare sema
   assert.equal(quote.metadata.isRush, true);
   assert.equal(quote.metadata.providerTtlSeconds, 300);
   assert.equal(quote.pickupEtaSeconds, null);
+  assert.equal(quote.priceType, "suggested");
+  assert.equal(quote.exactFare, null);
+  assert.equal(quote.metadata.priceDiagnostics.upstreamPriceField, "autofill_price.value");
+  assert.equal(quote.metadata.priceDiagnostics.priceClassification, "suggested");
 });
 
 test("multi-category calculations preserve price steps and unknown categories safely", () => {
@@ -301,4 +461,42 @@ test("a second pricing 401 marks auth required without another retry", async () 
 
 test("unsupported request category is rejected without guessing", () => {
   assert.throws(() => buildPricingPayload({ vehicleType: "spaceship", pickup: { latitude: 1, longitude: 2 }, destination: { latitude: 3, longitude: 4 }, distanceMeters: 10, durationSeconds: 20 }), /category is not supported/);
+});
+test("normalizes second-based persisted expiry timestamps without changing credentials", async () => {
+  const now = 1792360000000;
+  const accessToken = "access-token";
+  const row = {
+    provider: "indrive",
+    access_token: accessToken,
+    refresh_token: "refresh-token",
+    access_expires_at: Math.floor((now + 3600000) / 1000),
+    last_rotated_at: Math.floor((now - 3600000) / 1000),
+    rotation_version: 2,
+    status: "READY",
+  };
+  const database = { query: async () => ({ rows: [row] }) };
+  const manager = createSessionManager({ config: { mode: "real", enabled: true, refreshBufferSeconds: 300 }, database, now: () => now });
+  const session = await manager.load();
+  assert.equal(session.accessToken, accessToken);
+  assert.equal(session.accessExpiresAt, now + 3600000);
+  assert.equal(session.lastRotatedAt, now - 3600000);
+  assert.equal(manager.hasUsableAccess(session), true);
+});
+
+test("preserves millisecond persisted expiry timestamps and refresh-window semantics", async () => {
+  const now = 1792360000000;
+  const row = {
+    provider: "indrive",
+    access_token: "access-token",
+    refresh_token: "refresh-token",
+    access_expires_at: now + 120000,
+    last_rotated_at: now - 120000,
+    rotation_version: 2,
+    status: "READY",
+  };
+  const database = { query: async () => ({ rows: [row] }) };
+  const manager = createSessionManager({ config: { mode: "real", enabled: true, refreshBufferSeconds: 300 }, database, now: () => now });
+  const session = await manager.load();
+  assert.equal(session.accessExpiresAt, now + 120000);
+  assert.equal(manager.hasUsableAccess(session), false);
 });

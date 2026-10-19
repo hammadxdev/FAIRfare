@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS fare_results (
 );
 CREATE TABLE IF NOT EXISTS provider_sessions (
   provider text PRIMARY KEY, access_token text, refresh_token text, access_expires_at bigint,
-  status text NOT NULL, updated_at bigint NOT NULL
+  status text NOT NULL, rotation_version bigint NOT NULL DEFAULT 0, last_rotated_at bigint,
+  updated_at bigint NOT NULL
 );
 
 -- AI conversations/messages are explicitly PostgreSQL tables in production.

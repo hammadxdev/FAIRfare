@@ -1,0 +1,21 @@
+{
+  "currency_rules": {
+    "code": "PKR",
+    "text": "Rs.",
+    "template": "$SIGN$$VALUE$ $CURRENCY$",
+    "sign": "Rs."
+  },
+  "service_levels": [
+    { "name": "Scheduled ride", "class": "intercity_preorder", "cars": ["Hyundai Solaris", "Kia Rio"], "price": "$SIGN$165 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$165 $CURRENCY$" },
+    { "name": "City to City", "class": "intercity", "cars": ["Toyota Yaris", "Toyota Corolla", "Honda City"], "price": "$SIGN$165 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$165 $CURRENCY$" },
+    { "name": "Economy", "class": "econom", "cars": ["Daihatsu Mira", "Suzuki Alto", "WagonR"], "price": "$SIGN$316 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$316 $CURRENCY$", "paid_options": { "value": 1.5095 } },
+    { "name": "Economy A/C", "class": "business", "cars": ["Daihatsu Mira", "Suzuki Alto", "WagonR"], "price": "$SIGN$314 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$314 $CURRENCY$", "paid_options": { "value": 1.3612 } },
+    { "name": "Comfort", "class": "comfortplus", "cars": ["Toyota Corolla", "Honda City", "Toyota Yaris"], "price": "$SIGN$230 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$230 $CURRENCY$" },
+    { "name": "Bike", "class": "moto", "cars": ["Honda", "Suzuki", "Yamaha", "Pak Hero", "Metro"], "price": "$SIGN$80 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$80 $CURRENCY$", "paid_options": { "value": 1.2123 } },
+    { "name": "Rickshaw", "class": "tuktuk", "cars": ["Sazgar", "Siwa", "New Asia"], "price": "$SIGN$214 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$214 $CURRENCY$", "paid_options": { "value": 1.8428 } },
+    { "name": "Courier", "class": "courier", "cars": ["Free item pickup at your door"], "price": "$SIGN$57 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$57 $CURRENCY$", "delivery_extra": { "offer_id": "fk_id:courier" } },
+    { "name": "Cargo Intercity", "class": "cargo_intercity", "cars": [], "price": "$SIGN$2,178 $CURRENCY$", "is_hidden": true, "description": "from $SIGN$2,178 $CURRENCY$" },
+    { "name": "Rickshaw+", "class": "test_tariff_project_category", "cars": ["Sazgar"], "price": "$SIGN$109 $CURRENCY$", "is_hidden": false, "description": "from $SIGN$109 $CURRENCY$" }
+  ],
+  "alternatives": { "options": [] }
+}

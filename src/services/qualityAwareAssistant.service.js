@@ -2,6 +2,8 @@ const base = require("./ai/aiRideAssistant.service");
 const defaultLlmClient = require("./ai/llmClient");
 const { extractTripLocations } = require("./tripExtraction.service");
 const { enforce: enforceProviderBoundary, normalizeComparison } = require("./providerRecommendationGuard.service");
+const { buildGroundedComparison, deterministicSummary, validateReplyAgainstGrounding } = require("./ai/fareComparisonGrounding.service");
+const { getComparisonForUser } = require("./currentComparison.service");
 
 let llmClient = defaultLlmClient;
 
@@ -73,6 +75,7 @@ async function answer(args) {
   context.responsePolicy = policy;
   const conversationTrip = context.recentConversation.slice().reverse().map((item) => item.role === "USER" ? extractTripLocations(item.content) : null).find((trip) => trip?.pickup && trip?.destination) || null;
   const publicContext = { comparisonUsed: Boolean(context.comparison), comparisonFreshness: context.comparison?.freshness || null, predictionAvailable: Boolean(context.comparison?.rides?.some((ride) => ride.prediction?.status === "AVAILABLE")), preferencesUsed: true, historyUsed: context.history.length > 0, historyAvailable: context.history.length > 0, trip: args.tripContext || null };
+  const groundedComparison = args.comparisonId ? buildGroundedComparison(getComparisonForUser(args.comparisonId, args.userId) || null) : null;
   try {
     const rawResult = typeof llmClient.completeDetailed === "function"
       ? await llmClient.completeDetailed({ message: args.message, context })
@@ -85,14 +88,16 @@ async function answer(args) {
     const fareGuardedReply = safeUngroundedFareReply(args.message, policy.language, { hasAuthoritativeContext: Boolean(context.comparison) });
     const vehicleGuardedReply = safeVehicleReply(args.message, policy.language, { hasAuthoritativeContext: Boolean(context.comparison) });
     const candidateReply = guardedReply || coverageGuardedReply || fareGuardedReply || vehicleGuardedReply || result.text;
+    const safeReply = validateReplyAgainstGrounding(candidateReply, groundedComparison) ? candidateReply : deterministicSummary(groundedComparison, args.message, policy.language);
     const providerGuard = enforceProviderBoundary({
       message: args.message,
-      text: candidateReply,
+      text: safeReply,
       comparison: context.comparison,
       responseLanguage: policy.language,
     });
     return { reply: providerGuard.text, modelId: result.modelId, provider: result.provider || null, fallbackUsed: Boolean(result.fallbackUsed), context: publicContext, available: true, status: "AVAILABLE" };
   } catch (error) {
+    if (groundedComparison) return { reply: deterministicSummary(groundedComparison, args.message, policy.language), context: publicContext, available: true, status: "AVAILABLE", fallbackUsed: true, modelId: null, provider: null, errorCode: error.code || "LLM_PROVIDER_ERROR" };
     return { reply: null, context: publicContext, available: false, status: "UNAVAILABLE", errorCode: error.code || "LLM_PROVIDER_ERROR" };
   }
 }

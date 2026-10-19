@@ -4,8 +4,13 @@ const { extractTripLocations } = require("./tripExtraction.service");
 const conversations = require("./ai/conversation.service");
 const qualityAwareAssistant = require("./qualityAwareAssistant.service");
 const { buildConversationTripContext, publicTripContext } = require("./tripContext.service");
+const { getComparisonForUser } = require("./currentComparison.service");
+const { getHistoryById } = require("./history.service");
+const { compareFares } = require("./fare.service");
+const { DECISIONS, decideGrounding } = require("./ai/groundingDecision.service");
 const defaultTripResolver = resolveTripForAssistant;
 let tripResolver = defaultTripResolver;
+let comparisonBuilder = compareFares;
 
 function attachResponsePolicy(args, result) {
   if (!result || typeof result !== "object" || result.modelId == null) return result;
@@ -56,21 +61,71 @@ async function answer(args) {
     if (trip.status === "NO_TRIP" && current.pickup && current.destination) trip = await tripResolver({ message: resolverMessage });
   }
   catch (error) { trip = { status: "UNRESOLVED", error: error.code || "TRIP_RESOLUTION_FAILED" }; }
+  let comparison = null;
+  if (args.comparisonId) comparison = getComparisonForUser(args.comparisonId, args.userId) || await getHistoryById(args.comparisonId, args.userId);
+  let grounding = decideGrounding({ trip, comparison });
+  if (grounding.decision === DECISIONS.FARES_UNAVAILABLE && trip?.status === "NO_TRIP" && !grounding.comparisonId) {
+    grounding = { decision: null, comparisonId: null };
+  }
+  if (grounding.decision === DECISIONS.LOCATION_UNRESOLVED) {
+    return routeDecisionResponse({ trip, decision: grounding.decision, message: args.message, hadPreviousComparison: Boolean(args.comparisonId) });
+  }
+  if (grounding.decision === DECISIONS.ROUTE_CHANGED && args.comparisonId) {
+    try {
+      const vehicleType = trip.vehiclePreference || comparison?.vehicleType || "car";
+      const fresh = await comparisonBuilder({
+        userId: args.userId,
+        pickup: trip.pickup,
+        dropoff: trip.destination,
+        vehicleType,
+        route: trip.route,
+      });
+      if (fresh?.comparisonId) {
+        grounding = { decision: DECISIONS.NEW_COMPARISON_READY, comparisonId: fresh.comparisonId };
+        args = { ...args, comparisonId: fresh.comparisonId };
+        comparison = fresh;
+      } else {
+        grounding = { decision: DECISIONS.FARES_UNAVAILABLE, comparisonId: null };
+      }
+    } catch (error) {
+      grounding = { decision: DECISIONS.FARES_UNAVAILABLE, comparisonId: null, errorCode: error.code || "COMPARISON_UNAVAILABLE" };
+    }
+  } else if (grounding.decision === DECISIONS.ROUTE_CHANGED) {
+    grounding = { decision: DECISIONS.FARES_UNAVAILABLE, comparisonId: null };
+  }
+  if (grounding.decision === DECISIONS.FARES_UNAVAILABLE) {
+    return routeDecisionResponse({ trip, decision: grounding.decision, message: args.message, hadPreviousComparison: Boolean(args.comparisonId) });
+  }
   if (trip.status !== "NO_TRIP" && trip.extracted) {
     // An existing comparison is authoritative. Keep the established assistant
     // grounding path so fare facts and Book/Wait semantics are not replaced by
     // a route-only response.
     const structuredTrip = publicTripContext(trip);
-    if (args.comparisonId) return qualityAwareAssistant.answer({ ...args, tripContext: structuredTrip });
+    if (args.comparisonId) {
+      const result = await qualityAwareAssistant.answer({ ...args, tripContext: structuredTrip });
+      return withGroundingDecision(result, grounding);
+    }
     const current = extractTripLocations(args.message);
     const routeReplyAllowed = trip.source === "current_message" || (current.pickup && current.destination);
     const reply = routeReplyAllowed ? routeReply(trip, routeResponseLanguage(args.message)) : null;
-    if (reply) return { reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { comparisonUsed: Boolean(args.comparisonId), comparisonFreshness: null, predictionAvailable: false, preferencesUsed: true, historyUsed: recent.length > 0, historyAvailable: recent.length > 0, trip: structuredTrip } };
-    return qualityAwareAssistant.answer({ ...args, tripContext: structuredTrip });
+    if (reply) return withGroundingDecision({ reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { comparisonUsed: Boolean(args.comparisonId), comparisonFreshness: null, predictionAvailable: false, preferencesUsed: true, historyUsed: recent.length > 0, historyAvailable: recent.length > 0, trip: structuredTrip } }, grounding);
+    return withGroundingDecision(await qualityAwareAssistant.answer({ ...args, tripContext: structuredTrip }), grounding);
   }
-  return qualityAwareAssistant.answer({ ...args, tripContext: null });
+  return withGroundingDecision(await qualityAwareAssistant.answer({ ...args, tripContext: null }), grounding);
 }
 
 function setTripResolverForTests(resolver) { tripResolver = resolver || defaultTripResolver; }
+function setComparisonBuilderForTests(builder) { comparisonBuilder = builder || compareFares; }
+function withGroundingDecision(result, grounding) { return { ...result, comparisonId: grounding.comparisonId || null, groundingDecision: grounding.decision, context: { ...(result.context || {}), comparisonId: grounding.comparisonId || null, groundingDecision: grounding.decision } }; }
+function routeDecisionResponse({ trip, decision, message, hadPreviousComparison = false }) {
+  const language = routeResponseLanguage(message);
+  const route = trip?.pickup && trip?.destination ? routeReply(trip, language) : null;
+  const fallback = decision === DECISIONS.LOCATION_UNRESOLVED
+    ? (language === "roman_urdu" ? "Pickup ya destination clear nahi hui. Sirf missing location clarify karein; purani fares is request par apply nahi hoti." : "I could not resolve the pickup or destination confidently. Please clarify the missing location; older fares do not apply to this request.")
+    : hadPreviousComparison
+      ? (language === "roman_urdu" ? "Nayi route ke liye verified fares abhi available nahi hain. Purani comparison is route par apply nahi hoti." : "Verified fares are not available for this new route yet. The previous comparison does not apply to it.")
+      : (language === "roman_urdu" ? "Is route ke liye verified fares abhi available nahi hain." : "Verified fares are not available for this route yet.");
+  return { reply: route && decision === DECISIONS.FARES_UNAVAILABLE ? `${route}\n\n${fallback}` : fallback, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", groundingDecision: decision, context: { comparisonUsed: false, comparisonFreshness: null, predictionAvailable: false, preferencesUsed: true, historyUsed: false, historyAvailable: false, groundingDecision: decision, trip: trip ? publicTripContext(trip) : null } };
+}
 
-module.exports = { ...base, answer, routeReply, routeResponseLanguage, setTripResolverForTests };
+module.exports = { ...base, answer, routeReply, routeResponseLanguage, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse };

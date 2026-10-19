@@ -1,7 +1,7 @@
 const { query } = require("../config/postgres");
 const { success } = require("../utils/apiResponse");
 const asyncHandler = require("../utils/asyncHandler");
-const { getProviderStatus } = require("../providers/provider.registry");
+const { getProviderStatus, getAdapter } = require("../providers/provider.registry");
 
 const getProviders = asyncHandler(async (req, res) => {
   // Prepared fresh per request rather than once at module load — see the
@@ -23,4 +23,29 @@ const getProviderStatuses = asyncHandler(async (req, res) => {
   return success(res, { message: "Provider statuses fetched successfully", data: { providers: await getProviderStatus() } });
 });
 
-module.exports = { getProviders, getProviderStatuses };
+const indrive = () => getAdapter("indrive");
+const providerData = (result) => ({ provider: "indrive", ...result });
+
+const getIndriveSuggestions = asyncHandler(async (req, res) => {
+  const result = await indrive().getSuggestions({ text: req.query.text || req.query.input, latitude: req.query.latitude ?? req.query.lat, longitude: req.query.longitude ?? req.query.lng, sessionId: req.query.sessionId || req.query.sessionToken });
+  return success(res, { data: providerData(result) });
+});
+
+const getIndriveRoute = asyncHandler(async (req, res) => {
+  const result = await indrive().getRoute({ pickup: req.body?.pickup, destination: req.body?.destination });
+  return success(res, { data: providerData(result) });
+});
+
+const getIndriveFares = asyncHandler(async (req, res) => {
+  const result = await indrive().getFareEstimates(req.body || {});
+  return success(res, { data: providerData(result) });
+});
+
+const getIndriveDrivers = asyncHandler(async (req, res) => {
+  const result = await indrive().getNearbyDrivers({ latitude: req.query.latitude ?? req.query.lat, longitude: req.query.longitude ?? req.query.lng, rideType: req.query.rideType });
+  return success(res, { data: providerData(result) });
+});
+
+const getIndriveStatus = asyncHandler(async (req, res) => success(res, { data: await indrive().getProviderStatus() }));
+
+module.exports = { getProviders, getProviderStatuses, getIndriveSuggestions, getIndriveRoute, getIndriveFares, getIndriveDrivers, getIndriveStatus };

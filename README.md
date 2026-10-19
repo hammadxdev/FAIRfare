@@ -1,10 +1,28 @@
 # FairFare Backend
 
 Backend API for **FairFare**, a React Native app that compares ride fares across
-multiple providers. It supports simulated providers and an authorized inDrive
-integration using backend-only session credentials.
-It's built with a provider-adapter architecture so real APIs can be swapped in
-later without touching the routes/controllers/services layer.
+multiple providers. It supports deterministic simulation, an authorized inDrive
+adapter using backend-only session credentials, and a gated Yango adapter whose
+live configuration is not activated by default.
+It is built with a provider-adapter architecture so provider integrations can be
+validated without changing the routes/controllers/services layer.
+
+## Release status and architecture
+
+The mobile and frontend clients call this backend for authentication, location
+resolution, route summaries, fare comparison, history, saved routes, and the
+grounded AI Ride Assistant. Provider adapters normalize results into the shared
+fare contract: inDrive prices remain suggested/negotiable, Yango results retain
+exact/display/unavailable semantics, and Bykea live pricing is not configured.
+
+The AI assistant validates the requested route against the comparison snapshot
+before using fares. A changed or unresolved route cannot reuse stale prices,
+pickup ETAs, distance, duration, or provider rankings. The backend returns a
+safe clarification or unavailable response when a fresh matching comparison is
+not available.
+
+Provider app launch is a client-side handoff only. It never places a ride or
+payment, and route autofill is not claimed unless verified for that provider.
 
 ## Tech Stack
 
@@ -15,7 +33,7 @@ later without touching the routes/controllers/services layer.
 - Node's built-in test runner (`node --test`) + `supertest`
 - JWT authentication with rotating refresh sessions
 - User-owned comparison history and private preferences
-- AI Chat remains a navigation placeholder; provider booking/recommendation flows are not implemented
+- AI Ride Assistant with server-side route/fare grounding and stale-comparison rejection
 
 ## Folder Structure
 
@@ -445,6 +463,47 @@ Fair Fare does not implement inDrive authentication bypass. An authorized
 session credential must be supplied before the real provider integration can
 become READY.
 
+### Centralized provider runtime configuration
+
+Provider settings can be staged in the backend-only Supabase table
+`provider_runtime_config` using migration
+`src/db/migrations/011_provider_runtime_config.sql`. The table contains only
+validated non-secret settings such as mode, enablement, approved HTTPS base
+URL/path, timeout, app metadata, Yango defaults, and explicit authorization
+gates. Access tokens and refresh tokens are not copied there: inDrive tokens
+remain in `provider_sessions`, and existing secure environment/hosting secret
+storage remains the source for other authorization material.
+
+The existing environment configuration remains authoritative by default. To
+read an active Supabase row, the backend must have both
+`PROVIDER_RUNTIME_CONFIG_ENABLED=true` and
+`PROVIDER_RUNTIME_CONFIG_ACTIVATED=true`. A live mode additionally requires
+`PROVIDER_RUNTIME_CONFIG_LIVE_CUTOVER=true`, a validated row with both
+authorization gates true, and the existing provider authorization checks. A
+missing, invalid, or unavailable row falls back to the current environment
+configuration and never enables a provider or simulation mode by itself.
+
+Use the non-destructive migration helper for initialization:
+
+```bash
+node scripts/migrateProviderRuntimeConfig.cjs       # sanitized dry run
+node scripts/migrateProviderRuntimeConfig.cjs --apply # writes inactive rows
+```
+
+The import always writes `active=false`, clears authorization gates, never
+prints or stores credentials, and never replaces working environment settings.
+After reviewing the inserted values in Supabase, activation is a controlled
+operator action: set the approved row active, set the three runtime flags in
+the backend secret manager, then restart or wait for the bounded refresh cache.
+Rollback is to deactivate the row or set the runtime flags false; the original
+environment configuration is then used. No frontend, mobile, or public API
+exposes these settings.
+
+Run the migration manually in Supabase SQL Editor; it is not applied by the
+application startup command. The backend uses the database role already
+configured for Supabase and the table has RLS enabled with no `PUBLIC`,
+`anon`, or `authenticated` grants.
+
 ## ML Fare Prediction
 
 Fair Fare's first tabular prediction pipeline is separated from the Express
@@ -732,3 +791,45 @@ restarts, attach a persistent volume/disk and point `DB_PATH` at it.
    — the mobile app needs `https://fairfare-backend.example.com/api` as its
    `EXPO_PUBLIC_API_BASE_URL`.
 5. Smoke test before pointing the app at it: `curl https://YOUR_URL/api/health`.
+## Sanitized provider API diagnostics
+
+When explicitly enabled, the backend stores short-lived, sanitized request and
+response-contract diagnostics for inDrive pricing and Yango RouteStats in the
+Supabase PostgreSQL table `provider_api_payloads`. The storage boundary is
+`src/services/providerApiPayloadStorage.service.js`; it is called by the
+provider HTTP clients and is best-effort, so a database failure never fails a
+fare comparison.
+
+Environment variable names:
+
+```text
+PROVIDER_API_PAYLOAD_STORAGE_ENABLED=true
+PROVIDER_API_PAYLOAD_RETENTION_DAYS=7
+```
+
+Retention is clamped to 1–30 days and the backend periodically deletes expired
+rows. Migration `src/db/migrations/010_provider_api_payloads.sql` must be
+reviewed and run in the Supabase SQL Editor. RLS is enabled and no grants are
+provided to `anon`, `authenticated`, or `PUBLIC`; there is no public API for
+reading payloads. Only the backend database/service role should inspect them.
+
+Only route coordinates, route metrics, provider category/class identifiers,
+fare/price fields, currency, availability, TTL, and safe error/status fields
+are allowlisted. Authorization headers, access or refresh tokens, cookies,
+session IDs, API keys, device or account identifiers, and private profile
+fields are discarded. Stored records are diagnostics, never a fare cache:
+quote timestamps and provider TTLs are retained for contract verification, and
+expired records must not be replayed as live prices.
+
+Safe inspection should use an authenticated backend-only SQL session and select
+metadata rather than exporting JSON payloads:
+
+```sql
+SELECT id, provider, operation, comparison_id, http_status, created_at, expires_at
+FROM provider_api_payloads
+WHERE expires_at > NOW()
+ORDER BY created_at DESC
+LIMIT 50;
+```
+
+Do not export these records to Git, logs, tickets, fixtures, or client APIs.

@@ -15,9 +15,55 @@ const { rememberComparison } = require("./currentComparison.service");
 const { resolveWeatherContext } = require("./weatherContext.service");
 const { getDatasetMode, resolveTripCoverage, estimateDatasetFare } = require("./fairFareDataset.service");
 
+function safeYangoDiagnostics(value) {
+  const categories = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE"]);
+  if (!value || value.provider !== "yango" || !categories.has(value.errorCategory) || ![true, false, "unknown"].includes(value.requestReachedUpstream)) return null;
+  const status = value.upstreamStatus === null ? null : Number(value.upstreamStatus);
+  if (status !== null && (!Number.isInteger(status) || status <= 0)) return null;
+  return { provider: "yango", upstreamStatus: status, errorCategory: value.errorCategory, requestReachedUpstream: value.requestReachedUpstream };
+}
+
 function dataSourceForAdapter(adapter) {
   if (process.env.NODE_ENV === "test") return "TEST";
-  return adapter.mode === "real" ? "REAL" : "SIMULATED";
+  return adapter.liveTransportEnabled === true && ["real", "authorized-live"].includes(adapter.mode) ? "REAL" : "NONE";
+}
+
+function isLiveFareResult(result) {
+  const source = String(result?.dataSource || result?.source || "").toUpperCase();
+  const fare = Number(result?.fare);
+  const testFixture = process.env.NODE_ENV === "test" && ["TEST", "REAL"].includes(source);
+  return (source === "REAL" || testFixture) && Number.isFinite(fare) && fare > 0 && result?.isAvailable !== false;
+}
+
+function unavailableLiveResult(provider, code = "LIVE_INTEGRATION_NOT_CONFIGURED") {
+  return {
+    provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
+    fare: null, etaMin: null, isAvailable: false, status: "unavailable", source: "none", dataSource: "NONE",
+    estimates: [],
+    error: { code, message: "Live fare data is currently unavailable." },
+    badges: [], breakdown: null,
+  };
+}
+
+function logDevelopmentProviderDiagnostics(providers, results) {
+  if (process.env.NODE_ENV === "production") return;
+  const diagnostics = providers.map((provider, index) => {
+    const adapter = getAdapter(provider.name);
+    const result = results[index] || {};
+    const errorCode = typeof result.error === "string" ? result.error : result.error?.code || null;
+    const upstream = result.errorDiagnostics || result.error?.diagnostics || null;
+    return {
+      provider: provider.display_name || provider.name,
+      configured: adapter.liveTransportEnabled === true,
+      attempted: upstream?.requestReachedUpstream === true || result.dataSource === "REAL" || result.source === "live",
+      httpStatus: Number.isInteger(upstream?.upstreamStatus) ? upstream.upstreamStatus : null,
+      status: result.status || (result.isAvailable ? "available" : "unavailable"),
+      errorCode,
+      fareCategories: Array.isArray(result.quotes) ? result.quotes.length : 0,
+      availabilityReason: result.availabilityReason?.code || result.availability || errorCode || null,
+    };
+  });
+  console.info("[fare] provider diagnostics", diagnostics);
 }
 
 // Statements are prepared fresh inside each function rather than once at
@@ -70,7 +116,11 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   // Weather is contextual enrichment: one pickup lookup is shared by every
   // provider/category and a failure returns UNKNOWN without blocking fares.
   const weatherContext = await resolveWeatherContext({ latitude: pickup.lat, longitude: pickup.lng, observedAt });
-  const rawResults = await Promise.all(providers.map(async (provider) => {
+  const settledResults = await Promise.allSettled(providers.map(async (provider) => {
+    const adapter = getAdapter(provider.name);
+    if (process.env.NODE_ENV !== "test" && (adapter.liveTransportEnabled !== true || dataSourceForAdapter(adapter) !== "REAL")) {
+      return unavailableLiveResult(provider);
+    }
     const coverage = resolveTripCoverage({ pickup, dropoff, provider: provider.name, vehicleType });
     if (datasetMode === "verified" && !coverage.supported) {
       return {
@@ -97,7 +147,6 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
           badges: [], breakdown: null,
         };
       }
-      const adapter = getAdapter(provider.name);
       const etaMin = typeof adapter.getPickupEtaMin === "function" ? adapter.getPickupEtaMin(vehicleType) : null;
       const quote = { providerId: provider.name, providerName: provider.display_name, categoryId: vehicleType, categoryName: vehicleType, fare: estimate.fare, fareMin: null, fareMax: null, currency: estimate.currency, fareType: estimate.fareType, pickupEtaSeconds: etaMin == null ? null : etaMin * 60, isAvailable: true, metadata: estimate.metadata };
       return {
@@ -124,6 +173,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
         const quotes = await adapter.getQuotes({ route: routeData, rate, vehicleType, observedAt, context: { hour: simulationContext.hourOfDay, dayOfWeek: simulationContext.dayOfWeek, isWeekend: Boolean(simulationContext.isWeekend) }, weather: weatherContext });
         const quote = quotes.find((candidate) => candidate.fare !== null && candidate.fare !== undefined);
         if (!quote) throw new Error("No quote returned");
+        if (!Number.isFinite(Number(quote.fare)) || Number(quote.fare) <= 0) throw new Error("Invalid fare returned");
         return {
           provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
           fare: quote.fare, etaMin: quote.pickupEtaSeconds == null ? null : quote.pickupEtaSeconds / 60,
@@ -132,6 +182,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
           metadata: quote.metadata,
           quotes,
           dataSource: dataSourceForAdapter(adapter),
+          source: dataSourceForAdapter(adapter) === "REAL" ? "live" : "test",
         };
       }
       const { finalFare, breakdown } = adapter.getFareQuote({ rate, distanceKm, durationMin });
@@ -155,22 +206,35 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
       };
     } catch (error) {
       console.error(`[${provider.display_name}] provider request failed: ${error.code || "UNAVAILABLE"}`);
-      return {
+        const result = {
         provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
         fare: null, etaMin: null, isAvailable: false,
         error: error.code || "PROVIDER_UNAVAILABLE", badges: [], breakdown: null,
       };
+        const diagnostics = provider.name === "quickride" ? safeYangoDiagnostics(error?.yangoDiagnostics) : null;
+        if (diagnostics) result.errorDiagnostics = diagnostics;
+        return result;
     }
   }));
+  const rawResults = settledResults.map((entry, index) => {
+    if (entry.status === "fulfilled") return entry.value;
+    const provider = providers[index];
+    const errorCode = entry.reason?.code || "PROVIDER_UNAVAILABLE";
+    console.error(`[${provider.display_name}] provider request failed: ${errorCode}`);
+    return process.env.NODE_ENV === "test"
+      ? { provider: { id: provider.id, name: provider.name, displayName: provider.display_name }, fare: null, etaMin: null, isAvailable: false, error: errorCode, availability: errorCode === "PROVIDER_TIMEOUT" ? "timeout" : "unavailable", badges: [], breakdown: null }
+      : unavailableLiveResult(provider, errorCode);
+  });
+  logDevelopmentProviderDiagnostics(providers, rawResults);
 
-  const available = rawResults.filter((result) => result.fare !== null && result.fare !== undefined);
+  const available = rawResults.filter(isLiveFareResult);
   // Only verified mode changes the public result set. Legacy and preview retain
   // the existing provider response contract; preview adds diagnostics below.
   const results = datasetMode === "verified"
     ? [...applyRecommendation(available), ...rawResults.filter((result) => !available.includes(result) && (!result.coverage || result.coverage.supported))]
     : [...applyRecommendation(available), ...rawResults.filter((result) => !available.includes(result))];
 
-  const datasetPreview = datasetMode === "preview"
+  const datasetPreview = process.env.NODE_ENV === "test" && datasetMode === "preview"
     ? providers.map((provider) => {
       const coverage = resolveTripCoverage({ pickup, dropoff, provider: provider.name, vehicleType });
       const estimate = estimateDatasetFare({ vehicleType, distanceKm, durationMin, hourOfDay: simulationContext.hourOfDay, dayOfWeek: simulationContext.dayOfWeek, weather: weatherContext });
@@ -282,7 +346,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
       dropoffCity: rawResults.find((result) => result.coverage)?.coverage?.dropoffCity || null,
       intercity: rawResults.some((result) => result.coverage?.intercity === true),
       providers: rawResults.map((result) => ({ provider: result.provider.name, displayName: result.provider.displayName, status: result.coverage?.status || (result.fare != null ? "LEGACY_APPROVED" : "UNKNOWN"), supported: result.coverage?.supported === true })),
-      provenance: "Fair Fare synthetic dataset v1; not live provider availability",
+      provenance: "Live provider data only; provider availability is not inferred locally",
     },
     results: personalizedResults,
   };
@@ -291,4 +355,4 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   return comparison;
 }
 
-module.exports = { compareFares };
+module.exports = { compareFares, isLiveFareResult, unavailableLiveResult };

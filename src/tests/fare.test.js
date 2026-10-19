@@ -27,6 +27,14 @@ test("GET /api/providers/status is safe and does not expose credentials", async 
   assert.doesNotMatch(JSON.stringify(res.body), /access_token|refresh_token|fingerprint|authorization/i);
 });
 
+test("fare comparison keeps optional Yango diagnostics separate from inDrive output", async () => {
+  const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
+  assert.equal(res.status, 200);
+  const indrive = res.body.data.results.find((result) => result.provider?.name === "indrive");
+  assert.ok(indrive);
+  assert.equal(indrive.errorDiagnostics, undefined);
+});
+
 test("POST /api/fares/compare works for valid input and returns 3 results", async () => {
   const res = await request(app).post("/api/fares/compare").set("Authorization", authHeader(auth)).send(validPayload);
   assert.equal(res.status, 200);

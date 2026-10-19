@@ -4,6 +4,7 @@ const { getComparisonForUser } = require("../currentComparison.service");
 const defaultLlmClient = require("./llmClient");
 const conversationService = require("./conversation.service");
 const { retrieveFairFareKnowledge } = require("./fairFareKnowledge.service");
+const { buildGroundedComparison, deriveFacts } = require("./fareComparisonGrounding.service");
 
 let llmClient = defaultLlmClient;
 const MAX_MESSAGE_LENGTH = 1000;
@@ -18,15 +19,12 @@ function responseLanguage(message) {
 function derivedFacts(rides) {
   const available = rides.filter((ride) => ride.availability === "available");
   const fareCandidates = available.filter((ride) => typeof ride.fare === "number" && Number.isFinite(ride.fare));
-  const etaCandidates = available.filter((ride) => typeof ride.pickupEtaMin === "number" && Number.isFinite(ride.pickupEtaMin));
   const flaggedCheapest = fareCandidates.filter((ride) => ride.isCheapest);
-  const flaggedFastest = etaCandidates.filter((ride) => ride.isFastest);
   const cheapest = (flaggedCheapest.length ? flaggedCheapest : fareCandidates.filter((ride) => ride.fare === Math.min(...fareCandidates.map((item) => item.fare))))[0] || null;
-  const fastest = (flaggedFastest.length ? flaggedFastest : etaCandidates.filter((ride) => ride.pickupEtaMin === Math.min(...etaCandidates.map((item) => item.pickupEtaMin))))[0] || null;
   const recommendationStatuses = [...new Set(rides.filter((ride) => ride.enrichmentStatus !== "stale").map((ride) => ride.bookWait?.status).filter((status) => status && status !== "INSUFFICIENT_DATA"))];
   return {
     cheapest: cheapest ? { provider: cheapest.provider, fare: cheapest.fare, currency: cheapest.currency } : null,
-    pickupEstimate: fastest ? { provider: fastest.provider, pickupEtaMin: fastest.pickupEtaMin, verified: false } : null,
+    pickupEstimate: null,
     bookWaitStatus: recommendationStatuses.length === 1 ? recommendationStatuses[0] : null,
   };
 }
@@ -35,6 +33,17 @@ async function safePreferences(userId) { return getPreferences(userId); }
 
 function comparisonContext(comparison) {
   if (!comparison) return null;
+  const grounded = buildGroundedComparison(comparison);
+  if (grounded) {
+    return {
+      comparisonId: grounded.comparisonId,
+      freshness: grounded.freshness,
+      route: grounded.route,
+      providers: grounded.providers,
+      rides: grounded.options,
+      derivedFacts: deriveFacts(grounded, ""),
+    };
+  }
   return {
     comparisonId: comparison.comparisonId || null,
     freshness: comparison.comparisonId ? "current_enriched_comparison" : (comparison.enrichmentStatus === "stale" ? "history_snapshot_stale" : "history_snapshot"),
@@ -48,7 +57,6 @@ function comparisonContext(comparison) {
       fareMax: ride.fareMax ?? null,
       currency: ride.currency || "PKR",
       fareType: ride.fareType || ride.quotes?.[0]?.fareType || null,
-      pickupEtaMin: ride.etaMin ?? (ride.pickupEtaSeconds == null ? (ride.quotes?.[0]?.pickupEtaSeconds == null ? null : ride.quotes[0].pickupEtaSeconds / 60) : ride.pickupEtaSeconds / 60),
       availability: ride.isAvailable === false || ride.availability === "unavailable" ? "unavailable" : "available",
       prediction: ride.prediction ? { status: ride.prediction.status, predictedFare: ride.prediction.predictedFare ?? null, dataSource: ride.prediction.dataSource || null, model: ride.prediction.model || null } : null,
       bookWait: ride.recommendation ? { status: ride.recommendation.status, currentFare: ride.recommendation.currentFare ?? null, expectedFare: ride.recommendation.expectedFare ?? null, reason: ride.recommendation.reason || null, modelDataSource: ride.recommendation.modelDataSource || null } : null,

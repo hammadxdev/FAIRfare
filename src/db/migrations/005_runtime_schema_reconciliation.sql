@@ -62,8 +62,13 @@ CREATE TABLE IF NOT EXISTS provider_sessions (
   refresh_token text,
   access_expires_at bigint,
   status text NOT NULL,
+  rotation_version bigint NOT NULL DEFAULT 0,
+  last_rotated_at bigint,
   updated_at bigint NOT NULL
 );
+
+ALTER TABLE provider_sessions ADD COLUMN IF NOT EXISTS rotation_version bigint NOT NULL DEFAULT 0;
+ALTER TABLE provider_sessions ADD COLUMN IF NOT EXISTS last_rotated_at bigint;
 
 CREATE TABLE IF NOT EXISTS comparison_history (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

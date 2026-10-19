@@ -38,8 +38,10 @@ test("simulated inDrive quotes and status do not call real session or pricing", 
 
 test("provider status is safe in the default simulated deployment", async () => {
   const statuses = await getProviderStatus();
-  assert.deepEqual(statuses.map((item) => item.mode), ["simulated", "simulated", "simulated"]);
-  assert.deepEqual(statuses.map((item) => item.status), ["READY", "READY", "READY"]);
+  assert.deepEqual(statuses.map((item) => item.id), ["indrive", "quickride", "yango", "urbancab"]);
+  assert.deepEqual(statuses.map((item) => item.mode), ["simulated", "simulated", "unavailable", "simulated"]);
+  assert.deepEqual(statuses.map((item) => item.status), ["READY", "READY", "NOT_CONFIGURED", "READY"]);
+  assert.deepEqual(statuses.find((item) => item.id === "yango"), { id: "yango", enabled: false, mode: "unavailable", status: "NOT_CONFIGURED" });
 });
 
 test("weather observation migration contains every runtime column", () => {

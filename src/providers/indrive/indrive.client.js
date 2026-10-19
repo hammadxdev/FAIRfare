@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { TOKEN_RENEW_URL, PRICING_URL } = require("./indrive.constants");
 const { IndriveError, CODES } = require("./indrive.errors");
+const { recordProviderApiPayload } = require("../../services/providerApiPayloadStorage.service");
 
 function headers(config, accessToken) {
   const result = {
@@ -10,11 +11,11 @@ function headers(config, accessToken) {
     "X-Os-Type": config.osType,
     "X-App-Flavor": config.appFlavor,
     "X-App": config.appVersion,
-    "X-Device-Fingerprint": config.deviceFingerprint,
-    "X-Fingerprint": config.fingerprint,
     "Content-Type": "application/json; charset=utf-8",
     "User-Agent": "okhttp/5.3.0",
   };
+  if (config.deviceFingerprint) result["X-Device-Fingerprint"] = config.deviceFingerprint;
+  if (config.fingerprint) result["X-Fingerprint"] = config.fingerprint;
   if (accessToken) result.Authorization = `Bearer ${accessToken}`;
   return result;
 }
@@ -90,7 +91,10 @@ async function requestJson(url, options, config, fetchImpl = global.fetch, onRes
   }
 }
 
-function createIndriveClient({ config, fetchImpl = global.fetch, logger = console } = {}) {
+function createIndriveClient({ config, fetchImpl = global.fetch, logger = console, payloadRecorder = recordProviderApiPayload } = {}) {
+  const record = (operation, requestPayload) => (response) => {
+    if (operation === "pricing" && typeof payloadRecorder === "function") void payloadRecorder({ provider: "indrive", operation, requestPayload, responsePayload: response.body, httpStatus: response.status });
+  };
   return {
     async renew(refreshToken) {
       assertConfigured(config);
@@ -125,11 +129,20 @@ function createIndriveClient({ config, fetchImpl = global.fetch, logger = consol
       });
     },
     async getPricing(accessToken, payload) {
-      assertConfigured(config);
-      return requestJson(PRICING_URL, {
+      if (!accessToken) throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive access token is required");
+      const requestPayload = payload;
+      return requestJson(config.pricingUrl || "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gateway-backend/api/pricing/v5/price", {
         method: "POST",
         headers: { ...headers(config, accessToken), "X-Local-Req-Id": crypto.randomUUID() },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestPayload),
+      }, config, fetchImpl, record("pricing", requestPayload));
+    },
+    async getAutocomplete(accessToken, request) {
+      if (!accessToken) throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive access token is required");
+      return requestJson(request.url, {
+        method: "POST",
+        headers: { ...headers(config, accessToken), "Content-Type": "application/x-www-form-urlencoded", "X-Local-Req-Id": crypto.randomUUID() },
+        body: request.body,
       }, config, fetchImpl);
     },
   };

@@ -2,7 +2,8 @@ const PROVIDER_ID = "indrive";
 const PROVIDER_NAME = "inDrive";
 
 const TOKEN_RENEW_URL = "https://ath-gw-cf.euce1.indriverapp.com/api/auth/v1/token/renew";
-const PRICING_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gateway-backend/api/pricing/v5/price";
+const PRICING_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gateway-backend/api/pricing/v6/price";
+const AUTOCOMPLETE_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/geo2dev/api/autocomplete";
 const ORDER_TYPE_IDS = [2, 33, 31, 29, 11];
 const ORDER_TYPE_CATEGORIES = {
   2: { name: "Moto", normalizedCategory: "BIKE" },
@@ -27,13 +28,20 @@ const VEHICLE_TYPE_ORDER_IDS = Object.freeze({
 
 function getConfig(env = process.env) {
   const requestedMode = String(env.INDRIVE_MODE || "simulated").toLowerCase();
-  const simulationOnly = String(env.FAIRFARE_SIMULATION_ONLY ?? "true").toLowerCase() !== "false";
+  const simulationOnly = env.FAIRFARE_SIMULATION_ONLY === undefined
+    ? true
+    : String(env.FAIRFARE_SIMULATION_ONLY).toLowerCase() !== "false";
   return {
     enabled: env.INDRIVE_ENABLED !== "false",
+    simulationOnly,
     // Demo deployments fail closed to simulation. REAL is reachable only when
     // explicitly opting out of the global simulation-only guard.
-    mode: simulationOnly ? "simulated" : ["simulated", "real"].includes(requestedMode) ? requestedMode : "simulated",
-    refreshToken: env.INDRIVE_REFRESH_TOKEN || "",
+    mode: env.NODE_ENV === "test" ? "simulated" : simulationOnly ? "simulated" : ["simulated", "real"].includes(requestedMode) ? requestedMode : "simulated",
+    pricingUrl: env.INDRIVE_AUTHORIZED_PRICING_URL || PRICING_URL,
+    autocompleteUrl: env.INDRIVE_AUTHORIZED_AUTOCOMPLETE_URL || AUTOCOMPLETE_URL,
+    cityId: Number(env.INDRIVE_CITY_ID || 5388),
+    autocompleteRoutePointType: env.INDRIVE_AUTOCOMPLETE_ROUTE_POINT_TYPE || "to",
+    currencyMultiplier: Number(env.INDRIVE_CURRENCY_MULTIPLIER || 100),
     deviceFingerprint: env.INDRIVE_DEVICE_FINGERPRINT || "",
     fingerprint: env.INDRIVE_FINGERPRINT || "",
     appVersion: env.INDRIVE_APP_VERSION || "android 5.157.0",
@@ -50,6 +58,7 @@ module.exports = {
   PROVIDER_NAME,
   TOKEN_RENEW_URL,
   PRICING_URL,
+  AUTOCOMPLETE_URL,
   ORDER_TYPE_IDS,
   ORDER_TYPE_CATEGORIES,
   VEHICLE_TYPE_ORDER_IDS,

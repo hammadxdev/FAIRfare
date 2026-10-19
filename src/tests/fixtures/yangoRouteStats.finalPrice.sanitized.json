@@ -1,0 +1,100 @@
+{
+  "distance": "4.8 km",
+  "time": "16 min",
+  "currency_rules": {
+    "code": "PKR",
+    "text": "Rs.",
+    "template": "$SIGN$$VALUE$ $CURRENCY$",
+    "sign": "Rs."
+  },
+  "is_fixed_price": true,
+  "service_levels": [
+    {
+      "class": "econom",
+      "name": "Economy",
+      "price": "$SIGN$430 $CURRENCY$",
+      "max_price_as_decimal": "439.00",
+      "is_hidden": false,
+      "prices": { "raw": { "final_price": "439" } },
+      "details_tariff": [{ "type": "price", "value": "from $SIGN$209 $CURRENCY$" }],
+      "estimated_waiting": { "seconds": 420 },
+      "paid_options": { "value": 1.1 }
+    },
+    {
+      "class": "business",
+      "name": "Economy A/C",
+      "price": "$SIGN$490 $CURRENCY$",
+      "max_price_as_decimal": "492.00",
+      "is_hidden": false,
+      "prices": { "raw": { "final_price": "492" } },
+      "details_tariff": [{ "type": "price", "value": "from $SIGN$232 $CURRENCY$" }],
+      "estimated_waiting": { "seconds": 480 },
+      "paid_options": { "value": 1.1 }
+    },
+    {
+      "class": "comfortplus",
+      "name": "Comfort",
+      "price": "$SIGN$550 $CURRENCY$",
+      "max_price_as_decimal": "559.00",
+      "is_hidden": false,
+      "prices": { "raw": { "final_price": "559" } },
+      "details_tariff": [{ "type": "price", "value": "from $SIGN$230 $CURRENCY$" }],
+      "estimated_waiting": { "seconds": 780 }
+    },
+    {
+      "class": "moto",
+      "name": "Bike",
+      "price": "$SIGN$160 $CURRENCY$",
+      "max_price_as_decimal": "161.00",
+      "is_hidden": false,
+      "prices": { "raw": { "final_price": "161" } },
+      "details_tariff": [{ "type": "price", "value": "from $SIGN$70 $CURRENCY$" }],
+      "estimated_waiting": { "seconds": 180 },
+      "paid_options": { "value": 1.1 }
+    },
+    {
+      "class": "tuktuk",
+      "name": "Rickshaw",
+      "price": "$SIGN$320 $CURRENCY$",
+      "max_price_as_decimal": "324.00",
+      "is_hidden": false,
+      "prices": { "raw": { "final_price": "324" } },
+      "details_tariff": [{ "type": "price", "value": "from $SIGN$95 $CURRENCY$" }],
+      "estimated_waiting": { "seconds": 480 }
+    },
+    {
+      "class": "test_tariff_project_category",
+      "name": "Rickshaw+",
+      "price": "$SIGN$270 $CURRENCY$",
+      "max_price_as_decimal": "273.00",
+      "is_hidden": false,
+      "prices": { "raw": { "final_price": "273" } },
+      "estimated_waiting": { "seconds": 0 },
+      "tariff_unavailable": { "code": "no_free_cars_nearby", "message": "Oops, all drivers are busy" }
+    },
+    {
+      "class": "comfort",
+      "name": "Hidden passenger tariff",
+      "price": "$SIGN$600 $CURRENCY$",
+      "max_price_as_decimal": "600.00",
+      "is_hidden": true,
+      "prices": { "raw": { "final_price": "600" } }
+    },
+    {
+      "class": "courier",
+      "name": "Courier",
+      "price": "$SIGN$125 $CURRENCY$",
+      "is_hidden": false,
+      "delivery_extra": {},
+      "tariff_unavailable": { "code": "delivery_only" }
+    },
+    {
+      "class": "cargo",
+      "name": "Cargo",
+      "price": "$SIGN$1,201 $CURRENCY$",
+      "is_hidden": false,
+      "delivery_extra": {},
+      "tariff_unavailable": { "code": "redirect" }
+    }
+  ]
+}

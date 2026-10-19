@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/3.0/nearestdrivers",
+    "body": {
+      "point": [74.41626832907782, 31.474148968180497],
+      "classes": ["econom"],
+      "current_drivers": [],
+      "simplify": true,
+      "payment": {
+        "type": "cash"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "drivers": [
+        { "free": true, "display_tariff": "econom" },
+        { "free": true, "display_tariff": "business" },
+        { "free": true, "display_tariff": "business" }
+      ]
+    }
+  }
+}

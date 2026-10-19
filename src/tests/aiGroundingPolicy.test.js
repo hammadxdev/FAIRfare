@@ -14,7 +14,7 @@ function context(responseLanguage = "english") {
       ],
       derivedFacts: {
         cheapest: { provider: "inDrive", fare: 280, currency: "PKR" },
-        pickupEstimate: { provider: "Bykea", pickupEtaMin: 7, verified: false },
+        pickupEstimate: null,
         bookWaitStatus: "BOOK_NOW",
       },
     },
@@ -27,16 +27,16 @@ test("comparison grounding supplies deterministic cheapest and fastest facts", (
     { provider: { displayName: "inDrive" }, fare: 280, etaMin: 18, isAvailable: true, isCheapest: true, isFastest: false },
     { provider: { displayName: "Bykea" }, fare: 350, etaMin: 7, isAvailable: true, isCheapest: false, isFastest: true },
   ] });
-  assert.deepEqual(result.rides.map(({ provider, fare, pickupEtaMin }) => ({ provider, fare, pickupEtaMin })), [
-    { provider: "Yango", fare: 320, pickupEtaMin: 12 },
-    { provider: "inDrive", fare: 280, pickupEtaMin: 18 },
-    { provider: "Bykea", fare: 350, pickupEtaMin: 7 },
+  assert.deepEqual(result.rides.map(({ provider, fare }) => ({ provider, fare })), [
+    { provider: "Yango", fare: 320 },
+    { provider: "inDrive", fare: 280 },
+    { provider: "Bykea", fare: 350 },
   ]);
   assert.equal(result.rides[1].isCheapest, true);
   assert.equal(result.rides[2].isFastest, true);
   assert.deepEqual(derivedFacts(result.rides), {
     cheapest: { provider: "inDrive", fare: 280, currency: "PKR" },
-    pickupEstimate: { provider: "Bykea", pickupEtaMin: 7, verified: false },
+    pickupEstimate: null,
     bookWaitStatus: null,
   });
 });
@@ -67,11 +67,11 @@ test("fastest ride/provider questions cannot turn simulated ETA into a live clai
   assert.equal(groundedReply({ text: "Bykea has the fastest pickup.", message: "Which provider has the fastest pickup?", context: context() }), expected);
 });
 
-test("pickup facts remain explicitly unverified while route facts remain available", () => {
+test("pickup ETA facts are withheld while route facts remain available", () => {
   const result = comparisonContext({ distanceKm: 4.2, durationMin: 18, results: [{ provider: { displayName: "Bykea" }, fare: 300, etaMin: 7, isAvailable: true }] });
   assert.equal(result.route.distanceKm, 4.2);
   assert.equal(result.route.durationMin, 18);
-  assert.equal(derivedFacts(result.rides).pickupEstimate.verified, false);
+  assert.equal(derivedFacts(result.rides).pickupEstimate, null);
   assert.match(SYSTEM_INSTRUCTIONS, /does not have live driver locations/i);
 });
 

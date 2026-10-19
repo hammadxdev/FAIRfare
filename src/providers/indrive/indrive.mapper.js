@@ -51,18 +51,33 @@ function mapPricingResponse(raw, route = {}) {
     const maxRaw = singleShape ? item.price_max?.value : item.price_max;
     const isRush = singleShape ? item.rush_hour?.is_rush : item.is_rush;
     const fare = normalizeMoney(recommendedRaw, multiplier);
+    const priceSourceField = singleShape ? "autofill_price.value" : item.autofill_price !== undefined ? "autofill_price" : "recommended_price";
+    const priceClassification = fare === null ? "unavailable" : "suggested";
+    const priceDiagnostics = {
+      categoryId: category.categoryId,
+      categoryName: category.categoryName,
+      upstreamPriceField: priceSourceField,
+      originalNumericAmount: finiteNumber(recommendedRaw),
+      normalizedNumericAmount: fare,
+      currency: code,
+      priceClassification,
+      source: "real",
+      freshnessTtlSeconds: finiteNumber(envelope?.ttl ?? item.ttl ?? 300),
+    };
     return {
       providerId: "indrive", providerName: "inDrive", ...category,
       fare, fareRecommended: fare,
       fareMin: normalizeMoney(minRaw, multiplier), fareMax: normalizeMoney(maxRaw, multiplier),
+      exactFare: null, priceType: "suggested", isNegotiable: fare !== null,
       currency: code, fareType: "RECOMMENDED", pickupEtaSeconds: null,
       tripDurationSeconds: finiteNumber(route.durationSeconds), distanceMeters: finiteNumber(route.distanceMeters),
       isAvailable: fare !== null, deepLink: null,
       metadata: {
-        providerTtlSeconds: finiteNumber(envelope?.ttl ?? item.ttl),
+        providerTtlSeconds: finiteNumber(envelope?.ttl ?? item.ttl ?? 300),
         isRush: typeof isRush === "boolean" ? isRush : null,
         price: normalizeMoney(priceRaw, multiplier), priceMin: normalizeMoney(minRaw, multiplier), priceMax: normalizeMoney(maxRaw, multiplier),
         priceSteps: item.price_steps && typeof item.price_steps === "object" ? sanitizeMetadata(item.price_steps) : null,
+        priceDiagnostics,
         raw: sanitizeMetadata(item),
       },
     };
