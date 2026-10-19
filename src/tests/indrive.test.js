@@ -4,6 +4,7 @@ const { createSessionManager } = require("../providers/indrive/indrive.auth");
 const { createIndriveAdapter, buildPricingPayload } = require("../providers/indrive/indrive.adapter");
 const { createIndriveClient } = require("../providers/indrive/indrive.client");
 const { mapPricingResponse } = require("../providers/indrive/indrive.mapper");
+const { getConfig } = require("../providers/indrive/indrive.constants");
 
 function createDb() {
   const state = { row: null };
@@ -12,6 +13,10 @@ function createDb() {
     async query(text, params) {
       if (/pg_advisory_xact_lock/i.test(text)) return { rows: [] };
       if (/^SELECT \* FROM provider_sessions/i.test(text)) return { rows: state.row ? [{ ...state.row }] : [] };
+      if (/^UPDATE provider_sessions SET status/i.test(text)) {
+        if (state.row && (Number(state.row.rotation_version) || 0) === Number(params[3])) state.row.status = params[0];
+        return { rows: [], rowCount: state.row ? 1 : 0 };
+      }
       state.row = {
         provider: params[0],
         access_token: params[1],
@@ -68,15 +73,31 @@ function createPricingAdapter({ database, now = () => 1_700_000_000_000, configO
   return createIndriveAdapter({ config: runtimeConfig, session, client });
 }
 
+test("inDrive runtime configuration excludes environment credentials", () => {
+  const runtime = getConfig({
+    NODE_ENV: "development",
+    FAIRFARE_SIMULATION_ONLY: "false",
+    INDRIVE_MODE: "real",
+    INDRIVE_ENABLED: "true",
+    INDRIVE_ACCESS_TOKEN: "env-access-token",
+    INDRIVE_REFRESH_TOKEN: "env-refresh-token",
+    INDRIVE_DEVICE_FINGERPRINT: "device",
+    INDRIVE_FINGERPRINT: "finger",
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(runtime, "accessToken"), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(runtime, "refreshToken"), false);
+});
+
 test("inDrive session manager reports missing refresh configuration without crashing", async () => {
   const database = createDb();
   const manager = createSessionManager({ config: { ...config, refreshToken: "" }, client: { renew: async () => { throw new Error("must not call"); } }, database, logger: { log() {} } });
   await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_NOT_CONFIGURED");
-  assert.equal(database.state.row.status, "NOT_CONFIGURED");
+  assert.equal(await manager.getStatus(), "NOT_CONFIGURED");
 });
 
 test("concurrent refresh calls are single-flight and rotated refresh token persists", async () => {
   const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "seed-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 0 };
   let calls = 0;
   const logs = [];
   const now = () => 1_700_000_000_000;
@@ -140,14 +161,13 @@ test("unknown expiry preserves the current access token without a renewal loop",
   manager.stop();
 });
 
-test("newer configured JWT is preferred over an older persisted JWT", async () => {
+test("persisted session remains authoritative over configured credential-shaped fields", async () => {
   const database = createDb();
   const now = () => 1_700_000_000_000;
   database.state.row = { provider: "indrive", access_token: syntheticJwt(1_700_001_000), refresh_token: "old-refresh", access_expires_at: null, status: "READY", updated_at: now() };
-  const newer = syntheticJwt(1_700_007_200);
   let renewCalls = 0;
-  const manager = createSessionManager({ config: { ...config, accessToken: newer, refreshToken: "new-refresh" }, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
-  assert.equal(await manager.ensureValidSession(), newer);
+  const manager = createSessionManager({ config: { ...config, accessToken: syntheticJwt(1_700_007_200), refreshToken: "new-refresh" }, database, now, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; } } });
+  assert.equal(await manager.ensureValidSession(), database.state.row.access_token);
   assert.equal(renewCalls, 0);
   manager.stop();
 });
@@ -175,14 +195,13 @@ test("expired persisted session renews exactly once", async () => {
   assert.equal(renewCalls, 1);
 });
 
-test("missing session uses bootstrap refresh credential once and creates a session", async () => {
+test("missing Supabase session is not bootstrapped from configuration", async () => {
   const database = createDb();
   let renewCalls = 0;
   const manager = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async (token) => { renewCalls += 1; assert.equal(token, "seed-refresh"); return { status: 200, body: { access_token: "bootstrapped-access", refresh_token: "bootstrapped-refresh", expires_in: 3600 } }; } } });
-  assert.equal(await manager.ensureValidSession(), "bootstrapped-access");
-  assert.equal(renewCalls, 1);
-  assert.equal(database.state.row.status, "READY");
-  assert.equal(database.state.row.refresh_token, "bootstrapped-refresh");
+  await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_NOT_CONFIGURED");
+  assert.equal(renewCalls, 0);
+  assert.equal(database.state.row, null);
 });
 
 test("startup reuses a valid persisted session without refreshing", async () => {
@@ -215,6 +234,7 @@ test("startup refreshes a near-expiry session and persists rotation", async () =
 
 test("rotated credentials survive a session-manager restart", async () => {
   const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "seed-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 0 };
   const now = () => 1_700_000_000_000;
   const first = createSessionManager({ config, database, now, logger: { log() {} }, client: { renew: async () => ({ status: 200, body: { access_token: "rotated-access", refresh_token: "rotated-refresh", expires_in: 3600 } }) } });
   await first.ensureValidSession();
@@ -271,6 +291,7 @@ test("PostgreSQL transaction lock prevents two managers from rotating the same s
 
 test("a second fare request reuses the session created by the first request", async () => {
   const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "seed-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 0 };
   let renewCalls = 0;
   const pricingTokens = [];
   const adapter = createPricingAdapter({ database, renew: async () => { renewCalls += 1; return { status: 200, body: { access_token: "bootstrapped-access", refresh_token: "bootstrapped-refresh", expires_in: 3600 } }; }, getPricing: async (token) => { pricingTokens.push(token); return { status: 200, body: { data: [] } }; } });
@@ -282,11 +303,32 @@ test("a second fare request reuses the session created by the first request", as
 
 test("renewal failure has no immediate retry loop", async () => {
   const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "persisted-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 1 };
   let renewCalls = 0;
   const manager = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; return { status: 403, body: { code: "REJECTED" } }; } } });
-  await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_AUTH_REQUIRED");
+  await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_ACCESS_DENIED");
   assert.equal(renewCalls, 1);
-  assert.equal(database.state.row.status, "AUTH_REQUIRED");
+  assert.equal(database.state.row.status, "ACCESS_DENIED");
+  assert.equal(database.state.row.access_token, "expired-access");
+  assert.equal(database.state.row.refresh_token, "persisted-refresh");
+});
+
+test("stale auth status cannot overwrite a newer rotated session", async () => {
+  const database = {
+    state: { row: { provider: "indrive", access_token: "new-access", refresh_token: "new-refresh", access_expires_at: 1_700_100_000_000, status: "READY", rotation_version: 3 } },
+    async query(text, params) {
+      if (/^SELECT \* FROM provider_sessions/i.test(text)) return { rows: [{ provider: "indrive", access_token: "old-access", refresh_token: "old-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 2 }] };
+      if (/^UPDATE provider_sessions SET status/i.test(text)) {
+        if ((Number(this.state.row.rotation_version) || 0) === Number(params[3])) this.state.row.status = params[0];
+        return { rows: [], rowCount: 0 };
+      }
+      return { rows: [] };
+    },
+  };
+  const manager = createSessionManager({ config, database, logger: { log() {} }, client: {} });
+  await manager.markAccessDenied();
+  assert.equal(database.state.row.status, "READY");
+  assert.equal(database.state.row.access_token, "new-access");
 });
 
 test("renewal client sends the verified endpoint, body, and observed fingerprint headers", async () => {
@@ -331,13 +373,15 @@ test("renewal sends a fresh local request id and safe diagnostics never expose c
   assert.match(serializedLogs, /refreshTokenReturned/);
 });
 
-test("renewal 401 and 403 remain PROVIDER_AUTH_REQUIRED", async () => {
-  for (const status of [401, 403]) {
+test("renewal 401 requires auth and 403 is access denied", async () => {
+  for (const [status, expected] of [[401, "PROVIDER_AUTH_REQUIRED"], [403, "PROVIDER_ACCESS_DENIED"]]) {
+    const database = createDb();
+    database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "persisted-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 1 };
     const manager = createSessionManager({
-      config, database: createDb(), logger: { log() {} },
+      config, database, logger: { log() {} },
       client: { renew: async () => ({ status, body: { code: "REJECTED" } }) },
     });
-    await assert.rejects(manager.ensureValidSession(), (error) => error.code === "PROVIDER_AUTH_REQUIRED");
+    await assert.rejects(manager.ensureValidSession(), (error) => error.code === expected);
   }
 });
 
@@ -347,6 +391,7 @@ test("pricing payload keeps route values numeric and 401 retries once", async ()
   assert.equal(payload.order_type_id, 2);
   assert.equal(payload.geo.distance_meters, 4142);
   const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "seed-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 0 };
   let pricingCalls = 0;
   let renewCalls = 0;
   const session = createSessionManager({ config, database, logger: { log() {} }, client: { renew: async () => { renewCalls += 1; return { status: 200, body: { access_token: "token", expires_in: 3600 } }; } } });
@@ -448,6 +493,7 @@ test("normalized provider metadata excludes credentials and fingerprint fields",
 test("a second pricing 401 marks auth required without another retry", async () => {
   let pricingCalls = 0;
   const database = createDb();
+  database.state.row = { provider: "indrive", access_token: "expired-access", refresh_token: "seed-refresh", access_expires_at: 1_699_999_000_000, status: "READY", rotation_version: 0 };
   const session = createSessionManager({ config, database, logger: { log() {} }, client: {
     renew: async () => ({ status: 200, body: { access_token: "access-2", expires_in: 3600 } }),
   } });

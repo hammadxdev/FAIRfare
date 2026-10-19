@@ -12,7 +12,7 @@ const indriveAutocompleteHandler = asyncHandler(async (req, res) => {
     const data = await adapter.getAutocomplete({ text, cityId: cityId ?? cid, orderTypeId, latitude, longitude, routePointType });
     return success(res, { message: "inDrive autocomplete completed successfully", data });
   } catch (error) {
-    const status = error.code === "PROVIDER_AUTH_REQUIRED" ? "auth_required" : error.code === "PROVIDER_TIMEOUT" ? "timeout" : "unavailable";
+    const status = error.code === "PROVIDER_AUTH_REQUIRED" ? "auth_required" : error.code === "PROVIDER_ACCESS_DENIED" ? "access_denied" : error.code === "PROVIDER_TIMEOUT" ? "timeout" : "unavailable";
     return success(res, {
       message: "inDrive autocomplete is currently unavailable",
       data: { provider: "indrive", status, source: "none", suggestions: [], error: { code: error.code || "PROVIDER_UNAVAILABLE", message: "Live provider data is currently unavailable." } },

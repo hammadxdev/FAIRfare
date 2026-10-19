@@ -33,25 +33,8 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     return jwtExpiryMillis(session?.accessToken);
   }
 
-  function normalizeConfigSession() {
-    if (!config.accessToken && !config.refreshToken) return null;
-    const accessExpiresAt = jwtExpiryMillis(config.accessToken);
-    return {
-      provider: PROVIDER_ID,
-      accessToken: config.accessToken || null,
-      refreshToken: config.refreshToken || null,
-      accessExpiresAt,
-      status: config.accessToken ? (accessExpiresAt ? "READY" : "EXPIRY_UNKNOWN") : "NOT_CONFIGURED",
-      source: "bootstrap",
-      rotationVersion: 0,
-      lastRotatedAt: null,
-      updatedAt: null,
-    };
-  }
-
   function selectCredentials(row) {
-    const configured = normalizeConfigSession();
-    if (!row) return configured;
+    if (!row) return null;
     const persisted = {
       provider: row.provider,
       accessToken: row.access_token,
@@ -63,16 +46,6 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
       lastRotatedAt: epochMillis(row.last_rotated_at),
       updatedAt: row.updated_at,
     };
-    if (!configured?.accessToken) return persisted;
-    if (!persisted.accessToken) return configured;
-
-    const persistedExpiry = sessionExpiryMillis(persisted);
-    const configuredExpiry = sessionExpiryMillis(configured);
-    // Known expiry is the only safe way to establish which bootstrap token is
-    // newer. A persisted rotated token with unknown expiry remains authoritative
-    // and is never discarded merely because its metadata is incomplete.
-    if (Number.isFinite(configuredExpiry) && Number.isFinite(persistedExpiry) && configuredExpiry > persistedExpiry) return configured;
-    if (persisted.status === "AUTH_REQUIRED" && Number.isFinite(configuredExpiry) && (!Number.isFinite(persistedExpiry) || configuredExpiry > now())) return configured;
     return persisted;
   }
 
@@ -81,12 +54,6 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     try {
       row = (await executor.query("SELECT * FROM provider_sessions WHERE provider = $1", [PROVIDER_ID])).rows[0];
     } catch (error) {
-      // Partial adapter configurations used by offline callers may provide an
-      // access token but no persistence layer. Production getConfig always
-      // supplies refreshToken, so persistence failures are not hidden there.
-      if (config.refreshToken === undefined && config.accessToken) {
-        return normalizeConfigSession();
-      }
       throw error;
     }
     return selectCredentials(row);
@@ -115,7 +82,7 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
 
   async function configuredRefreshToken(session = null) {
     if (!session) session = await load();
-    return session?.refreshToken || config.refreshToken || null;
+    return session?.refreshToken || null;
   }
 
   function hasUsableAccess(session) {
@@ -152,10 +119,6 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     const refreshToken = await configuredRefreshToken(previous);
     if (!refreshToken) {
       const code = previous?.accessToken ? CODES.AUTH_REQUIRED : CODES.NOT_CONFIGURED;
-      const status = previous?.accessToken ? "AUTH_REQUIRED" : "NOT_CONFIGURED";
-      if (config.refreshToken !== undefined) {
-        await write({ ...(previous || {}), accessToken: previous?.accessToken || null, refreshToken: null, accessExpiresAt: previous?.accessExpiresAt || null, status }, executor);
-      }
       throw new IndriveError(code, previous?.accessToken ? "inDrive access token is expired or invalid" : "inDrive refresh token is not configured");
     }
     if (!config.deviceFingerprint || !config.fingerprint) {
@@ -164,9 +127,13 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     }
     logger.log("[inDrive] refreshing session");
     const response = await client.renew(refreshToken);
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       await write({ ...(previous || {}), refreshToken, status: "AUTH_REQUIRED" }, executor);
       throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive session renewal was rejected", { status: response.status, errorCategory: "AUTH_ERROR" });
+    }
+    if (response.status === 403) {
+      await write({ ...(previous || {}), refreshToken, status: "ACCESS_DENIED" }, executor);
+      throw new IndriveError(CODES.ACCESS_DENIED, "inDrive session renewal was denied", { status: response.status, errorCategory: "FORBIDDEN" });
     }
     if (response.status < 200 || response.status >= 300) {
       throw new IndriveError(response.status === 429 ? CODES.RATE_LIMITED : CODES.UNAVAILABLE, "inDrive session renewal failed", { status: response.status });
@@ -239,8 +206,22 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
   }
 
   async function markAuthRequired() {
-    const session = await load() || {};
-    await save({ ...session, status: "AUTH_REQUIRED" });
+    await markStatus("AUTH_REQUIRED");
+  }
+
+  async function markAccessDenied() {
+    await markStatus("ACCESS_DENIED");
+  }
+
+  async function markStatus(status) {
+    const session = await load();
+    if (!session) return;
+    // Do not let a delayed 401/403 from an older request overwrite a newer
+    // rotated session. The version predicate makes this a compare-and-set.
+    await database.query(
+      "UPDATE provider_sessions SET status = $1, updated_at = $2 WHERE provider = $3 AND rotation_version = $4",
+      [status, now(), PROVIDER_ID, Number(session.rotationVersion) || 0],
+    );
   }
 
   async function getTokenDiagnostics() {
@@ -261,6 +242,8 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     if (!config.enabled) return "DISABLED";
     if (config.mode !== "real") return "READY";
     try {
+      const current = await load();
+      if (current?.status === "ACCESS_DENIED") return "ACCESS_DENIED";
       await ensureValidSession();
       const session = await load();
       return Number.isFinite(sessionExpiryMillis(session)) ? "READY" : "EXPIRY_UNKNOWN";
@@ -268,11 +251,12 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
     catch (error) {
       if (error.code === CODES.NOT_CONFIGURED) return "NOT_CONFIGURED";
       if (error.code === CODES.AUTH_REQUIRED) return "AUTH_REQUIRED";
+      if (error.code === CODES.ACCESS_DENIED) return "ACCESS_DENIED";
       return "TEMPORARILY_UNAVAILABLE";
     }
   }
 
-  return { load, save, refreshSession, ensureValidSession, markAuthRequired, getStatus, getTokenDiagnostics, hasUsableAccess, start, stop };
+  return { load, save, refreshSession, ensureValidSession, markAuthRequired, markAccessDenied, getStatus, getTokenDiagnostics, hasUsableAccess, start, stop };
 }
 
 module.exports = { createSessionManager };
