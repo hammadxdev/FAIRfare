@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+process.env.NODE_ENV = "test";
 const { getConfig } = require("../providers/indrive/indrive.constants");
 const { modeFor } = require("../providers/simulated.provider");
 const { createIndriveAdapter } = require("../providers/indrive/indrive.adapter");
