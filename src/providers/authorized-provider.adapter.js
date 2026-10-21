@@ -1,10 +1,14 @@
 const crypto = require("node:crypto");
 
 const STATUS = Object.freeze({
+  NOT_CONFIGURED: "not_configured",
   AVAILABLE: "available",
   NO_DRIVERS: "no_drivers",
   BUSY: "busy",
   TIMEOUT: "timeout",
+  AUTH_REQUIRED: "auth_required",
+  ACCESS_DENIED: "access_denied",
+  RATE_LIMITED: "rate_limited",
   AUTH_ERROR: "auth_error",
   UNAVAILABLE: "unavailable",
   INVALID_REQUEST: "invalid_request",
@@ -43,7 +47,9 @@ function requestId() {
 
 function normalizeCategory(estimate, requestedCategory) {
   const id = estimate?.rideType || estimate?.categoryId || estimate?.vehicleType || requestedCategory || null;
-  const name = estimate?.categoryName || estimate?.vehicleCategory || estimate?.name || id;
+  const name = Object.prototype.hasOwnProperty.call(estimate || {}, "categoryName")
+    ? estimate.categoryName
+    : estimate?.vehicleCategory || estimate?.name || id;
   return { id: id == null ? null : String(id), name: name == null ? null : String(name) };
 }
 
@@ -64,6 +70,8 @@ function normalizeLiveQuote(estimate, { currency, currencyMultiplier = 100, requ
   if (!resolvedCurrency || (estimate?.isAvailable !== false && !hasFare)) return null;
   if (effectiveExpiry && Number.isFinite(Date.parse(effectiveExpiry)) && Date.parse(effectiveExpiry) <= now()) return null;
   const category = normalizeCategory(estimate, requestedCategory);
+  const fareMin = Number(estimate?.fareMin ?? estimate?.minFare);
+  const fareMax = Number(estimate?.fareMax ?? estimate?.maxFare);
   return {
     categoryId: category.id,
     categoryName: category.name,
@@ -75,6 +83,8 @@ function normalizeLiveQuote(estimate, { currency, currencyMultiplier = 100, requ
     quotedAt: estimate?.quotedAt || quotedAt || new Date(now()).toISOString(),
     expiresAt: effectiveExpiry || null,
     source: "live",
+    ...(Number.isFinite(fareMin) && fareMin >= 0 ? { fareMin } : {}),
+    ...(Number.isFinite(fareMax) && fareMax >= 0 ? { fareMax } : {}),
     ...(estimate?.fareType ? { fareType: String(estimate.fareType) } : {}),
     ...(estimate?.exactFare !== undefined ? { exactFare: estimate.exactFare } : {}),
     ...(estimate?.providerFinalFare !== undefined ? { providerFinalFare: estimate.providerFinalFare } : {}),
@@ -92,6 +102,13 @@ function normalizeLiveQuote(estimate, { currency, currencyMultiplier = 100, requ
     ...(Array.isArray(estimate?.vehicleExamples) ? { vehicleExamples: estimate.vehicleExamples } : {}),
     ...(Number.isFinite(Number(estimate?.surgeMultiplier)) ? { surgeMultiplier: Number(estimate.surgeMultiplier) } : {}),
     ...(estimate?.categoryType ? { categoryType: String(estimate.categoryType) } : {}),
+    ...(estimate?.vehicleCategory ? { vehicleCategory: String(estimate.vehicleCategory) } : {}),
+    ...(estimate?.providerServiceName ? { providerServiceName: String(estimate.providerServiceName) } : {}),
+    ...(estimate?.providerServiceLabel ? { providerServiceLabel: String(estimate.providerServiceLabel) } : {}),
+    ...(estimate?.serviceTier ? { serviceTier: String(estimate.serviceTier) } : {}),
+    ...(Array.isArray(estimate?.features) ? { features: estimate.features.map((feature) => String(feature)) } : {}),
+    ...(estimate?.service_code !== undefined ? { service_code: estimate.service_code } : {}),
+    ...(estimate?.currency_code !== undefined ? { currency_code: estimate.currency_code } : {}),
   };
 }
 
@@ -134,7 +151,12 @@ function createAuthorizedProviderAdapter({ id, displayName, currency = "PKR", cu
       const response = await selectedTransport.getFareEstimates({ pickup, destination, route, rideType });
       return normalizeTransportResponse(response, { ...options, requestedCategory: rideType });
     } catch (error) {
-      const status = error?.code === "PROVIDER_TIMEOUT" ? STATUS.TIMEOUT : error?.code === "PROVIDER_AUTH_ERROR" ? STATUS.AUTH_ERROR : STATUS.UNAVAILABLE;
+      const status = error?.code === "PROVIDER_TIMEOUT" ? STATUS.TIMEOUT
+        : error?.code === "PROVIDER_AUTH_REQUIRED" ? STATUS.AUTH_REQUIRED
+          : error?.code === "PROVIDER_ACCESS_DENIED" ? STATUS.ACCESS_DENIED
+            : error?.code === "PROVIDER_RATE_LIMITED" ? STATUS.RATE_LIMITED
+            : error?.code === "PROVIDER_BAD_RESPONSE" || error?.code === "PROVIDER_NO_VALID_TARIFFS" ? STATUS.PROVIDER_ERROR
+            : STATUS.UNAVAILABLE;
       const safeDiagnostics = id === "quickride" ? safeYangoDiagnostics(error?.yangoDiagnostics) : null;
       return { provider: id, status, source: "none", currency, estimates: [], error: { code: error?.code || "PROVIDER_UNAVAILABLE", message: "Live fare data is currently unavailable.", ...(safeDiagnostics ? { diagnostics: safeDiagnostics } : {}) }, requestId: requestId() };
     }

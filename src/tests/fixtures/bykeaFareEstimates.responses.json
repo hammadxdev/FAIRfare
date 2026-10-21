@@ -1,0 +1,48 @@
+{
+  "sanitizedData": {
+    "data": [
+      { "success": true, "service_code": 23, "currency_code": "PKR", "mstr": "Est: 196 PKR", "data": 9999, "minimum_fare": 100, "fare_without_surge": 180, "bid_values": [180, 220] },
+      { "success": true, "service_code": 70, "currency_code": "PKR", "mstr": "Est: 336 PKR", "data": 9999, "minimum_fare": 100, "fare_without_surge": 320, "bid_values": [300, 350] },
+      { "success": true, "service_code": 44, "currency_code": "PKR", "mstr": "Est: 742 PKR", "data": 9999, "minimum_fare": 100, "fare_without_surge": 700, "bid_values": [700, 780] },
+      { "success": true, "service_code": 45, "currency_code": "PKR", "mstr": "Est: 643 PKR", "data": 9999, "minimum_fare": 100, "fare_without_surge": 600, "bid_values": [600, 680] },
+      { "success": true, "service_code": 48, "currency_code": "PKR", "mstr": "Est: 1125 PKR", "data": 9999, "minimum_fare": 100, "fare_without_surge": 1100, "bid_values": [1100, 1180] }
+    ]
+  },
+  "availableMultiple": {
+    "status": "available",
+    "currency": "PKR",
+    "estimates": [
+      {
+        "categoryId": "motorbike",
+        "categoryName": "Motorbike",
+        "fare": 220,
+        "fareMin": 200,
+        "fareMax": 240,
+        "pickupEtaSeconds": 360,
+        "priceType": "estimate"
+      },
+      {
+        "categoryId": "rickshaw",
+        "categoryName": "Rickshaw",
+        "fare": 340,
+        "pickupEtaSeconds": 480,
+        "priceType": "estimate"
+      }
+    ]
+  },
+  "noDrivers": {
+    "status": "no_drivers",
+    "currency": "PKR",
+    "estimates": []
+  },
+  "busy": {
+    "status": "busy",
+    "currency": "PKR",
+    "estimates": []
+  },
+  "malformed": {
+    "status": "available",
+    "currency": "PKR",
+    "estimates": [{ "categoryName": "Motorbike", "fare": "not-a-number" }]
+  }
+}

@@ -158,8 +158,11 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
       };
     }
 
-    const rate = (await query(`SELECT * FROM vehicle_rates WHERE provider_id = $1 AND vehicle_type = $2`, [provider.id, vehicleType])).rows[0];
-    if (!rate) {
+    const usesAuthorizedLiveTransport = adapter.liveTransportEnabled === true && dataSourceForAdapter(adapter) === "REAL";
+    const rate = usesAuthorizedLiveTransport
+      ? null
+      : (await query(`SELECT * FROM vehicle_rates WHERE provider_id = $1 AND vehicle_type = $2`, [provider.id, vehicleType])).rows[0];
+    if (!rate && !usesAuthorizedLiveTransport) {
       return {
         provider: { id: provider.id, name: provider.name, displayName: provider.display_name },
         fare: null, etaMin: null, isAvailable: false,
@@ -179,6 +182,12 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
           fare: quote.fare, etaMin: quote.pickupEtaSeconds == null ? null : quote.pickupEtaSeconds / 60,
           isAvailable: quote.isAvailable, fareMin: quote.fareMin, fareMax: quote.fareMax,
           currency: quote.currency, fareType: quote.fareType, breakdown: quote.metadata?.breakdown || null,
+          vehicleCategory: quote.vehicleCategory || "unknown",
+          providerServiceName: quote.providerServiceName || quote.categoryName || null,
+          providerServiceLabel: quote.providerServiceLabel || null,
+          serviceTier: quote.serviceTier || "unknown",
+          features: Array.isArray(quote.features) ? quote.features : [],
+          service_code: quote.service_code,
           metadata: quote.metadata,
           quotes,
           dataSource: dataSourceForAdapter(adapter),
