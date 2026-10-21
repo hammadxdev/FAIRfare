@@ -1,5 +1,13 @@
-// Point every test file at an isolated sqlite file and make sure it's migrated + seeded.
-process.env.DB_PATH = process.env.DB_PATH || "./data/test.sqlite";
+// Integration setup is only valid with an explicitly isolated PostgreSQL test
+// database. Never inherit DATABASE_URL, which may identify Supabase/staging.
+const { isolatedTestDatabase, APPROVAL } = require("./helpers/testDatabaseGuard");
+const verified = isolatedTestDatabase();
+if (!verified.configured || process.env.FAIRFARE_TEST_DATABASE_PREFLIGHT_VERIFIED !== APPROVAL) {
+  const error = new Error(!verified.configured ? verified.code : "TEST_DATABASE_PREFLIGHT_REQUIRED");
+  error.code = error.message;
+  throw error;
+}
+process.env.DATABASE_URL = verified.value;
 process.env.NODE_ENV = "test";
 process.env.FAIR_FARE_DATASET_MODE = "legacy";
 process.env.JWT_ACCESS_SECRET = "test-only-fairfare-access-secret";
@@ -15,8 +23,5 @@ emailProvider.setEmailProviderForTests({
     return { accepted: true };
   },
 });
-
-const { ensureDatabaseReady } = require("../db/bootstrap");
-ensureDatabaseReady();
 
 module.exports = require("../app");

@@ -117,7 +117,7 @@ test("RouteStats mapper extracts numeric tariffs, qualifiers, and skips hidden o
     { id: "template", name: "Template", price: "from $SIGN$345 $CURRENCY$" },
   ] });
   assert.equal(mapped.status, "available");
-  assert.deepEqual(mapped.estimates[0], { categoryId: "econom", categoryName: "Econom", fare: 345, currency: "PKR", priceQualifier: "from", priceText: null, isAvailable: true, hidden: false });
+  assert.deepEqual(mapped.estimates[0], { categoryId: "econom", categoryName: "Econom", providerServiceName: "Econom", serviceTier: "unknown", features: [], vehicleCategory: "unknown", fare: 345, currency: "PKR", priceQualifier: "from", priceText: null, isAvailable: true, hidden: false });
   assert.equal(mapped.estimates.length, 1);
   assert.equal(numericPrice("from $SIGN$345 $CURRENCY$"), null);
 });
@@ -260,6 +260,30 @@ test("missing credentials, expired JWT, auth failure, timeout, and malformed JSO
   await assert.rejects(() => timeoutClient.getFareEstimates(trip), { code: "PROVIDER_TIMEOUT" });
   const malformedClient = createYangoRouteStatsClient({ config, fetchImpl: async () => ({ status: 200, ok: true, text: async () => "not-json" }) });
   await assert.rejects(() => malformedClient.getFareEstimates(trip), { code: "PROVIDER_BAD_RESPONSE" });
+});
+
+test("zero valid tariffs preserve successful upstream diagnostics", async () => {
+  const config = getConfig({ YANGO_ENABLED: "true", YANGO_AUTHORIZED_ACCESS_TOKEN: token(), YANGO_AUTHORIZED_CLIENT_ID: "client", YANGO_AUTHORIZATION_VERIFIED: "true" });
+  let requestCount = 0;
+  const client = createYangoRouteStatsClient({
+    config,
+    fetchImpl: async () => {
+      requestCount += 1;
+      return { status: 200, ok: true, text: async () => JSON.stringify({ currency_rules: { code: "PKR" }, service_levels: [] }) };
+    },
+  });
+
+  await assert.rejects(() => client.getFareEstimates(trip), (error) => {
+    assert.equal(error.code, "PROVIDER_NO_VALID_TARIFFS");
+    assert.deepEqual(error.yangoDiagnostics, {
+      provider: "yango",
+      upstreamStatus: 200,
+      errorCategory: "NO_VALID_TARIFFS",
+      requestReachedUpstream: true,
+    });
+    return true;
+  });
+  assert.equal(requestCount, 1);
 });
 
 test("Yango HTTP and transport failures produce only safe diagnostics", async () => {

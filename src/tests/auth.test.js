@@ -4,12 +4,26 @@ const request = require("supertest");
 const app = require("./setup");
 const { query } = require("../config/postgres");
 const emailProvider = require("../services/email/emailProvider");
+const { MAX_VERIFICATION_RESENDS, resendMetadata, cooldownRemainingSeconds } = require("../services/emailAuth.service");
 
 const email = `auth-${Date.now()}@example.com`;
 const otherEmail = `auth-other-${Date.now()}@example.com`;
 const password = "correct horse battery";
 async function register(value = email, name = "Ali") { return request(app).post("/api/auth/register").send({ name, email: value, password }); }
 async function login(value = email) { let result = await request(app).post("/api/auth/login").send({ email: value, password }); if (result.status === 403 && result.body.errorCode === "EMAIL_NOT_VERIFIED") { const code = global.__emailTestCodes.get(`${value}:verify`); assert.equal((await request(app).post("/api/auth/email/verify").send({ email: value, code })).status, 200); result = await request(app).post("/api/auth/login").send({ email: value, password }); } return result; }
+
+test("verification resend metadata is bounded to two user-requested resends", () => {
+  assert.equal(MAX_VERIFICATION_RESENDS, 2);
+  assert.deepEqual(resendMetadata(0, 60), { resendCount: 0, remainingResends: 2, resendLimit: 2, cooldownSeconds: 60 });
+  assert.deepEqual(resendMetadata(1, 60), { resendCount: 1, remainingResends: 1, resendLimit: 2, cooldownSeconds: 60 });
+  assert.deepEqual(resendMetadata(99, 60), { resendCount: 2, remainingResends: 0, resendLimit: 2, cooldownSeconds: 60 });
+});
+
+test("verification resend cooldown reports remaining seconds without exposing state", () => {
+  const now = Date.parse("2026-01-01T00:00:30.000Z");
+  assert.equal(cooldownRemainingSeconds("2026-01-01T00:00:00.000Z", 60, now), 30);
+  assert.equal(cooldownRemainingSeconds("2026-01-01T00:00:00.000Z", 60, now + 60000), 0);
+});
 
 test("registration hashes password and returns an account without a session", async () => {
   const res = await register();

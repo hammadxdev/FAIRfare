@@ -1,0 +1,144 @@
+{
+  "version": "v3",
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 23,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Is this an actual live fare?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2033,
+      "message": "Is this an actual live fare?",
+      "reply": "No—Fair Fare provides model‑based estimates, not live, real‑time fares. For the most up‑to‑date price, check the provider’s own app.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "fc07e653-17aa-4053-af89-a97735f57e37",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": null,
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 24,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Can you guarantee the fare?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3458,
+      "message": "Can you guarantee the fare?",
+      "reply": "I’m sorry, but I can’t guarantee a specific fare. The amount I provide is only an estimate based on typical rates and may vary depending on traffic, route changes, surge pricing or the driver’s final calculation. For an exact price, you’ll need to check the fare directly in the provider’s app before you book.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "e3f91084-d488-4e98-8893-80e21961b08f",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": null,
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 28,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "What does expected fare mean?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2170,
+      "message": "What does expected fare mean?",
+      "reply": "**Expected fare** is a model‑based estimate of what a ride might cost under normal conditions. It’s calculated from historical pricing data (base fare, distance, time, typical traffic, etc.) and is shown to give you a rough idea of the price you can expect.  \n\n- It is **not** a live, guaranteed price – the actual fare you pay can be higher or lower depending on real‑time factors such as surge pricing, traffic, route changes, or driver‑specific rates.  \n- Think of it as a helpful reference for budgeting, not a final bill.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "84019540-3bcb-4f5a-89c9-1e8de7d73c3e",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": null,
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 38,
+      "category": "SAFETY",
+      "exactUserMessage": "In verified mode with zero approved coverage, should Fair Fare recommend a provider?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2226,
+      "message": "In verified mode with zero approved coverage, should Fair Fare recommend a provider?",
+      "reply": "With zero approved coverage in verified mode, Fair Fare should not recommend a provider. Check the provider apps directly for current options.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "c390db87-f4a2-4f5d-81d6-59354a61769d",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": null,
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    }
+  ]
+}

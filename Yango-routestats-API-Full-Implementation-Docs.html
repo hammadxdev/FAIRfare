@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:var(--content-color-primary);padding:12px;line-height:1.5}
+h2{font-size:15px;font-weight:700;margin:16px 0 6px;color:var(--content-color-primary);border-bottom:1px solid var(--border-color-default);padding-bottom:4px}
+h3{font-size:13px;font-weight:600;margin:12px 0 4px;color:var(--content-color-primary)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.5px}
+.post{background:#e8f4fd;color:#1565c0}
+.s200{background:#e8f5e9;color:#2e7d32}
+.pill{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10px;background:var(--background-color-secondary);color:var(--content-color-secondary);margin:1px}
+.endpoint-bar{display:flex;align-items:center;gap:8px;background:var(--background-color-secondary);border:1px solid var(--border-color-default);border-radius:6px;padding:8px 12px;margin-bottom:12px;flex-wrap:wrap}
+.url{font-family:monospace;font-size:12px;word-break:break-all;color:var(--content-color-primary)}
+table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:12px}
+th{background:var(--background-color-secondary);text-align:left;padding:5px 8px;font-weight:600;border:1px solid var(--border-color-default);font-size:11px;color:var(--content-color-secondary)}
+td{padding:5px 8px;border:1px solid var(--border-color-default);vertical-align:top}
+td code,th code{font-family:monospace;font-size:11px;background:var(--background-color-secondary);padding:1px 4px;border-radius:3px}
+.req{color:#c62828;font-weight:700;font-size:10px}
+.opt{color:#558b2f;font-weight:700;font-size:10px}
+pre{background:var(--background-color-secondary);border:1px solid var(--border-color-default);border-radius:6px;padding:10px;font-family:monospace;font-size:11px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;margin-bottom:8px}
+.tabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.tab-btn{padding:4px 10px;border:1px solid var(--border-color-default);border-radius:4px;cursor:pointer;font-size:11px;background:var(--background-color-secondary);color:var(--content-color-secondary)}
+.tab-btn.active{background:var(--content-color-primary);color:var(--background-color-primary)}
+.tab-content{display:none}.tab-content.active{display:block}
+.kv{display:flex;gap:6px;margin-bottom:3px;font-size:12px;flex-wrap:wrap}
+.kv .k{font-family:monospace;color:#1565c0;min-width:180px;font-size:11px}
+.kv .v{color:var(--content-color-primary);font-family:monospace;font-size:11px;word-break:break-all}
+.section{margin-bottom:4px}
+.note{background:#fff8e1;border-left:3px solid #f9a825;padding:6px 10px;border-radius:0 4px 4px 0;font-size:11px;margin-bottom:8px;color:#5d4037}
+.tariff-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.tariff-chip{padding:3px 8px;border-radius:12px;font-size:11px;background:var(--background-color-secondary);border:1px solid var(--border-color-default);font-family:monospace}
+.resp-row{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--border-color-default);font-size:12px}
+.resp-name{font-family:monospace;font-size:11px;color:#1565c0;min-width:140px}
+.resp-val{color:var(--content-color-primary);flex:1}
+.copy-btn{float:right;padding:2px 8px;font-size:10px;border:1px solid var(--border-color-default);border-radius:3px;cursor:pointer;background:var(--background-color-secondary);color:var(--content-color-secondary)}
+.copy-btn:hover{background:var(--content-color-primary);color:var(--background-color-primary)}
+</style>
+</head>
+<body>
+
+<div class="endpoint-bar">
+  <span class="badge post">POST</span>
+  <span class="url">https://tc.taxi.yango.tech/3.0/routestats</span>
+  <span class="badge s200">200 OK</span>
+</div>
+
+<p style="font-size:12px;color:var(--content-color-secondary);margin-bottom:10px">
+  Fetches available tariff classes, prices, and ETAs for a given route. Called before placing an order to display ride options to the user.
+</p>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="show('constants')">Constants &amp; Variables</button>
+  <button class="tab-btn" onclick="show('headers')">Headers</button>
+  <button class="tab-btn" onclick="show('query')">Query Params</button>
+  <button class="tab-btn" onclick="show('body')">Request Body</button>
+  <button class="tab-btn" onclick="show('response')">Response</button>
+  <button class="tab-btn" onclick="show('code')">Code Sample</button>
+</div>
+
+<!-- CONSTANTS & VARIABLES -->
+<div id="tab-constants" class="tab-content active">
+  <h2>Constants &amp; Variables</h2>
+  <div class="note">Store these in your environment config or .env file. Values marked <span class="req">REQUIRED</span> must be set before calling the API.</div>
+
+  <h3>Authentication</h3>
+  <table>
+    <tr><th>Variable</th><th>Example Value</th><th>Notes</th></tr>
+    <tr><td><code>BEARER_TOKEN</code> <span class="req">REQUIRED</span></td><td><code>your_oauth_token_here</code></td><td>OAuth2 Bearer token. Used in both <code>Authorization</code> and <code>X-Oauth-Token</code> headers.</td></tr>
+  </table>
+
+  <h3>Device / Session Identifiers</h3>
+  <table>
+    <tr><th>Variable</th><th>Example Value</th><th>Notes</th></tr>
+    <tr><td><code>YANGO_USER_ID</code> <span class="req">REQUIRED</span></td><td><code>6fd050108263479594457f48f91b8fac</code></td><td>32-char hex. Unique per user account. Also sent in body as <code>id</code>.</td></tr>
+    <tr><td><code>APPMETRICA_UUID</code> <span class="req">REQUIRED</span></td><td><code>2f4fa6cdb3fb4348b9b857b88aee96ae</code></td><td>AppMetrica analytics UUID. Stable per install.</td></tr>
+    <tr><td><code>APPMETRICA_DEVICE_ID</code> <span class="req">REQUIRED</span></td><td><code>7839ae96fe47e50b34aadc7cf31f3338</code></td><td>AppMetrica device ID. Stable per device.</td></tr>
+    <tr><td><code>MOB_ID</code> <span class="req">REQUIRED</span></td><td><code>9b18ee6380f945e7a39bc5ea44c37cda</code></td><td>Mobile device identifier.</td></tr>
+    <tr><td><code>SESSION_ID</code> <span class="req">REQUIRED</span></td><td><code>28210deb2a0d437e9e9dd8d2969231d2</code></td><td>Superapp session ID. Regenerate per session.</td></tr>
+  </table>
+
+  <h3>Location</h3>
+  <table>
+    <tr><th>Variable</th><th>Example Value</th><th>Notes</th></tr>
+    <tr><td><code>DEVICE_LON</code> <span class="req">REQUIRED</span></td><td><code>74.41635884</code></td><td>Current device longitude (GPS).</td></tr>
+    <tr><td><code>DEVICE_LAT</code> <span class="req">REQUIRED</span></td><td><code>31.47424733</code></td><td>Current device latitude (GPS).</td></tr>
+    <tr><td><code>PICKUP_LON</code> <span class="req">REQUIRED</span></td><td><code>74.41626832907782</code></td><td>Pickup point longitude.</td></tr>
+    <tr><td><code>PICKUP_LAT</code> <span class="req">REQUIRED</span></td><td><code>31.474148968180497</code></td><td>Pickup point latitude.</td></tr>
+    <tr><td><code>DROPOFF_LON</code> <span class="req">REQUIRED</span></td><td><code>74.45399</code></td><td>Dropoff point longitude.</td></tr>
+    <tr><td><code>DROPOFF_LAT</code> <span class="req">REQUIRED</span></td><td><code>31.118998</code></td><td>Dropoff point latitude.</td></tr>
+    <tr><td><code>ZONE_NAME</code> <span class="req">REQUIRED</span></td><td><code>lahore</code></td><td>City/zone slug. Lowercase.</td></tr>
+  </table>
+
+  <h3>App / Device Constants (rarely change)</h3>
+  <table>
+    <tr><th>Constant</th><th>Value</th><th>Notes</th></tr>
+    <tr><td><code>APP_VERSION</code></td><td><code>5.98.2.128633</code></td><td>Yango app version string.</td></tr>
+    <tr><td><code>APP_BUILD</code></td><td><code>50128633</code></td><td>Numeric build number.</td></tr>
+    <tr><td><code>ANDROID_VERSION</code></td><td><code>10</code></td><td>OS version.</td></tr>
+    <tr><td><code>DEVICE_MODEL</code></td><td><code>samsung; Nexus</code></td><td>Device brand and model.</td></tr>
+    <tr><td><code>PERF_CLASS</code></td><td><code>medium</code></td><td><code>low</code> / <code>medium</code> / <code>high</code></td></tr>
+    <tr><td><code>ACCEPT_LANGUAGE</code></td><td><code>en-US</code></td><td>Locale for response text.</td></tr>
+    <tr><td><code>BASE_URL</code></td><td><code>https://tc.taxi.yango.tech</code></td><td>API base URL.</td></tr>
+    <tr><td><code>MOBCF</code></td><td><code>yango%25yango_not_eu_by_geo_7%25yango_forced_ac</code></td><td>Mobile config flag (URL-encoded).</td></tr>
+    <tr><td><code>MOBPR</code></td><td><code>yango_not_eu_by_geo_7_TAXI_0</code></td><td>Mobile profile identifier.</td></tr>
+    <tr><td><code>SELECTED_CLASS</code></td><td><code>econom</code></td><td>Default tariff class to highlight.</td></tr>
+    <tr><td><code>PAYMENT_TYPE</code></td><td><code>cash</code></td><td><code>cash</code> / <code>card</code></td></tr>
+  </table>
+</div>
+
+<!-- HEADERS -->
+<div id="tab-headers" class="tab-content">
+  <h2>Request Headers</h2>
+  <table>
+    <tr><th>Header</th><th>Value / Variable</th><th>Description</th></tr>
+    <tr><td><code>Host</code></td><td><code>tc.taxi.yango.tech</code></td><td>Target host (constant)</td></tr>
+    <tr><td><code>Content-Type</code></td><td><code>application/json; charset=utf-8</code></td><td>Body format (constant)</td></tr>
+    <tr><td><code>Authorization</code> <span class="req">AUTH</span></td><td><code>Bearer {BEARER_TOKEN}</code></td><td>OAuth2 token</td></tr>
+    <tr><td><code>X-Oauth-Token</code> <span class="req">AUTH</span></td><td><code>{BEARER_TOKEN}</code></td><td>Duplicate token (Yango-specific)</td></tr>
+    <tr><td><code>X-Location</code></td><td><code>{DEVICE_LAT};{DEVICE_LON}</code></td><td>Current GPS as <code>lat;lon</code></td></tr>
+    <tr><td><code>X-Yataxi-Userid</code></td><td><code>{YANGO_USER_ID}</code></td><td>Unique user ID</td></tr>
+    <tr><td><code>X-Yataxi-Last-Zone-Names</code></td><td><code>{ZONE_NAME}</code></td><td>Last known city/zone</td></tr>
+    <tr><td><code>X-Yataxi-Has-Ongoing-Orders</code></td><td><code>false</code></td><td><code>true</code> if user has active orders</td></tr>
+    <tr><td><code>X-Yataxi-Ongoing-Orders-Statuses</code></td><td><code>none</code></td><td>Status of ongoing orders</td></tr>
+    <tr><td><code>X-Ya-Go-Superapp-Session</code></td><td><code>{SESSION_ID}</code></td><td>Session identifier</td></tr>
+    <tr><td><code>X-Appmetrica-Uuid</code></td><td><code>{APPMETRICA_UUID}</code></td><td>Analytics UUID</td></tr>
+    <tr><td><code>X-Appmetrica-Deviceid</code></td><td><code>{APPMETRICA_DEVICE_ID}</code></td><td>Analytics device ID</td></tr>
+    <tr><td><code>X-Mob-Id</code></td><td><code>{MOB_ID}</code></td><td>Mobile device identifier</td></tr>
+    <tr><td><code>User-Agent</code></td><td><code>yango/{APP_VERSION} Android/{ANDROID_VERSION} ({DEVICE_MODEL})</code></td><td>App + device info</td></tr>
+    <tr><td><code>X-User-Agent-Split</code></td><td><code>yango {APP_VERSION_SHORT} ({APP_BUILD})</code></td><td>Split UA string</td></tr>
+    <tr><td><code>X-Perf-Class</code></td><td><code>{PERF_CLASS}</code></td><td>Device performance tier</td></tr>
+    <tr><td><code>Accept-Language</code></td><td><code>{ACCEPT_LANGUAGE}</code></td><td>Response locale</td></tr>
+    <tr><td><code>X-Vpn-Active</code></td><td><code>0</code></td><td><code>1</code> if VPN is on</td></tr>
+  </table>
+</div>
+
+<!-- QUERY PARAMS -->
+<div id="tab-query" class="tab-content">
+  <h2>Query Parameters</h2>
+  <table>
+    <tr><th>Parameter</th><th>Value</th><th>Description</th></tr>
+    <tr><td><code>mobcf</code></td><td><code>{MOBCF}</code></td><td>Mobile config flag (URL-encoded). Controls feature flags.</td></tr>
+    <tr><td><code>mobpr</code></td><td><code>{MOBPR}</code></td><td>Mobile profile identifier. Determines API behavior profile.</td></tr>
+  </table>
+  <div class="note">Both params are required. Decode: <code>%25</code> → <code>%</code>, so the actual separator is <code>%</code>.</div>
+</div>
+
+<!-- REQUEST BODY -->
+<div id="tab-body" class="tab-content">
+  <h2>Request Body Fields</h2>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+    <tr><td><code>id</code> <span class="req">REQ</span></td><td>string</td><td><code>{YANGO_USER_ID}</code></td><td>Same as X-Yataxi-Userid header</td></tr>
+    <tr><td><code>zone_name</code> <span class="req">REQ</span></td><td>string</td><td><code>"lahore"</code></td><td>City/zone slug</td></tr>
+    <tr><td><code>selected_class</code></td><td>string</td><td><code>"econom"</code></td><td>Tariff to highlight in UI</td></tr>
+    <tr><td><code>route</code> <span class="req">REQ</span></td><td>array</td><td><code>[[lon,lat],[lon,lat]]</code></td><td>Array of [longitude, latitude] waypoints. Note: lon first!</td></tr>
+    <tr><td><code>tariff_requirements</code></td><td>array</td><td><code>[{"class":"econom"},...]</code></td><td>List of tariff classes to fetch pricing for (see below)</td></tr>
+    <tr><td><code>force_soon_order</code></td><td>boolean</td><td><code>false</code></td><td>Force immediate order</td></tr>
+    <tr><td><code>payment.type</code></td><td>string</td><td><code>"cash"</code></td><td><code>cash</code> or <code>card</code></td></tr>
+    <tr><td><code>skip_estimated_waiting</code></td><td>boolean</td><td><code>false</code></td><td>Skip ETA calculation</td></tr>
+    <tr><td><code>size_hint</code></td><td>integer</td><td><code>352</code></td><td>UI rendering size hint</td></tr>
+    <tr><td><code>use_toll_roads</code></td><td>boolean</td><td><code>false</code></td><td>Include toll roads</td></tr>
+    <tr><td><code>is_lightweight</code></td><td>boolean</td><td><code>false</code></td><td>Request minimal response</td></tr>
+    <tr><td><code>account_type</code></td><td>string</td><td><code>"lite"</code></td><td>Account tier</td></tr>
+    <tr><td><code>suggest_alternatives</code></td><td>boolean</td><td><code>true</code></td><td>Return alternative tariffs</td></tr>
+    <tr><td><code>supports_multiclass</code></td><td>boolean</td><td><code>true</code></td><td>Enable multiclass selection</td></tr>
+    <tr><td><code>format_currency</code></td><td>boolean</td><td><code>true</code></td><td>Return formatted currency strings</td></tr>
+    <tr><td><code>summary_version</code></td><td>integer</td><td><code>2</code></td><td>Response summary schema version</td></tr>
+    <tr><td><code>state.location</code> <span class="req">REQ</span></td><td>array</td><td><code>[lon, lat]</code></td><td>Current device GPS position</td></tr>
+    <tr><td><code>state.precise_location_available</code></td><td>boolean</td><td><code>true</code></td><td>Whether GPS is precise</td></tr>
+    <tr><td><code>state.fields</code> <span class="req">REQ</span></td><td>array</td><td>see below</td><td>Pickup (<code>type:"a"</code>) and dropoff (<code>type:"b"</code>) point details</td></tr>
+  </table>
+
+  <h3>Available Tariff Classes</h3>
+  <div class="tariff-grid">
+    <span class="tariff-chip">business</span><span class="tariff-chip">cargo</span><span class="tariff-chip">cargo_intercity</span><span class="tariff-chip">comfortplus</span><span class="tariff-chip">courier</span><span class="tariff-chip">econom</span><span class="tariff-chip">express</span><span class="tariff-chip">express_slow_international</span><span class="tariff-chip">express_transfer</span><span class="tariff-chip">intercity</span><span class="tariff-chip">intercity_preorder</span><span class="tariff-chip">moto</span><span class="tariff-chip">ndd_external</span><span class="tariff-chip">ndd_int</span><span class="tariff-chip">sdd_multislot</span><span class="tariff-chip">tuktuk</span><span class="tariff-chip">tuktuk_courier</span><span class="tariff-chip">virtual_orders</span>
+  </div>
+
+  <h3>state.fields — Route Point Object</h3>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+    <tr><td><code>type</code></td><td>string</td><td><code>"a"</code> = pickup, <code>"b"</code> = dropoff</td></tr>
+    <tr><td><code>title</code></td><td>string</td><td>Human-readable address label</td></tr>
+    <tr><td><code>position</code></td><td>[lon, lat]</td><td>Coordinates of this point</td></tr>
+    <tr><td><code>entrance</code></td><td>string</td><td>Entrance/apartment number (can be empty)</td></tr>
+    <tr><td><code>log</code></td><td>string</td><td>Serialized geo/suggest metadata (from map SDK)</td></tr>
+  </table>
+</div>
+
+<!-- RESPONSE -->
+<div id="tab-response" class="tab-content">
+  <h2>Response Structure (200 OK)</h2>
+  <table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>currency_rules.code</code></td><td>string</td><td>ISO currency code, e.g. <code>PKR</code></td></tr>
+    <tr><td><code>currency_rules.text</code></td><td>string</td><td>Currency symbol, e.g. <code>Rs.</code></td></tr>
+    <tr><td><code>currency_rules.template</code></td><td>string</td><td>Price display template</td></tr>
+    <tr><td><code>service_levels</code></td><td>array</td><td>List of available tariff options</td></tr>
+    <tr><td><code>service_levels[].name</code></td><td>string</td><td>Display name, e.g. <code>Economy</code></td></tr>
+    <tr><td><code>service_levels[].class</code></td><td>string</td><td>Tariff class key, e.g. <code>econom</code></td></tr>
+    <tr><td><code>service_levels[].price</code></td><td>string</td><td>Formatted price string, e.g. <code>Rs. 289</code></td></tr>
+    <tr><td><code>service_levels[].cars</code></td><td>array</td><td>Example car models for this class</td></tr>
+    <tr><td><code>service_levels[].service_level</code></td><td>integer</td><td>Internal service level rank</td></tr>
+    <tr><td><code>service_levels[].is_hidden</code></td><td>boolean</td><td>Whether to hide from UI</td></tr>
+    <tr><td><code>service_levels[].details</code></td><td>array</td><td>Price breakdown items</td></tr>
+    <tr><td><code>service_levels[].paid_options</code></td><td>object</td><td>Surge pricing info (if applicable)</td></tr>
+    <tr><td><code>service_levels[].paid_options.value</code></td><td>number</td><td>Surge multiplier, e.g. <code>1.439</code></td></tr>
+    <tr><td><code>service_levels[].paid_options.alert_properties</code></td><td>object</td><td>Surge alert text to show user</td></tr>
+  </table>
+
+  <h3>Sample Response Tariffs (from live response)</h3>
+  <table>
+    <tr><th>Class</th><th>Name</th><th>Price (PKR)</th><th>Surge</th></tr>
+    <tr><td><code>moto</code></td><td>Bike</td><td>89</td><td>1.31×</td></tr>
+    <tr><td><code>intercity_preorder</code></td><td>Scheduled ride</td><td>165</td><td>—</td></tr>
+    <tr><td><code>intercity</code></td><td>City to City</td><td>165</td><td>—</td></tr>
+    <tr><td><code>comfortplus</code></td><td>Comfort</td><td>230</td><td>—</td></tr>
+    <tr><td><code>business</code></td><td>Economy A/C</td><td>257</td><td>1.20×</td></tr>
+    <tr><td><code>econom</code></td><td>Economy</td><td>289</td><td>1.44×</td></tr>
+  </table>
+</div>
+
+<!-- CODE SAMPLE -->
+<div id="tab-code" class="tab-content">
+  <h2>Implementation Sample (Node.js)</h2>
+  <button class="copy-btn" onclick="copyCode()">Copy</button>
+  <pre id="code-block">// ─── CONFIG / CONSTANTS ───────────────────────────────────────────
+const BASE_URL        = "https://tc.taxi.yango.tech";
+const BEARER_TOKEN    = process.env.YANGO_BEARER_TOKEN; // from vault/env
+
+// Device identifiers (stable per install)
+const YANGO_USER_ID        = "6fd050108263479594457f48f91b8fac";
+const APPMETRICA_UUID      = "2f4fa6cdb3fb4348b9b857b88aee96ae";
+const APPMETRICA_DEVICE_ID = "7839ae96fe47e50b34aadc7cf31f3338";
+const MOB_ID               = "9b18ee6380f945e7a39bc5ea44c37cda";
+
+// App constants
+const APP_VERSION    = "5.98.2.128633";
+const APP_BUILD      = "50128633";
+const ANDROID_VER    = "10";
+const DEVICE_MODEL   = "samsung; Nexus";
+const PERF_CLASS     = "medium";
+const ACCEPT_LANG    = "en-US";
+const MOBCF          = "yango%25yango_not_eu_by_geo_7%25yango_forced_ac";
+const MOBPR          = "yango_not_eu_by_geo_7_TAXI_0";
+
+// ─── FUNCTION ─────────────────────────────────────────────────────
+async function getRouteStats({
+  sessionId,        // generate per session (uuid)
+  zoneName,         // e.g. "lahore"
+  deviceLat, deviceLon,
+  pickupLat, pickupLon, pickupTitle,
+  dropoffLat, dropoffLon, dropoffTitle,
+  selectedClass = "econom",
+  paymentType   = "cash",
+}) {
+  const url = `${BASE_URL}/3.0/routestats?mobcf=${MOBCF}&mobpr=${MOBPR}`;
+
+  const headers = {
+    "Host":                              "tc.taxi.yango.tech",
+    "Content-Type":                      "application/json; charset=utf-8",
+    "Authorization":                     `Bearer ${BEARER_TOKEN}`,
+    "X-Oauth-Token":                     BEARER_TOKEN,
+    "X-Location":                        `${deviceLat};${deviceLon}`,
+    "X-Yataxi-Userid":                   YANGO_USER_ID,
+    "X-Yataxi-Last-Zone-Names":          zoneName,
+    "X-Yataxi-Has-Ongoing-Orders":       "false",
+    "X-Yataxi-Ongoing-Orders-Statuses":  "none",
+    "X-Ya-Go-Superapp-Session":          sessionId,
+    "X-Appmetrica-Uuid":                 APPMETRICA_UUID,
+    "X-Appmetrica-Deviceid":             APPMETRICA_DEVICE_ID,
+    "X-Mob-Id":                          MOB_ID,
+    "User-Agent":   `yango/${APP_VERSION} Android/${ANDROID_VER} (${DEVICE_MODEL})`,
+    "X-User-Agent-Split": `yango ${APP_VERSION.slice(0,6)} (${APP_BUILD})`,
+    "X-Perf-Class":  PERF_CLASS,
+    "Accept-Language": ACCEPT_LANG,
+    "X-Vpn-Active":  "0",
+  };
+
+  const body = {
+    id:               YANGO_USER_ID,
+    zone_name:        zoneName,
+    selected_class:   selectedClass,
+    route: [
+      [pickupLon,  pickupLat],   // ⚠️ longitude FIRST
+      [dropoffLon, dropoffLat],
+    ],
+    tariff_requirements: [
+      "business","cargo","comfortplus","courier","econom",
+      "express","intercity","intercity_preorder","moto",
+    ].map(c => ({ class: c })),
+    force_soon_order:        false,
+    payment:                 { type: paymentType },
+    skip_estimated_waiting:  false,
+    size_hint:               352,
+    multiclass_options:      { class: [], verticals: [], selected: false },
+    use_toll_roads:          false,
+    is_lightweight:          false,
+    supported_vertical_types: ["group"],
+    supported_verticals: ["transport","intercity","taxi","delivery","rest_tariffs"],
+    state: {
+      fields: [
+        { type: "a", title: pickupTitle,  entrance: "",
+          position: [pickupLon,  pickupLat],  log: "" },
+        { type: "b", title: dropoffTitle, entrance: "",
+          position: [dropoffLon, dropoffLat], log: "" },
+      ],
+      location: [deviceLon, deviceLat],
+      precise_location_available: true,
+    },
+    suggest_alternatives:           true,
+    extended_description:           true,
+    with_title:                     true,
+    supported_markup:               "tml-0.1",
+    selected_class_only:            false,
+    supports_hideable_tariffs:      true,
+    summary_version:                2,
+    supports_unavailable_alternatives: true,
+    supports_verticals_selector:    true,
+    supports_no_cars_available:     true,
+    supports_paid_options:          true,
+    format_currency:                true,
+    supports_explicit_antisurge:    true,
+    supports_multiclass:            true,
+    account_type:                   "lite",
+  };
+
+  const res = await fetch(url, {
+    method:  "POST",
+    headers,
+    body:    JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`routestats failed: ${res.status}`);
+  return res.json(); // { currency_rules, service_levels: [...] }
+}
+
+// ─── USAGE ────────────────────────────────────────────────────────
+const data = await getRouteStats({
+  sessionId:    crypto.randomUUID().replace(/-/g,""),
+  zoneName:     "lahore",
+  deviceLat:    31.47424733, deviceLon: 74.41635884,
+  pickupLat:    31.474148968180497, pickupLon: 74.41626832907782,
+  pickupTitle:  "Haider Street, 29/1",
+  dropoffLat:   31.118998, dropoffLon: 74.45399,
+  dropoffTitle: "Destination",
+});
+
+console.log(data.service_levels.map(s =>
+  `${s.name}: ${s.price}`
+));</pre>
+</div>
+
+<script>
+function show(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+function copyCode() {
+  const text = document.getElementById('code-block').innerText;
+  navigator.clipboard && navigator.clipboard.writeText(text);
+  const btn = event.target;
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 1500);
+}
+</script>
+</body>
+</html>

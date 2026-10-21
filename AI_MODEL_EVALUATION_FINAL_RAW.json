@@ -1,0 +1,2039 @@
+{
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 1,
+      "category": "TRIP",
+      "exactUserMessage": "ok so i wanna go from north nazimabad to gulshan e hameed phase 2",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3448,
+      "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "north nazimabad",
+            "destination": "gulshan e hameed phase 2",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "north nazimabad",
+            "name": "North Nazimabad Town",
+            "city": "Karachi Division",
+            "county": "Nazimabad District",
+            "state": "Sindh",
+            "lat": 24.9424616,
+            "lng": 67.0477185
+          },
+          "destination": {
+            "query": "gulshan e hameed phase 2",
+            "name": "Gulshan e Hadeed Phase 2",
+            "city": "Karachi Division",
+            "county": "Malir District",
+            "state": "Sindh",
+            "lat": 24.8722974,
+            "lng": 67.3631119
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": "Karachi Division",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 38670,
+            "durationSeconds": 2426.537
+          }
+        }
+      },
+      "conversationId": "3bea08a9-9763-4f70-8482-5665c12584ed",
+      "extracted": {
+        "pickup": "north nazimabad",
+        "destination": "gulshan e hameed phase 2",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "north nazimabad",
+          "destination": "gulshan e hameed phase 2",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "north nazimabad",
+          "name": "North Nazimabad Town",
+          "city": "Karachi Division",
+          "county": "Nazimabad District",
+          "state": "Sindh",
+          "lat": 24.9424616,
+          "lng": 67.0477185
+        },
+        "destination": {
+          "query": "gulshan e hameed phase 2",
+          "name": "Gulshan e Hadeed Phase 2",
+          "city": "Karachi Division",
+          "county": "Malir District",
+          "state": "Sindh",
+          "lat": 24.8722974,
+          "lng": 67.3631119
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": "Karachi Division",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 38670,
+          "durationSeconds": 2426.537
+        }
+      }
+    },
+    {
+      "scenarioId": 2,
+      "category": "TRIP",
+      "exactUserMessage": "I wanna go from Gulberg III to Lahore Garrison University",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3577,
+      "reply": "I found Ambassador Travel & Tours (Pvt) Ltd to Lahore Leads University. The estimated road route is 2.3 km and about 3 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "Gulberg III",
+            "destination": "Lahore Garrison University",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Gulberg III",
+            "name": "Ambassador Travel & Tours (Pvt) Ltd",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.5164051,
+            "lng": 74.3448677
+          },
+          "destination": {
+            "query": "Lahore Garrison University",
+            "name": "Lahore Leads University",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.5030825,
+            "lng": 74.3290337
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": "Lahore",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 2296,
+            "durationSeconds": 185.786
+          }
+        }
+      },
+      "conversationId": "e9e6338b-d3cd-43e3-98c6-a052dfb60ac7",
+      "extracted": {
+        "pickup": "Gulberg III",
+        "destination": "Lahore Garrison University",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "Gulberg III",
+          "destination": "Lahore Garrison University",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Gulberg III",
+          "name": "Ambassador Travel & Tours (Pvt) Ltd",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.5164051,
+          "lng": 74.3448677
+        },
+        "destination": {
+          "query": "Lahore Garrison University",
+          "name": "Lahore Leads University",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.5030825,
+          "lng": 74.3290337
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": "Lahore",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 2296,
+          "durationSeconds": 185.786
+        }
+      }
+    },
+    {
+      "scenarioId": 3,
+      "category": "TRIP",
+      "exactUserMessage": "from Liberty Market to Lahore Railway Station",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3086,
+      "reply": "I found Liberty Market to Lahore Junction Railway Station. The estimated road route is 10.2 km and about 16 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "Liberty Market",
+            "destination": "Lahore Railway Station",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Liberty Market",
+            "name": "Liberty Market",
+            "city": "Lahore Cant",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.5103226,
+            "lng": 74.3447061
+          },
+          "destination": {
+            "query": "Lahore Railway Station",
+            "name": "Lahore Junction Railway Station",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.5770346,
+            "lng": 74.3361624
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": "Lahore Cant",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 10210,
+            "durationSeconds": 975.609
+          }
+        }
+      },
+      "conversationId": "e691a96c-c9ff-4361-8182-a4ea109f8bd8",
+      "extracted": {
+        "pickup": "Liberty Market",
+        "destination": "Lahore Railway Station",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "Liberty Market",
+          "destination": "Lahore Railway Station",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Liberty Market",
+          "name": "Liberty Market",
+          "city": "Lahore Cant",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.5103226,
+          "lng": 74.3447061
+        },
+        "destination": {
+          "query": "Lahore Railway Station",
+          "name": "Lahore Junction Railway Station",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.5770346,
+          "lng": 74.3361624
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": "Lahore Cant",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 10210,
+          "durationSeconds": 975.609
+        }
+      }
+    },
+    {
+      "scenarioId": 4,
+      "category": "TRIP",
+      "exactUserMessage": "DHA Phase 6 to Johar Town",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3016,
+      "reply": "I found DHA Phase 6 and Johar Town, but they resolve to different cities. Please confirm that you intend an intercity trip before comparing local provider coverage.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "CROSS_CITY",
+          "extracted": {
+            "pickup": "DHA Phase 6",
+            "destination": "Johar Town",
+            "pattern": "short_from_to"
+          },
+          "pickup": {
+            "query": "DHA Phase 6",
+            "name": "DHA Phase 6",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.7974429,
+            "lng": 67.0616441
+          },
+          "destination": {
+            "query": "Johar Town",
+            "name": "Johar Town",
+            "city": "Samsani Khui",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.4631615,
+            "lng": 74.2939169
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": null,
+          "cityMismatch": true,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 1210089,
+            "durationSeconds": 46641.867
+          }
+        }
+      },
+      "conversationId": "2680fb64-9c3c-4f2a-84a9-576da7297e8b",
+      "extracted": {
+        "pickup": "DHA Phase 6",
+        "destination": "Johar Town",
+        "pattern": "short_from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "CROSS_CITY",
+        "extracted": {
+          "pickup": "DHA Phase 6",
+          "destination": "Johar Town",
+          "pattern": "short_from_to"
+        },
+        "pickup": {
+          "query": "DHA Phase 6",
+          "name": "DHA Phase 6",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.7974429,
+          "lng": 67.0616441
+        },
+        "destination": {
+          "query": "Johar Town",
+          "name": "Johar Town",
+          "city": "Samsani Khui",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.4631615,
+          "lng": 74.2939169
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": null,
+        "cityMismatch": true,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 1210089,
+          "durationSeconds": 46641.867
+        }
+      }
+    },
+    {
+      "scenarioId": 5,
+      "category": "TRIP",
+      "exactUserMessage": "I need to go from Saddar to the airport",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2584,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Saddar",
+            "destination": "the airport",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Saddar",
+            "name": "Saddar",
+            "city": "Saddar",
+            "county": "Rawalpindi District",
+            "state": "Punjab",
+            "lat": 33.5954056,
+            "lng": 73.0512473
+          },
+          "destination": {
+            "query": "the airport",
+            "name": "The Smart School, Airport Jinnah Avenue Campus",
+            "city": "Karachi",
+            "county": "Karachi",
+            "state": "Sindh",
+            "lat": 24.9008699,
+            "lng": 67.1812794
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "859ab6c6-3fec-40b3-bd6e-a6f12bc26c39",
+      "extracted": {
+        "pickup": "Saddar",
+        "destination": "the airport",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Saddar",
+          "destination": "the airport",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Saddar",
+          "name": "Saddar",
+          "city": "Saddar",
+          "county": "Rawalpindi District",
+          "state": "Punjab",
+          "lat": 33.5954056,
+          "lng": 73.0512473
+        },
+        "destination": {
+          "query": "the airport",
+          "name": "The Smart School, Airport Jinnah Avenue Campus",
+          "city": "Karachi",
+          "county": "Karachi",
+          "state": "Sindh",
+          "lat": 24.9008699,
+          "lng": 67.1812794
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 6,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Mujhe Gulberg se LGU jana hai.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2203,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Gulberg",
+            "destination": "LGU",
+            "pattern": "roman_urdu"
+          },
+          "pickup": {
+            "query": "Gulberg",
+            "name": "Gulberg",
+            "city": "Gulberg",
+            "county": "Jhang District",
+            "state": "Punjab",
+            "lat": 30.8966357,
+            "lng": 72.0911806
+          },
+          "destination": {
+            "query": "LGU",
+            "name": "LG Service Centre",
+            "city": "Faisalabad City Tehsil",
+            "county": "Faisalabad District",
+            "state": "Punjab",
+            "lat": 31.4167107,
+            "lng": 73.089548
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "bfa1cd09-d1d5-4dcd-af11-9657943c2a03",
+      "extracted": {
+        "pickup": "Gulberg",
+        "destination": "LGU",
+        "pattern": "roman_urdu"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Gulberg",
+          "destination": "LGU",
+          "pattern": "roman_urdu"
+        },
+        "pickup": {
+          "query": "Gulberg",
+          "name": "Gulberg",
+          "city": "Gulberg",
+          "county": "Jhang District",
+          "state": "Punjab",
+          "lat": 30.8966357,
+          "lng": 72.0911806
+        },
+        "destination": {
+          "query": "LGU",
+          "name": "LG Service Centre",
+          "city": "Faisalabad City Tehsil",
+          "county": "Faisalabad District",
+          "state": "Punjab",
+          "lat": 31.4167107,
+          "lng": 73.089548
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 7,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Yaar Bykea sasti paregi ya Yango?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2420,
+      "reply": "Bykea aur Yango ke beech koi **taqable‑ka‑data** mere paas abhi maujood nahi hai, is liye main seedha keh na nahi sakta ke kaun zyaada sasta hai. Agar aap dono apps khol kar “fare estimate” dekh lein, ya phir “Compare Fares” feature use kar lein, to aapko andaza mil jayega ke kaun si service aapke route ke liye sasti padegi.  \n\nAgar aapko koi aur mashwara chahiye – jaise ke kaunsi gaadi aapke budget, safety ya mausam ke liye behtar hogi – to bataiye!",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "051c25a0-195c-42cb-8f86-a894e020c268",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 8,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Barish mein bike lena safe hai?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3272,
+      "reply": "Riding a bike in the rain can be risky, especially in Lahore where the streets can get slippery and traffic gets a bit more chaotic. Here are the main points to consider:\n\n| Factor | How it affects a bike ride in rain |\n|--------|------------------------------------|\n| **Safety** | Wet roads reduce traction, increasing the chance of skidding or losing control, especially on potholes or oil patches. Visibility is lower for both you and other drivers. |\n| **Comfort** | You’ll get soaked quickly, and the wind chill can make the ride feel much colder. |\n| **Weather protection** | A bike offers little shelter from rain, so you’ll need a good raincoat, waterproof pants, and possibly a helmet visor or rain cover. |\n| **Traffic** | Drivers tend to be more cautious but also more unpredictable; some may not see a motorbike as clearly. |\n| **Luggage** | Any bags or parcels need waterproof protection, otherwise they’ll get damaged. |\n\n### Recommendation\n- **If you can, avoid a bike** when it’s raining heavily.  \n- If you must ride, wear **full rain gear** (water‑proof jacket, pants, shoe covers, and a helmet with a visor).  \n- Keep your speed low, increase following distance, and avoid sudden braking.  \n- Check the route for **potholes or construction** that become more hazardous when wet.  \n\nIf safety and staying dry are top priorities, consider a **car or a rickshaw** instead—they provide shelter and are generally safer in wet conditions.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "17757c93-0c53-488e-9db5-3e99bc687fa8",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 9,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Mujhe railway station se Chungi jana hai.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2202,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "railway station",
+            "destination": "Chungi",
+            "pattern": "roman_urdu"
+          },
+          "pickup": {
+            "query": "railway station",
+            "name": "Railway Station",
+            "city": "Haripur",
+            "county": "Abbottābād District",
+            "state": "Khyber Pakhtunkhwa",
+            "lat": 33.9856054,
+            "lng": 72.9287574
+          },
+          "destination": {
+            "query": "Chungi",
+            "name": "22 No Chungi Stop",
+            "city": "Rawalpindi",
+            "county": "Rawalpindi District",
+            "state": "Punjab",
+            "lat": 33.5820875,
+            "lng": 73.044835
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "992386e4-d159-44dc-8234-b035096b03b4",
+      "extracted": {
+        "pickup": "railway station",
+        "destination": "Chungi",
+        "pattern": "roman_urdu"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "railway station",
+          "destination": "Chungi",
+          "pattern": "roman_urdu"
+        },
+        "pickup": {
+          "query": "railway station",
+          "name": "Railway Station",
+          "city": "Haripur",
+          "county": "Abbottābād District",
+          "state": "Khyber Pakhtunkhwa",
+          "lat": 33.9856054,
+          "lng": 72.9287574
+        },
+        "destination": {
+          "query": "Chungi",
+          "name": "22 No Chungi Stop",
+          "city": "Rawalpindi",
+          "county": "Rawalpindi District",
+          "state": "Punjab",
+          "lat": 33.5820875,
+          "lng": 73.044835
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 10,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Office timing mein ride mehngi kyun hoti hai?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2542,
+      "reply": "During office‑hour peaks (usually 8 am‑10 am and 5 pm‑7 pm) several factors push the fare higher:\n\n1. **Higher demand** – Many people are commuting to or from work at the same time, so the number of ride requests spikes.  \n2. **Limited supply** – The pool of available drivers doesn’t grow as fast as the demand, so the platform uses dynamic pricing to encourage more drivers to come online.  \n3. **Traffic congestion** – Roads are slower, meaning each ride takes longer and uses more fuel, which is reflected in the fare calculation.  \n4. **Surge pricing policies** – Most ride‑hailing apps automatically apply a multiplier when the demand‑to‑supply ratio crosses a certain threshold, making the quoted price higher than the base rate.\n\nSo the combination of more riders, fewer free drivers, slower traffic, and the app’s surge algorithm makes rides noticeably more expensive during office‑time rush hours. If you can shift your travel a bit earlier or later, you’ll usually see lower fares.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "4c5284fd-5119-4e05-beed-04f69e4fa43d",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 11,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Which provider is cheapest for my trip?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 1892,
+      "reply": "I need a current route comparison to answer that specifically. Share the route and vehicle details, or optionally create a comparison from Home.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "eca884a1-27d7-4da0-844b-e831e6094e2d",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 12,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Compare inDrive, Yango, and Bykea.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2763,
+      "reply": "I’m sorry, but I don’t have any fare or service data for inDrive, Yango, or Bykea to compare right now. If you have specific quotes or details from those providers, feel free to share them and I can help you weigh the options. Otherwise, you can check each app for their current rates, vehicle options, and any promotions they’re offering.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "d3517d3b-fc3c-4f71-8da2-9f8dcbce45fa",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 13,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Is this an actual live fare?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 1917,
+      "reply": "No—Fair Fare provides model‑based estimates, not live, real‑time prices. The actual fare you’ll see in the provider’s app may differ.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "70a27412-9f22-43b7-a157-99cbea30e39d",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 14,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Can you guarantee the fare?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2180,
+      "reply": "I’m sorry, but I can’t guarantee a specific fare. The amount I provide is an estimate based on typical rates and the details you give, and the final price may vary depending on the provider’s actual pricing, traffic, surge, or any extra charges. For an exact quote, you’ll need to check the fare directly in the ride‑hailing app you plan to use.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "7a4ea350-270c-4519-b96e-0995674dc4db",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 15,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Is a driver available right now?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 1837,
+      "reply": "Fair Fare doesn't currently have live driver pickup times. You can check availability in the provider's app.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "dfca2276-8b61-4dff-83ce-c8e01c2d37bc",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 16,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "What if it rains?",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 3367,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8722974,
+                "lng": 67.3631119
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38670,
+                "durationSeconds": 2426.537
+              }
+            }
+          },
+          "conversationId": "6baa5500-56b8-4659-904c-920a7e485758",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 3515,
+      "reply": "If it’s raining, here are a few things to keep in mind for the North Nazimabad → Gulshan‑e‑Hameed Phase 2 trip:\n\n**Vehicle choice**  \n- **Car (sedan or hatchback)** – Best protection from the rain, keeps you and any luggage dry, and offers the most comfort on wet roads.  \n- **Bike** – Not recommended in rain; the rider is exposed and road traction is poorer, increasing the risk of slips.  \n- **Rickshaw** – Usually has a roof, but many are open‑top or have only a small canopy, so you may still get wet, and the ride can be bumpier.\n\n**Safety tips**  \n1. **Drive slower** – Wet surfaces need extra stopping distance.  \n2. **Use headlights** – Even in light rain, it improves visibility for you and other drivers.  \n3. **Avoid puddles** – They can hide potholes or cause hydroplaning.  \n4. **Carry a small umbrella or raincoat** – In case you need to step out of the vehicle.  \n\n**Comfort & luggage**  \n- A car will keep any bags, electronics, or documents safe from water.  \n- If you have a lot of luggage, a car also gives you more space to store it securely.\n\n**Recommendation**  \nGiven the rain, a **car** is the most practical option for a dry, safe, and comfortable ride from North Nazimabad to Gulshan‑e‑Hameed Phase 2. If you prefer a cheaper option and are okay with a bit of exposure, a covered rickshaw could work, but avoid a bike.  \n\nYou can request a car through your usual ride‑hailing app and let the driver know you’d like a dry, safe ride. Stay safe!",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "6baa5500-56b8-4659-904c-920a7e485758",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 17,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "What about a bike?",
+      "setup": [
+        {
+          "message": "from Gulberg III to Lahore Garrison University",
+          "httpStatus": 200,
+          "latencyMs": 3629,
+          "reply": "I found Ambassador Travel & Tours (Pvt) Ltd to Lahore Leads University. The estimated road route is 2.3 km and about 3 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "Gulberg III",
+                "destination": "Lahore Garrison University",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "Gulberg III",
+                "name": "Ambassador Travel & Tours (Pvt) Ltd",
+                "city": "Lahore",
+                "county": "Lahore District",
+                "state": "Punjab",
+                "lat": 31.5164051,
+                "lng": 74.3448677
+              },
+              "destination": {
+                "query": "Lahore Garrison University",
+                "name": "Lahore Leads University",
+                "city": "Lahore",
+                "county": "Lahore District",
+                "state": "Punjab",
+                "lat": 31.5030825,
+                "lng": 74.3290337
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Lahore",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 2296,
+                "durationSeconds": 185.786
+              }
+            }
+          },
+          "conversationId": "13708fdb-2386-49a9-b397-b451db7e061d",
+          "extracted": {
+            "pickup": "Gulberg III",
+            "destination": "Lahore Garrison University",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 2749,
+      "reply": "A bike (motorbike‑taxi) is the most budget‑friendly option for a short 2‑3 km hop from Gulberg III to Lahore Garrison University.  \n\n**Pros**\n- **Cost:** Typically the cheapest mode—often 30‑50 PKR for a ride of this distance.\n- **Speed in traffic:** Bikes can weave through congestion, so you’ll usually arrive a few minutes faster than a car or rickshaw during peak hours.\n- **Parking:** No need to worry about finding a spot at the university.\n\n**Cons**\n- **Weather:** If it’s raining or very hot, a bike is less comfortable and offers no protection.\n- **Safety:** Motorbikes have a higher risk of minor injuries compared to cars; wear a helmet and make sure the driver follows traffic rules.\n- **Luggage:** Only a small bag or backpack can be carried safely.\n\n**Recommendation**  \nIf the weather is clear and you’re traveling light, a bike is a great choice for this short trip and will keep you well within a modest budget. If it’s raining, very hot, or you have more than a small bag, consider a car or a rickshaw for added comfort and protection.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "13708fdb-2386-49a9-b397-b451db7e061d",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 18,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Which one is cheaper?",
+      "setup": [
+        {
+          "message": "from Liberty Market to Lahore Railway Station",
+          "httpStatus": 200,
+          "latencyMs": 3018,
+          "reply": "I found Liberty Market to Lahore Junction Railway Station. The estimated road route is 10.2 km and about 16 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "Liberty Market",
+                "destination": "Lahore Railway Station",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "Liberty Market",
+                "name": "Liberty Market",
+                "city": "Lahore Cant",
+                "county": "Lahore District",
+                "state": "Punjab",
+                "lat": 31.5103226,
+                "lng": 74.3447061
+              },
+              "destination": {
+                "query": "Lahore Railway Station",
+                "name": "Lahore Junction Railway Station",
+                "city": "Lahore",
+                "county": "Lahore District",
+                "state": "Punjab",
+                "lat": 31.5770346,
+                "lng": 74.3361624
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Lahore Cant",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 10210,
+                "durationSeconds": 975.609
+              }
+            }
+          },
+          "conversationId": "61443c78-ea12-42af-8e96-18bede984a99",
+          "extracted": {
+            "pickup": "Liberty Market",
+            "destination": "Lahore Railway Station",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 2591,
+      "reply": "I don’t have any fare‑comparison data for Liberty Market → Lahore Railway Station, so I can’t tell which option would be cheaper. You can check the individual providers’ apps (e.g., inDrive, Yango, Bykea) for their current estimates and compare them yourself. If you’d like, let me know any specific vehicle type or budget preferences and I can give a general recommendation on the most cost‑effective option.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "61443c78-ea12-42af-8e96-18bede984a99",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 19,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Actually change the destination to Clifton Karachi.",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 3334,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8722974,
+                "lng": 67.3631119
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38670,
+                "durationSeconds": 2426.537
+              }
+            }
+          },
+          "conversationId": "504153e3-6c65-4225-b80e-279838175255",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 4730,
+      "reply": "I found North Nazimabad Town to Clifton Street 2. The estimated road route is 15.5 km and about 17 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Clifton Karachi",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "North Nazimabad",
+            "name": "North Nazimabad Town",
+            "city": "Karachi Division",
+            "county": "Nazimabad District",
+            "state": "Sindh",
+            "lat": 24.9424616,
+            "lng": 67.0477185
+          },
+          "destination": {
+            "query": "Clifton Karachi",
+            "name": "Clifton Street 2",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.8203973,
+            "lng": 67.032157
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": "Karachi Division",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 15492,
+            "durationSeconds": 1038.558
+          }
+        }
+      },
+      "conversationId": "504153e3-6c65-4225-b80e-279838175255",
+      "extracted": {
+        "pickup": null,
+        "destination": "Clifton Karachi",
+        "pattern": "change_destination"
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "North Nazimabad",
+          "destination": "Clifton Karachi",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "North Nazimabad",
+          "name": "North Nazimabad Town",
+          "city": "Karachi Division",
+          "county": "Nazimabad District",
+          "state": "Sindh",
+          "lat": 24.9424616,
+          "lng": 67.0477185
+        },
+        "destination": {
+          "query": "Clifton Karachi",
+          "name": "Clifton Street 2",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.8203973,
+          "lng": 67.032157
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": "Karachi Division",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 15492,
+          "durationSeconds": 1038.558
+        }
+      }
+    },
+    {
+      "scenarioId": 20,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Actually change the pickup to Clifton Karachi.",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 3231,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8722974,
+                "lng": 67.3631119
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38670,
+                "durationSeconds": 2426.537
+              }
+            }
+          },
+          "conversationId": "a23ba119-708a-4381-8a23-e1d326eee77c",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 5211,
+      "reply": "I found Clifton Street 2 to Gulshan e Hadeed Phase 2. The estimated road route is 36.8 km and about 39 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "Clifton Karachi",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Clifton Karachi",
+            "name": "Clifton Street 2",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.8203973,
+            "lng": 67.032157
+          },
+          "destination": {
+            "query": "Gulshan e Hameed Phase 2",
+            "name": "Gulshan e Hadeed Phase 2",
+            "city": "Karachi Division",
+            "county": "Malir District",
+            "state": "Sindh",
+            "lat": 24.8722974,
+            "lng": 67.3631119
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": "Karachi Division",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 36763,
+            "durationSeconds": 2329.701
+          }
+        }
+      },
+      "conversationId": "a23ba119-708a-4381-8a23-e1d326eee77c",
+      "extracted": {
+        "pickup": "Clifton Karachi",
+        "destination": null,
+        "pattern": "change_pickup"
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "Clifton Karachi",
+          "destination": "Gulshan e Hameed Phase 2",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Clifton Karachi",
+          "name": "Clifton Street 2",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.8203973,
+          "lng": 67.032157
+        },
+        "destination": {
+          "query": "Gulshan e Hameed Phase 2",
+          "name": "Gulshan e Hadeed Phase 2",
+          "city": "Karachi Division",
+          "county": "Malir District",
+          "state": "Sindh",
+          "lat": 24.8722974,
+          "lng": 67.3631119
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": "Karachi Division",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 36763,
+          "durationSeconds": 2329.701
+        }
+      }
+    },
+    {
+      "scenarioId": 21,
+      "category": "CONDITIONS",
+      "exactUserMessage": "Is a weekday morning more expensive than Sunday afternoon?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2247,
+      "reply": "Generally, ride‑hailing prices tend to be higher during weekday mornings because many people are commuting to work or school, which creates higher demand. Sunday afternoons are usually off‑peak, so fares are typically lower. Keep in mind that exact prices can still vary depending on the specific provider, any promotions they’re running, and occasional surge pricing if there’s a special event or heavy traffic. If you want the most accurate estimate for a particular trip, you can check the provider’s app for the current fare preview.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "ba039ce5-f3a6-4039-bccc-89e7dea6d553",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 22,
+      "category": "CONDITIONS",
+      "exactUserMessage": "How is Friday prayer-time travel usually?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3136,
+      "reply": "Friday prayers in Lahore usually bring a noticeable spike in traffic, especially around the main mosques and the surrounding neighborhoods. Here’s what you can typically expect:\n\n| Time Slot | Traffic Condition | Typical Delay |\n|-----------|-------------------|---------------|\n| **12:00 – 13:30** | Heavy – many people heading to or from the mosque | 30 – 60 minutes on major routes |\n| **13:30 – 15:00** | Still busy – crowds dispersing, especially near market areas | 20 – 40 minutes |\n| **15:00 – 17:00** | Gradual easing – traffic starts to normalize | 10 – 20 minutes |\n| **After 17:00** | Light to moderate – normal weekday flow resumes | 5 – 15 minutes |\n\n**Tips to navigate Friday‑prayer traffic**\n\n1. **Leave early** – If you have an appointment after the prayer, try to start your trip before 12 pm or wait until after 15:00.\n2. **Use alternate routes** – Roads that run parallel to the main arteries (e.g., using Canal Bank Road instead of Ferozepur Road) can be less congested.\n3. **Consider a bike or rickshaw** – Smaller vehicles can weave through the crowd more easily and are often cheaper during peak times.\n4. **Check a traffic‑monitoring app** – Even though we don’t have live data, apps like Google Maps or local traffic channels can give you a real‑time snapshot before you head out.\n5. **Plan for extra time** – Add at least 30 minutes to your usual travel estimate if you must travel during the peak prayer window.\n\nIf you have a specific route in mind (e.g., from Gulberg III to Lahore Garrison University), let me know and I can give you a more focused suggestion on the best times and possible detours.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "5fc820ca-9b97-405d-9d13-9a7b48545426",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 23,
+      "category": "CONDITIONS",
+      "exactUserMessage": "What vehicle is safer in heavy rain or fog?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 5946,
+      "reply": "In heavy rain or fog, a **car** is generally the safest choice. Cars have better visibility (larger windows, better headlights), more robust braking systems, and a sealed cabin that keeps you dry and protected from wind. A bike or rickshaw can be more exposed to rain and wind, and their smaller wheels may struggle on slick roads. If you’re traveling with passengers or luggage, a car also offers more space and comfort.",
+      "modelId": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "fallbackUsed": true,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "4cf31af9-e236-4cfc-9ef7-8ff4882d65f0",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 24,
+      "category": "CONDITIONS",
+      "exactUserMessage": "There is a protest and possible road closure. What should I do?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2162,
+      "reply": "If a protest is causing a road closure, the safest approach is to:\n\n1. **Check a reliable traffic app** (Google Maps, Waze, or the local transport authority’s site) for real‑time updates on the closure and any detours that have been posted.  \n2. **Plan an alternate route** that bypasses the closed stretch. Even if it’s a bit longer, it will save you time and frustration.  \n3. **Consider public transport** if the protest is in a busy area—trains or buses often have dedicated lanes that stay open.  \n4. **If you’re using a ride‑hailing service**, open the app and let it suggest a new route; most providers automatically reroute around closures.  \n5. **Give yourself extra travel time**. Protests can cause unpredictable delays, so add at least 15–20 minutes to your expected arrival.  \n\nIf you let me know your pickup and drop‑off points, I can suggest a specific detour or alternative transport option for you.",
+      "modelId": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "6a4d6dcc-e2a8-471b-bb86-8679ac0163f4",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 25,
+      "category": "CONDITIONS",
+      "exactUserMessage": "There is a major event tonight. Could demand be higher?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2084,
+      "reply": "If there’s a big event tonight—like a concert, sports match, or festival—ride‑share demand usually spikes around the event’s start and especially after it ends. That can lead to higher fares (surge pricing) and longer wait times for drivers.  \n\n**What you can do:**\n\n- **Book early**: If you can lock in a ride before the event starts, you’ll likely avoid the peak surge.  \n- **Check the app**: Most providers show a surge multiplier or a “high demand” icon; you’ll see if the price is going up.  \n- **Consider alternate routes or times**: If you’re flexible, leaving a bit earlier or later can help you dodge the heaviest traffic and price hikes.  \n\nIf you let me know your pickup and drop‑off, I can give more specific advice on timing or vehicle choice.",
+      "modelId": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "3662ad60-c5e5-4545-a44d-ac1d47498f17",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 26,
+      "category": "EDGE",
+      "exactUserMessage": "I need to go from a place called Zorblax to the airport.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3400,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "a place called Zorblax",
+            "destination": "the airport",
+            "pattern": "from_to"
+          },
+          "pickup": null,
+          "destination": {
+            "query": "the airport",
+            "name": "The Smart School, Airport Jinnah Avenue Campus",
+            "city": "Karachi",
+            "county": "Karachi",
+            "state": "Sindh",
+            "lat": 24.9008699,
+            "lng": 67.1812794
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "f09a4e6f-7406-4350-b715-b1f8e4cf04bd",
+      "extracted": {
+        "pickup": "a place called Zorblax",
+        "destination": "the airport",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "a place called Zorblax",
+          "destination": "the airport",
+          "pattern": "from_to"
+        },
+        "pickup": null,
+        "destination": {
+          "query": "the airport",
+          "name": "The Smart School, Airport Jinnah Avenue Campus",
+          "city": "Karachi",
+          "county": "Karachi",
+          "state": "Sindh",
+          "lat": 24.9008699,
+          "lng": 67.1812794
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 27,
+      "category": "EDGE",
+      "exactUserMessage": "Take me from Gulberg to Chungi.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2028,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Gulberg",
+            "destination": "Chungi",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Gulberg",
+            "name": "Gulberg",
+            "city": "Gulberg",
+            "county": "Jhang District",
+            "state": "Punjab",
+            "lat": 30.8966357,
+            "lng": 72.0911806
+          },
+          "destination": {
+            "query": "Chungi",
+            "name": "Saddar Chungi Road",
+            "city": "Chiniot",
+            "county": "Chiniot District",
+            "state": "Punjab",
+            "lat": 31.7279254,
+            "lng": 72.9817404
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "6444bee9-7c50-4e79-a5cb-57158b1b2aa2",
+      "extracted": {
+        "pickup": "Gulberg",
+        "destination": "Chungi",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Gulberg",
+          "destination": "Chungi",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Gulberg",
+          "name": "Gulberg",
+          "city": "Gulberg",
+          "county": "Jhang District",
+          "state": "Punjab",
+          "lat": 30.8966357,
+          "lng": 72.0911806
+        },
+        "destination": {
+          "query": "Chungi",
+          "name": "Saddar Chungi Road",
+          "city": "Chiniot",
+          "county": "Chiniot District",
+          "state": "Punjab",
+          "lat": 31.7279254,
+          "lng": 72.9817404
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 28,
+      "category": "EDGE",
+      "exactUserMessage": "I explicitly want to travel from Karachi to Lahore.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3654,
+      "reply": "I found Karachi and Lahore as an intercity trip. The estimated road route is 1204.5 km and about 710 minutes. Fair Fare does not have verified intercity provider coverage for this route, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "CROSS_CITY",
+          "extracted": {
+            "pickup": "Karachi",
+            "destination": "Lahore",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Karachi",
+            "name": "Karachi",
+            "city": "Karachi",
+            "county": null,
+            "state": "Sindh",
+            "lat": 24.8546842,
+            "lng": 67.0207055
+          },
+          "destination": {
+            "query": "Lahore",
+            "name": "Lahore",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.5656822,
+            "lng": 74.3141829
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": null,
+          "cityMismatch": true,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 1204485,
+            "durationSeconds": 42578.867
+          }
+        }
+      },
+      "conversationId": "57697780-c0af-46ad-96f1-50930a7deb0e",
+      "extracted": {
+        "pickup": "Karachi",
+        "destination": "Lahore",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "CROSS_CITY",
+        "extracted": {
+          "pickup": "Karachi",
+          "destination": "Lahore",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Karachi",
+          "name": "Karachi",
+          "city": "Karachi",
+          "county": null,
+          "state": "Sindh",
+          "lat": 24.8546842,
+          "lng": 67.0207055
+        },
+        "destination": {
+          "query": "Lahore",
+          "name": "Lahore",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.5656822,
+          "lng": 74.3141829
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": null,
+        "cityMismatch": true,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 1204485,
+          "durationSeconds": 42578.867
+        }
+      }
+    },
+    {
+      "scenarioId": 29,
+      "category": "EDGE",
+      "exactUserMessage": "In verified mode with zero approved coverage, should Fair Fare recommend a provider?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2217,
+      "reply": "In verified mode with zero approved coverage, Fair Fare cannot recommend a specific provider. Since there’s no approved coverage to guarantee a ride, the best approach is to check the provider’s app directly for availability and pricing.",
+      "modelId": "openai/gpt-oss-20b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "9285c451-2de2-4954-abe9-2542454fd0cf",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 30,
+      "category": "EDGE",
+      "exactUserMessage": "Plan a trip from DHA Phase 6 to Johar Town and tell me what is specific about this route.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3216,
+      "reply": "I found DHA Phase 6 and Johar Town, but they resolve to different cities. Please confirm that you intend an intercity trip before comparing local provider coverage.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "CROSS_CITY",
+          "extracted": {
+            "pickup": "DHA Phase 6",
+            "destination": "Johar Town",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "DHA Phase 6",
+            "name": "DHA Phase 6",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.7974429,
+            "lng": 67.0616441
+          },
+          "destination": {
+            "query": "Johar Town",
+            "name": "Johar Town",
+            "city": "Samsani Khui",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.4631615,
+            "lng": 74.2939169
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": null,
+          "cityMismatch": true,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 1210089,
+            "durationSeconds": 46641.867
+          }
+        }
+      },
+      "conversationId": "dc5bf508-152d-4ca0-8bc9-710ed24410b8",
+      "extracted": {
+        "pickup": "DHA Phase 6",
+        "destination": "Johar Town",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "CROSS_CITY",
+        "extracted": {
+          "pickup": "DHA Phase 6",
+          "destination": "Johar Town",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "DHA Phase 6",
+          "name": "DHA Phase 6",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.7974429,
+          "lng": 67.0616441
+        },
+        "destination": {
+          "query": "Johar Town",
+          "name": "Johar Town",
+          "city": "Samsani Khui",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.4631615,
+          "lng": 74.2939169
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": null,
+        "cityMismatch": true,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 1210089,
+          "durationSeconds": 46641.867
+        }
+      }
+    }
+  ]
+}

@@ -16,7 +16,7 @@ const { resolveWeatherContext } = require("./weatherContext.service");
 const { getDatasetMode, resolveTripCoverage, estimateDatasetFare } = require("./fairFareDataset.service");
 
 function safeYangoDiagnostics(value) {
-  const categories = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE"]);
+  const categories = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE", "NO_VALID_TARIFFS"]);
   if (!value || value.provider !== "yango" || !categories.has(value.errorCategory) || ![true, false, "unknown"].includes(value.requestReachedUpstream)) return null;
   const status = value.upstreamStatus === null ? null : Number(value.upstreamStatus);
   if (status !== null && (!Number.isInteger(status) || status <= 0)) return null;

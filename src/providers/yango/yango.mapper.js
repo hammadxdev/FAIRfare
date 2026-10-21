@@ -17,6 +17,43 @@ function currencyCode(value) {
   return /^[A-Z]{3}$/.test(code) ? code : null;
 }
 
+function canonicalVehicleCategory(value, name) {
+  const explicit = String(value || "").trim().toLowerCase();
+  if (/bike|moto|motorcycle/.test(explicit)) return "bike";
+  if (/rickshaw|tuk/.test(explicit)) return "rickshaw";
+  if (explicit === "car" || explicit === "auto") return "car";
+  const label = String(name || "").trim().toLowerCase();
+  if (label === "bike" || label === "moto" || label === "motorcycle") return "bike";
+  if (label === "rickshaw") return "rickshaw";
+  return "unknown";
+}
+
+function canonicalServiceTier(value, name) {
+  const explicit = String(value || "").trim().toLowerCase();
+  if (["economy", "standard", "premium", "exclusive", "unknown"].includes(explicit)) return explicit;
+  const label = String(name || "").trim().toLowerCase();
+  if (/^economy(?:\s+a\/?c)?$/.test(label)) return "economy";
+  if (label === "comfort") return "standard";
+  if (label === "premium") return "premium";
+  if (label === "exclusive") return "exclusive";
+  return "unknown";
+}
+
+function verifiedFeatures(level, name) {
+  const values = [];
+  const explicit = level?.features ?? level?.feature_flags ?? level?.amenities;
+  if (Array.isArray(explicit)) values.push(...explicit);
+  else if (explicit && typeof explicit === "object") values.push(...Object.entries(explicit).filter(([, enabled]) => enabled === true).map(([feature]) => feature));
+  const label = String(name || "").trim().toLowerCase();
+  if (/\ba\/?c\b|air\s*condition/.test(label)) values.push("AC");
+  return [...new Set(values.map((value) => {
+    const normalized = String(value).trim().toLowerCase();
+    if (["ac", "a/c", "air_conditioned", "air-conditioned", "air conditioning"].includes(normalized)) return "AC";
+    if (["non-ac", "non_ac", "non ac"].includes(normalized)) return "NON-AC";
+    return normalized.toUpperCase();
+  }).filter(Boolean))];
+}
+
 function parseDocumentedPrice(value, currency) {
   if (typeof value === "number") return finitePositive(value);
   if (value && typeof value === "object") {
@@ -89,6 +126,7 @@ function vehicleExamples(value) {
 
 function normalizeServiceLevel(level, currency, routeMetadata = {}) {
   const categoryId = level?.class == null || String(level.class).trim() === "" ? null : String(level.class);
+  const categoryName = level?.name == null ? null : String(level.name);
   const hidden = level?.is_hidden === true;
   const unavailableCode = typeof level?.tariff_unavailable?.code === "string" && level.tariff_unavailable.code.trim()
     ? level.tariff_unavailable.code.trim()
@@ -116,7 +154,11 @@ function normalizeServiceLevel(level, currency, routeMetadata = {}) {
   const hasExactQuote = exactFare !== null;
   const normalized = {
     categoryId,
-    categoryName: level?.name == null ? null : String(level.name),
+    categoryName,
+    providerServiceName: categoryName,
+    serviceTier: canonicalServiceTier(level?.service_tier ?? level?.serviceTier ?? level?.tier, categoryName),
+    features: verifiedFeatures(level, categoryName),
+    vehicleCategory: canonicalVehicleCategory(level?.vehicle_category ?? level?.vehicleCategory ?? level?.vehicle_type, categoryName),
     // `fare` remains the public comparison amount, but now means the exact
     // provider-returned route quote rather than the card's display/from price.
     fare: hidden || unavailable || !hasExactQuote ? null : exactFare,
@@ -159,6 +201,10 @@ function normalizeTariff(tariff) {
   return {
     categoryId: id == null ? null : String(id),
     categoryName: name == null ? null : String(name),
+    providerServiceName: name == null ? null : String(name),
+    serviceTier: canonicalServiceTier(tariff?.service_tier ?? tariff?.serviceTier ?? tariff?.tier, name),
+    features: verifiedFeatures(tariff, name),
+    vehicleCategory: canonicalVehicleCategory(tariff?.vehicle_category ?? tariff?.vehicleCategory ?? tariff?.vehicle_type, name),
     fare: hidden ? null : price,
     currency,
     priceQualifier: qualifier == null ? null : String(qualifier),
@@ -205,4 +251,4 @@ function normalizeRouteStatsResponse(response) {
   return { status: "available", source: "live", currency: available[0].currency, estimates: available };
 }
 
-module.exports = { numericPrice, normalizeTariff, normalizeRouteStatsResponse };
+module.exports = { numericPrice, canonicalVehicleCategory, canonicalServiceTier, verifiedFeatures, normalizeTariff, normalizeRouteStatsResponse };

@@ -1,0 +1,110 @@
+{
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 2,
+      "category": "TRIP",
+      "exactUserMessage": "I wanna go from Gulberg III to Lahore Garrison University",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 7889,
+      "reply": "I found Gulberg 3 to Lahore Garrison University. The approximate map-based road route is 15 km and about 18 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "Gulberg III",
+            "destination": "Lahore Garrison University",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Gulberg III",
+            "name": "Gulberg 3",
+            "city": "Model Town Tehsil",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.4907041,
+            "lng": 74.3393752
+          },
+          "destination": {
+            "query": "Lahore Garrison University",
+            "name": "Lahore Garrison University",
+            "city": "Lahore",
+            "county": "Lahore",
+            "state": "Punjab",
+            "lat": 31.4637789,
+            "lng": 74.4431405
+          },
+          "pickupAmbiguous": false,
+          "destinationAmbiguous": false,
+          "city": "Model Town Tehsil",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 15001,
+            "durationSeconds": 1095.933
+          }
+        }
+      },
+      "conversationId": "e9906030-d7c3-4f55-9958-1cf10bd0e9d1",
+      "extracted": {
+        "pickup": "Gulberg III",
+        "destination": "Lahore Garrison University",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "Gulberg III",
+          "destination": "Lahore Garrison University",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Gulberg III",
+          "name": "Gulberg 3",
+          "city": "Model Town Tehsil",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.4907041,
+          "lng": 74.3393752
+        },
+        "destination": {
+          "query": "Lahore Garrison University",
+          "name": "Lahore Garrison University",
+          "city": "Lahore",
+          "county": "Lahore",
+          "state": "Punjab",
+          "lat": 31.4637789,
+          "lng": 74.4431405
+        },
+        "pickupAmbiguous": false,
+        "destinationAmbiguous": false,
+        "city": "Model Town Tehsil",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 15001,
+          "durationSeconds": 1095.933
+        }
+      }
+    }
+  ]
+}

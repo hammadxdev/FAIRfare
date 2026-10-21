@@ -1,0 +1,102 @@
+{
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 16,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "What if it rains?",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 3625,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.6 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8718234,
+                "lng": 67.3633779
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": false,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38611,
+                "durationSeconds": 2420.538
+              }
+            }
+          },
+          "conversationId": "33271e3a-9464-48dd-b1b0-8a4d78eac975",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 4002,
+      "reply": "If it’s raining, consider these tips for a comfortable and safe ride:\n\n1. **Vehicle choice** – A car (or a ride‑hailing sedan) is usually the best option. It keeps you dry, offers better traction and stability than a bike or rickshaw, and provides more protection for any luggage you may have.\n\n2. **Safety** – Roads can get slippery, especially around potholes and water‑filled gutters. Ask the driver to drive cautiously, avoid sudden braking, and keep a safe distance from other vehicles.\n\n3. **Comfort** – Choose a driver who has a working windshield wiper and air‑conditioner/heater so the interior stays clear and the temperature stays comfortable.\n\n4. **Timing** – Rain often slows traffic, so allow an extra 10‑15 minutes beyond the usual 40‑minute estimate for the North Nazimabad → Gulshan‑e‑Hameed Phase 2 route.\n\nIf you have any specific concerns (e.g., luggage, number of passengers) let me know and I can fine‑tune the recommendation.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "33271e3a-9464-48dd-b1b0-8a4d78eac975",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    }
+  ]
+}

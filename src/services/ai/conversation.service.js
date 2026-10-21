@@ -14,4 +14,20 @@ async function findByClientMessageId(userId,clientMessageId){if(!clientMessageId
 async function addMessage(userId,id,role,content,modelId=null,clientMessageId=null){await getOwned(id,userId);const r=(await query("INSERT INTO ai_messages (conversation_id,role,content,model_id,client_message_id) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (conversation_id, client_message_id) WHERE client_message_id IS NOT NULL DO UPDATE SET content=EXCLUDED.content RETURNING id,role,content,client_message_id,created_at",[id,role,content,modelId,clientMessageId])).rows[0];await query("UPDATE ai_conversations SET updated_at=now() WHERE id=$1 AND user_id=$2",[id,userId]);return r;}
 async function titleFirstMessage(userId,id,message){const r=await getOwned(id,userId);if(r.title!=="New Chat")return;await query("UPDATE ai_conversations SET title=$1,updated_at=now() WHERE id=$2 AND user_id=$3",[titleFromMessage(message),id,userId]);}
 async function recentMessages(userId,id){await getOwned(id,userId);return (await query("SELECT role,content FROM ai_messages WHERE conversation_id=$1 ORDER BY created_at DESC,id DESC LIMIT $2",[id,MAX_CONTEXT_MESSAGES])).rows.reverse();}
-module.exports={create,list,get,rename,update,remove,ensure,findByClientMessageId,addMessage,titleFirstMessage,recentMessages,titleFromMessage,MAX_CONTEXT_MESSAGES};
+async function claimRequestRun(userId,conversationId,clientMessageId){
+  if(!clientMessageId)return {status:"DISABLED",claimOwner:false};
+  await getOwned(conversationId,userId);
+  const inserted=(await query("INSERT INTO ai_request_runs (user_id,conversation_id,client_message_id,status) VALUES ($1,$2,$3,'PENDING') ON CONFLICT (user_id,conversation_id,client_message_id) DO NOTHING RETURNING *",[userId,conversationId,clientMessageId])).rows[0];
+  if(inserted)return {...inserted,claimOwner:true};
+  const existing=(await query("SELECT * FROM ai_request_runs WHERE user_id=$1 AND conversation_id=$2 AND client_message_id=$3",[userId,conversationId,clientMessageId])).rows[0];
+  if(!existing)throw new AppError("AI request run could not be claimed",409);
+  return {...existing,claimOwner:false};
+}
+async function completeRequestRun(userId,runId,{status="COMPLETED",toolExecution=null,response=null,comparisonId=null,errorCode=null}={}){
+  if(!["COMPLETED","FAILED","UNCERTAIN"].includes(status))throw new AppError("Invalid AI request run status",400);
+  const r=(await query("UPDATE ai_request_runs SET status=$1,tool_execution_json=$2::jsonb,response_json=$3::jsonb,comparison_id=$4,error_code=$5,updated_at=now(),completed_at=now() WHERE id=$6 AND user_id=$7 AND status='PENDING' RETURNING *",[status,JSON.stringify(toolExecution),JSON.stringify(response),comparisonId,errorCode,runId])).rows[0];
+  if(!r)throw new AppError("AI request run is no longer claimable",409);
+  return r;
+}
+async function getRequestRun(userId,conversationId,clientMessageId){if(!clientMessageId)return null;return (await query("SELECT * FROM ai_request_runs WHERE user_id=$1 AND conversation_id=$2 AND client_message_id=$3",[userId,conversationId,clientMessageId])).rows[0] || null;}
+module.exports={create,list,get,rename,update,remove,ensure,findByClientMessageId,addMessage,titleFirstMessage,recentMessages,claimRequestRun,completeRequestRun,getRequestRun,titleFromMessage,MAX_CONTEXT_MESSAGES};

@@ -1,0 +1,42 @@
+{
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 10,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Office timing mein ride mehngi kyun hoti hai?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2760,
+      "reply": "Office timing mein demand aam tor par barh sakti hai, lekin mere paas is waqt live surge ya fare data nahi hai. Exact price ke liye provider app ka current quote check karein.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "8e99f097-2969-410a-85ef-bea74fd32f13",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    }
+  ]
+}

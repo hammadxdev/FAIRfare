@@ -7,10 +7,28 @@ const emailConfig = require("../config/email");
 const { getEmailProvider } = require("./email/emailProvider");
 const { verificationEmail, passwordResetEmail, passwordChangedEmail, welcomeEmail } = require("./email/emailTemplates");
 
-function authError(message, statusCode, code) {
-  const error = new AppError(message, statusCode);
+function authError(message, statusCode, code, details = null) {
+  const error = new AppError(message, statusCode, details);
   error.code = code;
   return error;
+}
+
+const MAX_VERIFICATION_RESENDS = 2;
+
+function resendMetadata(resendCount = 0, cooldownSeconds = emailConfig.resendCooldownSeconds()) {
+  const count = Math.max(0, Math.min(MAX_VERIFICATION_RESENDS, Number(resendCount) || 0));
+  return {
+    resendCount: count,
+    remainingResends: MAX_VERIFICATION_RESENDS - count,
+    resendLimit: MAX_VERIFICATION_RESENDS,
+    cooldownSeconds: Math.max(0, Number(cooldownSeconds) || 0),
+  };
+}
+
+function cooldownRemainingSeconds(lastSentAt, cooldownSeconds = emailConfig.resendCooldownSeconds(), now = Date.now()) {
+  if (!lastSentAt) return 0;
+  const remaining = Number(cooldownSeconds) * 1000 - (now - new Date(lastSentAt).getTime());
+  return Math.max(0, Math.ceil(remaining / 1000));
 }
 
 function secureOtp() {
@@ -35,11 +53,11 @@ function expiry(minutes) {
   return new Date(Date.now() + minutes * 60 * 1000);
 }
 
-function providerFailure(error) {
+function providerFailure(error, metadata = null) {
   if (error.code === "EMAIL_PROVIDER_NOT_CONFIGURED" || error.code === "EMAIL_SENDER_NOT_CONFIGURED") {
-    return authError("Email delivery is temporarily unavailable", 503, error.code);
+    return authError("Email delivery is temporarily unavailable", 503, error.code, metadata);
   }
-  return authError("Email delivery is temporarily unavailable", 503, "EMAIL_PROVIDER_ERROR");
+  return authError("Email delivery is temporarily unavailable", 503, "EMAIL_PROVIDER_ERROR", metadata);
 }
 
 async function sendInformationalEmail(message) {
@@ -51,21 +69,45 @@ async function findUser(email) {
 }
 
 async function sendVerificationOtp(email) {
-  const user = await findUser(email);
-  if (!user || user.email_verified_at) return { accepted: true };
-  const previous = (await query("SELECT last_sent_at FROM email_verification_requests WHERE user_id=$1 AND used_at IS NULL ORDER BY created_at DESC LIMIT 1", [user.id])).rows[0];
-  if (previous && previous.last_sent_at && new Date(previous.last_sent_at).getTime() > Date.now() - emailConfig.resendCooldownSeconds() * 1000) {
-    throw authError("Please wait before requesting another verification code", 429, "EMAIL_OTP_COOLDOWN");
-  }
-  const code = secureOtp();
-  try {
-    await getEmailProvider().send({ to: user.email, ...verificationEmail(code, emailConfig.verificationTtlMinutes()) });
-  } catch (error) {
-    throw providerFailure(error);
-  }
-  await query("UPDATE email_verification_requests SET used_at=now() WHERE user_id=$1 AND used_at IS NULL", [user.id]);
-  await query("INSERT INTO email_verification_requests (user_id,otp_hash,expires_at,last_sent_at) VALUES ($1,$2,$3,now())", [user.id, hashOtp(code), expiry(emailConfig.verificationTtlMinutes())]);
-  return { accepted: true };
+  return withTransaction(async (client) => {
+    const user = (await client.query("SELECT id,email,email_verified_at FROM users WHERE lower(email)=lower($1) FOR UPDATE", [normalizeEmail(email)])).rows[0];
+    if (!user || user.email_verified_at) return { accepted: true, ...resendMetadata(0) };
+
+    const previous = (await client.query(
+      "SELECT id,last_sent_at,resend_count FROM email_verification_requests WHERE user_id=$1 AND used_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+      [user.id]
+    )).rows[0];
+    const currentCount = Number(previous?.resend_count || 0);
+    const cooldownSeconds = emailConfig.resendCooldownSeconds();
+    const cooldownRemaining = cooldownRemainingSeconds(previous?.last_sent_at, cooldownSeconds);
+    const currentMetadata = resendMetadata(currentCount, cooldownRemaining || cooldownSeconds);
+
+    if (cooldownRemaining > 0) {
+      throw authError("Please wait before requesting another verification code", 429, "EMAIL_OTP_COOLDOWN", currentMetadata);
+    }
+    if (previous && currentCount >= MAX_VERIFICATION_RESENDS) {
+      throw authError("You have reached the verification resend limit", 429, "EMAIL_OTP_RESEND_LIMIT", currentMetadata);
+    }
+
+    const code = secureOtp();
+    try {
+      await getEmailProvider().send({ to: user.email, ...verificationEmail(code, emailConfig.verificationTtlMinutes()) });
+    } catch (error) {
+      // The transaction rolls back here: the prior OTP remains active and the
+      // successful-send allowance is unchanged when delivery is rejected.
+      throw providerFailure(error, currentMetadata);
+    }
+
+    const nextCount = previous ? currentCount + 1 : 0;
+    if (previous) {
+      await client.query("UPDATE email_verification_requests SET used_at=now() WHERE id=$1 AND used_at IS NULL", [previous.id]);
+    }
+    await client.query(
+      "INSERT INTO email_verification_requests (user_id,otp_hash,expires_at,last_sent_at,resend_count) VALUES ($1,$2,$3,now(),$4)",
+      [user.id, hashOtp(code), expiry(emailConfig.verificationTtlMinutes()), nextCount]
+    );
+    return { accepted: true, ...resendMetadata(nextCount, cooldownSeconds) };
+  });
 }
 
 async function verifyEmailOtp(email, code) {
@@ -135,4 +177,4 @@ async function resetPassword({ resetToken, newPassword }) {
   return { reset: true };
 }
 
-module.exports = { sendVerificationOtp, verifyEmailOtp, requestPasswordResetOtp, verifyPasswordResetOtp, resetPassword, setEmailProviderForTests: require("./email/emailProvider").setEmailProviderForTests };
+module.exports = { sendVerificationOtp, verifyEmailOtp, requestPasswordResetOtp, verifyPasswordResetOtp, resetPassword, resendMetadata, cooldownRemainingSeconds, MAX_VERIFICATION_RESENDS, setEmailProviderForTests: require("./email/emailProvider").setEmailProviderForTests };

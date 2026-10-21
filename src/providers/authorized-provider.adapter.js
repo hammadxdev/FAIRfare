@@ -15,7 +15,7 @@ const STATUS = Object.freeze({
   PROVIDER_ERROR: "provider_error",
 });
 
-const SAFE_DIAGNOSTIC_CATEGORIES = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE"]);
+const SAFE_DIAGNOSTIC_CATEGORIES = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE", "NO_VALID_TARIFFS"]);
 
 function safeYangoDiagnostics(value) {
   if (!value || value.provider !== "yango" || !SAFE_DIAGNOSTIC_CATEGORIES.has(value.errorCategory)) return null;

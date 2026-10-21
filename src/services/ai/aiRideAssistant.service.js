@@ -3,8 +3,9 @@ const { getHistory, getHistoryById } = require("../history.service");
 const { getComparisonForUser } = require("../currentComparison.service");
 const defaultLlmClient = require("./llmClient");
 const conversationService = require("./conversation.service");
-const { retrieveFairFareKnowledge } = require("./fairFareKnowledge.service");
+const { retrieveFairFareKnowledge, retrievePersistentFairFareKnowledge } = require("./fairFareKnowledge.service");
 const { buildGroundedComparison, deriveFacts } = require("./fareComparisonGrounding.service");
+const { getMemory } = require("./conversationMemory.service");
 
 let llmClient = defaultLlmClient;
 const MAX_MESSAGE_LENGTH = 1000;
@@ -51,7 +52,14 @@ function comparisonContext(comparison) {
     weather: comparison.weather ? { condition: comparison.weather.condition || "UNKNOWN", severity: comparison.weather.weatherSeverity || "UNKNOWN", precipitationMm: comparison.weather.precipitationMm ?? null, temperatureC: comparison.weather.temperatureC ?? null, source: comparison.weather.source || "UNKNOWN" } : null,
     rides: (comparison.results || comparison.quotes || []).map((ride) => ({
       provider: ride.provider?.displayName || ride.provider?.name || ride.provider,
+      providerId: ride.providerId || ride.provider?.id || null,
       vehicleType: ride.vehicleType || ride.category || ride.categoryName || ride.quotes?.[0]?.categoryName || null,
+      serviceCode: ride.serviceCode || ride.service_code || ride.quotes?.[0]?.serviceCode || null,
+      providerServiceName: ride.providerServiceName || ride.quotes?.[0]?.providerServiceName || null,
+      providerServiceLabel: ride.providerServiceLabel || ride.quotes?.[0]?.providerServiceLabel || null,
+      verifiedVehicleCategory: ride.verifiedVehicleCategory || ride.quotes?.[0]?.verifiedVehicleCategory || null,
+      serviceCategoryProvenance: ride.serviceCategoryProvenance || ride.quotes?.[0]?.serviceCategoryProvenance || null,
+      serviceTier: ride.serviceTier || ride.quotes?.[0]?.serviceTier || null,
       fare: ride.fare ?? null,
       fareMin: ride.fareMin ?? null,
       fareMax: ride.fareMax ?? null,
@@ -76,8 +84,15 @@ async function buildGroundingContext({ userId, message, comparisonId, conversati
   const history = await getHistory({ userId, limit: lower.includes("recent") || lower.includes("usually") || lower.includes("compare") ? MAX_HISTORY : 3 });
   const recentConversation = conversationId ? await conversationService.recentMessages(userId, conversationId) : [];
   if (recentConversation.at(-1)?.role === "USER" && recentConversation.at(-1).content === message) recentConversation.pop();
+  let memory = null;
+  if (String(process.env.FAIRFARE_AI_PHASE3_SCHEMA_VERIFIED || "false").toLowerCase() === "true" && String(process.env.FAIRFARE_AI_MEMORY_ENABLED || "false").toLowerCase() === "true" && conversationId) {
+    try { memory = await getMemory({ userId, conversationId }); } catch (error) {
+      if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) console.warn("[AI] conversation memory unavailable", { code: error.code || "MEMORY_UNAVAILABLE" });
+    }
+  }
   const comparisonData = comparisonContext(comparison);
-  return { responseLanguage: responseLanguage(message), comparison: comparisonData ? { ...comparisonData, derivedFacts: derivedFacts(comparisonData.rides) } : null, preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation, fairFareKnowledge: retrieveFairFareKnowledge(message) };
+  const persistentKnowledge = await retrievePersistentFairFareKnowledge(message);
+  return { responseLanguage: responseLanguage(message), comparison: comparisonData ? { ...comparisonData, derivedFacts: derivedFacts(comparisonData.rides) } : null, preferences: { preferredVehicleType: preferences.preferredVehicleType, avoidedVehicleTypes: preferences.avoidedVehicleTypes, typicalBudget: preferences.typicalBudget, ridePriority: preferences.ridePriority, currency: preferences.currency }, history: history.map((item) => ({ id: item.id, searchedAt: item.searchedAt, pickup: item.pickup.label, dropoff: item.destination.label, quotes: item.quotes.map((quote) => ({ provider: quote.provider, category: quote.category, fare: quote.fare, fareMin: quote.fareMin, fareMax: quote.fareMax, currency: quote.currency, fareType: quote.fareType, pickupEtaSeconds: quote.pickupEtaSeconds, availability: quote.availability })) })), recentConversation, memory, fairFareKnowledge: persistentKnowledge.length ? persistentKnowledge : retrieveFairFareKnowledge(message) };
 }
 
 async function answer({ userId, message, comparisonId, conversationId }) {

@@ -1,0 +1,78 @@
+{
+  "model_version": "fare-v1-development",
+  "model_type": "Gradient Boosting",
+  "trained_at": "2026-10-11T11:59:40.844633+00:00",
+  "data_source": "SIMULATED",
+  "loaded_observations": 600,
+  "accepted_observations": 600,
+  "rejected_observations": {},
+  "training_observations": 480,
+  "test_observations": 120,
+  "features": [
+    "pickup_latitude",
+    "pickup_longitude",
+    "destination_latitude",
+    "destination_longitude",
+    "distance_meters",
+    "duration_seconds",
+    "hour_of_day",
+    "day_of_week",
+    "is_weekend",
+    "precipitation_mm",
+    "temperature_c",
+    "provider_id",
+    "provider",
+    "provider_category_id",
+    "provider_category_name",
+    "vehicle_type",
+    "pickup_zone",
+    "destination_zone",
+    "weather_condition",
+    "weather_severity"
+  ],
+  "target": "fare",
+  "split_strategy": "grouped_by_comparison_id",
+  "random_seed": 42,
+  "metrics": {
+    "baseline": {
+      "mae": 123.54625401613491,
+      "rmse": 169.64744972840995,
+      "r2": 0.4681101281173701,
+      "mape": 21.837764426679385
+    },
+    "Linear Regression": {
+      "mae": 29.622378143708154,
+      "rmse": 41.857123155143114,
+      "r2": 0.9676208233056294,
+      "mape": 5.951429987998354
+    },
+    "Random Forest": {
+      "mae": 6.744085648148146,
+      "rmse": 10.161910466154726,
+      "r2": 0.9980915632184144,
+      "mape": 1.4229437567028331
+    },
+    "Gradient Boosting": {
+      "mae": 5.614511913053608,
+      "rmse": 7.659488816317513,
+      "r2": 0.9989157570107094,
+      "mape": 1.1706614849168135
+    }
+  },
+  "dataset_date_range": {
+    "min_observed_at": "1767582000000",
+    "max_observed_at": "1784823540000"
+  },
+  "providers": [
+    "indrive",
+    "quickride",
+    "urbancab"
+  ],
+  "vehicle_types": [
+    "BIKE",
+    "ECONOMY_CAR",
+    "RICKSHAW",
+    "STANDARD_CAR"
+  ],
+  "confidence": null
+}

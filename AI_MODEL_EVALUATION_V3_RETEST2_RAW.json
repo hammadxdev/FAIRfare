@@ -1,0 +1,555 @@
+{
+  "version": "v3",
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 12,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Bike pe kitna hoga?",
+      "setup": [
+        {
+          "httpStatus": 200,
+          "latencyMs": 7174,
+          "message": "Gulberg 3 se LGU jana hai",
+          "reply": "I found Gulberg 3 to Lahore Garrison University. The approximate map-based road route is 15 km and about 18 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": true,
+            "historyAvailable": true,
+            "trip": {
+              "status": "RESOLVED",
+              "pickup": {
+                "query": "Gulberg 3",
+                "name": "Gulberg 3",
+                "city": "Model Town Tehsil",
+                "county": "Lahore District",
+                "approximate": true
+              },
+              "destination": {
+                "query": "LGU",
+                "name": "Lahore Garrison University",
+                "city": "Lahore",
+                "county": "Lahore District",
+                "approximate": false
+              },
+              "city": "Model Town Tehsil",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 15001,
+                "durationSeconds": 1095.933
+              },
+              "vehiclePreference": null,
+              "intent": "trip_planning"
+            }
+          },
+          "conversationId": "c141d208-0488-4181-b143-16935de1ae27",
+          "extracted": {
+            "pickup": "Gulberg 3",
+            "destination": "LGU",
+            "pattern": "roman_urdu"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 10511,
+      "message": "Bike pe kitna hoga?",
+      "reply": "Fair Fare does not have a verified comparison for this route or vehicle yet, so I will not invent a fare. Create a comparison with the route and vehicle, or check the provider app for its current quote.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "pickup": {
+            "query": "Gulberg 3",
+            "name": "Gulberg 3",
+            "city": "Model Town Tehsil",
+            "county": "Lahore District",
+            "approximate": true
+          },
+          "destination": {
+            "query": "LGU",
+            "name": "Lahore Garrison University",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "approximate": false
+          },
+          "city": "Model Town Tehsil",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 15001,
+            "durationSeconds": 1095.933
+          },
+          "vehiclePreference": "bike",
+          "intent": "fare_comparison"
+        }
+      },
+      "conversationId": "c141d208-0488-4181-b143-16935de1ae27",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": {
+        "status": "RESOLVED",
+        "pickup": {
+          "query": "Gulberg 3",
+          "name": "Gulberg 3",
+          "city": "Model Town Tehsil",
+          "county": "Lahore District",
+          "approximate": true
+        },
+        "destination": {
+          "query": "LGU",
+          "name": "Lahore Garrison University",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "approximate": false
+        },
+        "city": "Model Town Tehsil",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 15001,
+          "durationSeconds": 1095.933
+        },
+        "vehiclePreference": "bike",
+        "intent": "fare_comparison"
+      },
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 13,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Sab se sasta konsa hai?",
+      "setup": [
+        {
+          "httpStatus": 200,
+          "latencyMs": 3953,
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The approximate map-based road route is 38.6 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": true,
+            "historyAvailable": true,
+            "trip": {
+              "status": "RESOLVED",
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "approximate": true
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "approximate": true
+              },
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38611,
+                "durationSeconds": 2420.538
+              },
+              "vehiclePreference": null,
+              "intent": "trip_planning"
+            }
+          },
+          "conversationId": "ecebb6ca-2d5d-4ada-aec8-7b1d4fe76ad3",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 9097,
+      "message": "Sab se sasta konsa hai?",
+      "reply": "Is route ya vehicle ke liye Fair Fare ke paas abhi verified comparison nahi hai, is liye main fare invent nahi karunga. Route aur vehicle details ke saath comparison banayein, ya provider app mein current quote check karein.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "pickup": {
+            "query": "North Nazimabad",
+            "name": "North Nazimabad Town",
+            "city": "Karachi Division",
+            "county": "Nazimabad District",
+            "approximate": true
+          },
+          "destination": {
+            "query": "Gulshan e Hameed Phase 2",
+            "name": "Gulshan e Hadeed Phase 2",
+            "city": "Karachi Division",
+            "county": "Malir District",
+            "approximate": true
+          },
+          "city": "Karachi Division",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 38611,
+            "durationSeconds": 2420.538
+          },
+          "vehiclePreference": null,
+          "intent": "fare_comparison"
+        }
+      },
+      "conversationId": "ecebb6ca-2d5d-4ada-aec8-7b1d4fe76ad3",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": {
+        "status": "RESOLVED",
+        "pickup": {
+          "query": "North Nazimabad",
+          "name": "North Nazimabad Town",
+          "city": "Karachi Division",
+          "county": "Nazimabad District",
+          "approximate": true
+        },
+        "destination": {
+          "query": "Gulshan e Hameed Phase 2",
+          "name": "Gulshan e Hadeed Phase 2",
+          "city": "Karachi Division",
+          "county": "Malir District",
+          "approximate": true
+        },
+        "city": "Karachi Division",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 38611,
+          "durationSeconds": 2420.538
+        },
+        "vehiclePreference": null,
+        "intent": "fare_comparison"
+      },
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 19,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "What about a rickshaw?",
+      "setup": [
+        {
+          "httpStatus": 200,
+          "latencyMs": 7214,
+          "message": "from Gulberg 3 to LGU",
+          "reply": "I found Gulberg 3 to Lahore Garrison University. The approximate map-based road route is 15 km and about 18 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": true,
+            "historyAvailable": true,
+            "trip": {
+              "status": "RESOLVED",
+              "pickup": {
+                "query": "Gulberg 3",
+                "name": "Gulberg 3",
+                "city": "Model Town Tehsil",
+                "county": "Lahore District",
+                "approximate": true
+              },
+              "destination": {
+                "query": "LGU",
+                "name": "Lahore Garrison University",
+                "city": "Lahore",
+                "county": "Lahore District",
+                "approximate": false
+              },
+              "city": "Model Town Tehsil",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 15001,
+                "durationSeconds": 1095.933
+              },
+              "vehiclePreference": null,
+              "intent": "trip_planning"
+            }
+          },
+          "conversationId": "7cace920-4e5b-4184-a371-8a0ff172a184",
+          "extracted": {
+            "pickup": "Gulberg 3",
+            "destination": "LGU",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 7496,
+      "message": "What about a rickshaw?",
+      "reply": "A bike is useful for a lower-cost, light trip; a rickshaw offers more space, while a car is generally more comfortable and better in rain. A verified fare comparison for this route is not available yet.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "pickup": {
+            "query": "Gulberg 3",
+            "name": "Gulberg 3",
+            "city": "Model Town Tehsil",
+            "county": "Lahore District",
+            "approximate": true
+          },
+          "destination": {
+            "query": "LGU",
+            "name": "Lahore Garrison University",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "approximate": false
+          },
+          "city": "Model Town Tehsil",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 15001,
+            "durationSeconds": 1095.933
+          },
+          "vehiclePreference": "rickshaw",
+          "intent": "general_assistant"
+        }
+      },
+      "conversationId": "7cace920-4e5b-4184-a371-8a0ff172a184",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": {
+        "status": "RESOLVED",
+        "pickup": {
+          "query": "Gulberg 3",
+          "name": "Gulberg 3",
+          "city": "Model Town Tehsil",
+          "county": "Lahore District",
+          "approximate": true
+        },
+        "destination": {
+          "query": "LGU",
+          "name": "Lahore Garrison University",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "approximate": false
+        },
+        "city": "Model Town Tehsil",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 15001,
+          "durationSeconds": 1095.933
+        },
+        "vehiclePreference": "rickshaw",
+        "intent": "general_assistant"
+      },
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 27,
+      "category": "FARE_PROVIDER",
+      "exactUserMessage": "Is it reasonable to book now?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2456,
+      "message": "Is it reasonable to book now?",
+      "reply": "I need a current route comparison to answer that specifically. Share the route and vehicle details, or optionally create a comparison from Home.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "2b24880e-2c7f-489e-bcfa-5bf5b43a2fa1",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": null,
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    },
+    {
+      "scenarioId": 31,
+      "category": "LANGUAGE",
+      "exactUserMessage": "Mujhe bike pe Gulberg se LGU jana hai",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 4540,
+      "message": "Mujhe bike pe Gulberg se LGU jana hai",
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": true,
+        "historyAvailable": true,
+        "trip": {
+          "status": "UNRESOLVED",
+          "pickup": {
+            "query": "Gulberg",
+            "name": "Gulberg",
+            "city": "Gulberg",
+            "county": "Jhang District",
+            "approximate": true
+          },
+          "destination": {
+            "query": "LGU",
+            "name": "Lahore Garrison University",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "approximate": false
+          },
+          "city": null,
+          "cityMismatch": false,
+          "route": null,
+          "vehiclePreference": "bike",
+          "intent": "trip_planning"
+        }
+      },
+      "conversationId": "ae96aa38-ca71-462f-b88c-871d378573c9",
+      "extracted": {
+        "pickup": "Gulberg",
+        "destination": "LGU",
+        "pattern": "roman_urdu"
+      },
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "pickup": {
+          "query": "Gulberg",
+          "name": "Gulberg",
+          "city": "Gulberg",
+          "county": "Jhang District",
+          "approximate": true
+        },
+        "destination": {
+          "query": "LGU",
+          "name": "Lahore Garrison University",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "approximate": false
+        },
+        "city": null,
+        "cityMismatch": false,
+        "route": null,
+        "vehiclePreference": "bike",
+        "intent": "trip_planning"
+      },
+      "authoritativeFareAvailable": false,
+      "realModelResponse": false,
+      "deterministicResponse": true
+    },
+    {
+      "scenarioId": 32,
+      "category": "LANGUAGE",
+      "exactUserMessage": "Barish ho to bike lena safe hai?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2884,
+      "message": "Barish ho to bike lena safe hai?",
+      "reply": "Barish ya dhund mein road slippery aur visibility kam ho sakti hai. Car aam tor par bike se zyada safe hoti hai; mere paas is waqt live weather ya traffic data nahi hai.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "6568a059-cc47-4c08-86a5-dfb09ef2d6eb",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "tripContext": null,
+      "authoritativeFareAvailable": false,
+      "realModelResponse": true,
+      "deterministicResponse": false
+    }
+  ]
+}

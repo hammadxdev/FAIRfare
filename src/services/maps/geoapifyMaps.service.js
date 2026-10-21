@@ -13,6 +13,7 @@ const PLACES_CATEGORIES = [
   "entertainment",
   "service",
 ].join(",");
+const inFlightRequests = new Map();
 
 function isValidLatitude(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= -90 && value <= 90;
@@ -36,6 +37,15 @@ function safeProviderMessage(body, fallback) {
 }
 
 async function requestGeoapify(path, params, operation) {
+  const requestKey = `${path}?${Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== "").sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${key}=${String(value)}`).join("&")}`;
+  const existing = inFlightRequests.get(requestKey);
+  if (existing) return existing;
+  const request = requestGeoapifyUncached(path, params, operation);
+  inFlightRequests.set(requestKey, request);
+  try { return await request; } finally { inFlightRequests.delete(requestKey); }
+}
+
+async function requestGeoapifyUncached(path, params, operation) {
   const url = new URL(`${BASE_URL}${path}`);
   for (const [key, value] of Object.entries({ ...params, apiKey: getApiKey() })) {
     if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));

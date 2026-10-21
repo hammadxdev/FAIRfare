@@ -268,7 +268,7 @@ function postJson(url, headers, body, timeoutMs) {
 
 let postJsonForTests = null;
 
-async function completeDetailed({ message, context }) {
+async function completeDetailed({ message, context, toolDefinitions = [], toolMessages = [] }) {
   const settings = config();
   if (!settings.enabled)
     throw unavailable(
@@ -334,6 +334,8 @@ async function completeDetailed({ message, context }) {
         message,
         context,
         history,
+        toolDefinitions: candidate.supportsTools === true ? toolDefinitions : [],
+        toolMessages,
       }),
     );
 
@@ -351,7 +353,21 @@ async function completeDetailed({ message, context }) {
         remainingMs,
       );
       const body = response?.body || response;
-      const text = body?.choices?.[0]?.message?.content;
+      const assistantMessage = body?.choices?.[0]?.message || {};
+      if (Array.isArray(assistantMessage.tool_calls) && assistantMessage.tool_calls.length) {
+        return {
+          text: null,
+          toolCalls: assistantMessage.tool_calls.map((call) => ({
+            id: String(call.id || ""),
+            name: String(call.function?.name || ""),
+            arguments: call.function?.arguments || {},
+          })),
+          modelId: model,
+          provider: candidate.provider,
+          fallbackUsed: index > 0,
+        };
+      }
+      const text = assistantMessage.content;
       if (typeof text !== "string" || !text.trim())
         throw unavailable(
           "LLM_MALFORMED_RESPONSE",

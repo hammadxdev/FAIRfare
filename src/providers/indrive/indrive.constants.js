@@ -6,11 +6,11 @@ const PRICING_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gat
 const AUTOCOMPLETE_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/geo2dev/api/autocomplete";
 const ORDER_TYPE_IDS = [2, 33, 31, 29, 11];
 const ORDER_TYPE_CATEGORIES = {
-  2: { name: "Moto", normalizedCategory: "BIKE" },
-  33: { name: "Mini", normalizedCategory: "ECONOMY_CAR" },
-  31: { name: "Rickshaw", normalizedCategory: "RICKSHAW" },
-  29: { name: "Ride AC", normalizedCategory: "STANDARD_CAR" },
-  11: { name: "Premium", normalizedCategory: "PREMIUM_CAR" },
+  2: { name: "Moto", normalizedCategory: "BIKE", serviceTier: "standard", features: [] },
+  33: { name: "Mini", normalizedCategory: "ECONOMY_CAR", serviceTier: "economy", features: [] },
+  31: { name: "Rickshaw", normalizedCategory: "RICKSHAW", serviceTier: "standard", features: [] },
+  29: { name: "Ride AC", normalizedCategory: "STANDARD_CAR", serviceTier: "standard", features: ["AC"] },
+  11: { name: "Premium", normalizedCategory: "PREMIUM_CAR", serviceTier: "premium", features: [] },
 };
 
 const VEHICLE_TYPE_ORDER_IDS = Object.freeze({

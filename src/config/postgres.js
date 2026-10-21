@@ -13,6 +13,12 @@ const pool = process.env.DATABASE_URL && Pool ? new Pool({
   max: Number(process.env.PG_POOL_MAX || 2),
   idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 10000,
+  // Enforce query cancellation in PostgreSQL. An application-side race only
+  // stops waiting; it does not stop the server-side query or make releasing a
+  // client safe.
+  statement_timeout: Number.isFinite(Number(process.env.PG_STATEMENT_TIMEOUT_MS))
+    ? Math.max(250, Math.min(30000, Number(process.env.PG_STATEMENT_TIMEOUT_MS)))
+    : 5000,
   ssl: process.env.PG_SSL_DISABLE === "true" ? false : { rejectUnauthorized: false },
 }) : null;
 

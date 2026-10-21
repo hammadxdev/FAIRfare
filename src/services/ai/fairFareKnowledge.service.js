@@ -1,5 +1,6 @@
 const MAX_RESULTS = 3;
 const MAX_FIELD_LENGTH = 600;
+const { retrieveKnowledge, evidenceForPrompt } = require("./knowledgeRetrieval.service");
 
 // The repository currently has no imported spreadsheet/FAQ source. Keep the
 // retrieval boundary deterministic so a future sanitized export can be added
@@ -36,4 +37,17 @@ function retrieveFairFareKnowledge(message, entries = []) {
     .map(({ entry }) => entry);
 }
 
-module.exports = { retrieveFairFareKnowledge, MAX_RESULTS, MAX_FIELD_LENGTH };
+async function retrievePersistentFairFareKnowledge(message, options = {}) {
+  const schemaVerified = String(process.env.FAIRFARE_AI_PHASE3_SCHEMA_VERIFIED || "false").toLowerCase() === "true";
+  const knowledgeEnabled = String(process.env.FAIRFARE_AI_KNOWLEDGE_ENABLED || "false").toLowerCase() === "true";
+  if (!schemaVerified || !knowledgeEnabled) return [];
+  try {
+    const result = await retrieveKnowledge({ message, ...options });
+    return evidenceForPrompt(result, 6000).slice(0, MAX_RESULTS);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) console.warn("[AI] knowledge retrieval unavailable", { code: error.code || "KNOWLEDGE_RETRIEVAL_FAILED" });
+    return [];
+  }
+}
+
+module.exports = { retrieveFairFareKnowledge, retrievePersistentFairFareKnowledge, MAX_RESULTS, MAX_FIELD_LENGTH };

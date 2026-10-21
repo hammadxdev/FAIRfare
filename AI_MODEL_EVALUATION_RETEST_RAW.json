@@ -1,0 +1,1005 @@
+{
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 1,
+      "category": "TRIP",
+      "exactUserMessage": "ok so i wanna go from north nazimabad to gulshan e hameed phase 2",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3930,
+      "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "north nazimabad",
+            "destination": "gulshan e hameed phase 2",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "north nazimabad",
+            "name": "North Nazimabad Town",
+            "city": "Karachi Division",
+            "county": "Nazimabad District",
+            "state": "Sindh",
+            "lat": 24.9424616,
+            "lng": 67.0477185
+          },
+          "destination": {
+            "query": "gulshan e hameed phase 2",
+            "name": "Gulshan e Hadeed Phase 2",
+            "city": "Karachi Division",
+            "county": "Malir District",
+            "state": "Sindh",
+            "lat": 24.8722974,
+            "lng": 67.3631119
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": "Karachi Division",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 38670,
+            "durationSeconds": 2426.537
+          }
+        }
+      },
+      "conversationId": "9102893b-e378-4923-84aa-15a01011608e",
+      "extracted": {
+        "pickup": "north nazimabad",
+        "destination": "gulshan e hameed phase 2",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "north nazimabad",
+          "destination": "gulshan e hameed phase 2",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "north nazimabad",
+          "name": "North Nazimabad Town",
+          "city": "Karachi Division",
+          "county": "Nazimabad District",
+          "state": "Sindh",
+          "lat": 24.9424616,
+          "lng": 67.0477185
+        },
+        "destination": {
+          "query": "gulshan e hameed phase 2",
+          "name": "Gulshan e Hadeed Phase 2",
+          "city": "Karachi Division",
+          "county": "Malir District",
+          "state": "Sindh",
+          "lat": 24.8722974,
+          "lng": 67.3631119
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": "Karachi Division",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 38670,
+          "durationSeconds": 2426.537
+        }
+      }
+    },
+    {
+      "scenarioId": 4,
+      "category": "TRIP",
+      "exactUserMessage": "DHA Phase 6 to Johar Town",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3091,
+      "reply": "I found DHA Phase 6 and Johar Town, but they resolve to different cities. Please confirm that you intend an intercity trip before comparing local provider coverage.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "CROSS_CITY",
+          "extracted": {
+            "pickup": "DHA Phase 6",
+            "destination": "Johar Town",
+            "pattern": "short_from_to"
+          },
+          "pickup": {
+            "query": "DHA Phase 6",
+            "name": "DHA Phase 6",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.7974429,
+            "lng": 67.0616441
+          },
+          "destination": {
+            "query": "Johar Town",
+            "name": "Johar Town",
+            "city": "Samsani Khui",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.4631615,
+            "lng": 74.2939169
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": null,
+          "cityMismatch": true,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 1210089,
+            "durationSeconds": 46641.867
+          }
+        }
+      },
+      "conversationId": "9305b58e-d8aa-42d8-b624-3288c9c858f1",
+      "extracted": {
+        "pickup": "DHA Phase 6",
+        "destination": "Johar Town",
+        "pattern": "short_from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "CROSS_CITY",
+        "extracted": {
+          "pickup": "DHA Phase 6",
+          "destination": "Johar Town",
+          "pattern": "short_from_to"
+        },
+        "pickup": {
+          "query": "DHA Phase 6",
+          "name": "DHA Phase 6",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.7974429,
+          "lng": 67.0616441
+        },
+        "destination": {
+          "query": "Johar Town",
+          "name": "Johar Town",
+          "city": "Samsani Khui",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.4631615,
+          "lng": 74.2939169
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": null,
+        "cityMismatch": true,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 1210089,
+          "durationSeconds": 46641.867
+        }
+      }
+    },
+    {
+      "scenarioId": 5,
+      "category": "TRIP",
+      "exactUserMessage": "I need to go from Saddar to the airport",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3071,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Saddar",
+            "destination": "the airport",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Saddar",
+            "name": "Saddar",
+            "city": "Saddar",
+            "county": "Rawalpindi District",
+            "state": "Punjab",
+            "lat": 33.5954056,
+            "lng": 73.0512473
+          },
+          "destination": {
+            "query": "the airport",
+            "name": "The Smart School, Airport Jinnah Avenue Campus",
+            "city": "Karachi",
+            "county": "Karachi",
+            "state": "Sindh",
+            "lat": 24.9008699,
+            "lng": 67.1812794
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "57240302-00e9-4761-84ac-097de544d54c",
+      "extracted": {
+        "pickup": "Saddar",
+        "destination": "the airport",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Saddar",
+          "destination": "the airport",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Saddar",
+          "name": "Saddar",
+          "city": "Saddar",
+          "county": "Rawalpindi District",
+          "state": "Punjab",
+          "lat": 33.5954056,
+          "lng": 73.0512473
+        },
+        "destination": {
+          "query": "the airport",
+          "name": "The Smart School, Airport Jinnah Avenue Campus",
+          "city": "Karachi",
+          "county": "Karachi",
+          "state": "Sindh",
+          "lat": 24.9008699,
+          "lng": 67.1812794
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 6,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Mujhe Gulberg se LGU jana hai.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2913,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Gulberg",
+            "destination": "LGU",
+            "pattern": "roman_urdu"
+          },
+          "pickup": {
+            "query": "Gulberg",
+            "name": "Gulberg",
+            "city": "Gulberg",
+            "county": "Jhang District",
+            "state": "Punjab",
+            "lat": 30.8966357,
+            "lng": 72.0911806
+          },
+          "destination": {
+            "query": "LGU",
+            "name": "LG Service Centre",
+            "city": "Faisalabad City Tehsil",
+            "county": "Faisalabad District",
+            "state": "Punjab",
+            "lat": 31.4167107,
+            "lng": 73.089548
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "9b909985-8fa2-42c1-8f7b-c15c298e3127",
+      "extracted": {
+        "pickup": "Gulberg",
+        "destination": "LGU",
+        "pattern": "roman_urdu"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Gulberg",
+          "destination": "LGU",
+          "pattern": "roman_urdu"
+        },
+        "pickup": {
+          "query": "Gulberg",
+          "name": "Gulberg",
+          "city": "Gulberg",
+          "county": "Jhang District",
+          "state": "Punjab",
+          "lat": 30.8966357,
+          "lng": 72.0911806
+        },
+        "destination": {
+          "query": "LGU",
+          "name": "LG Service Centre",
+          "city": "Faisalabad City Tehsil",
+          "county": "Faisalabad District",
+          "state": "Punjab",
+          "lat": 31.4167107,
+          "lng": 73.089548
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 9,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Mujhe railway station se Chungi jana hai.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2028,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "railway station",
+            "destination": "Chungi",
+            "pattern": "roman_urdu"
+          },
+          "pickup": {
+            "query": "railway station",
+            "name": "Railway Station",
+            "city": "Haripur",
+            "county": "Abbottābād District",
+            "state": "Khyber Pakhtunkhwa",
+            "lat": 33.9856054,
+            "lng": 72.9287574
+          },
+          "destination": {
+            "query": "Chungi",
+            "name": "22 No Chungi Stop",
+            "city": "Rawalpindi",
+            "county": "Rawalpindi District",
+            "state": "Punjab",
+            "lat": 33.5820875,
+            "lng": 73.044835
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "c80e3fdb-d4d9-4e9f-ab2a-af63f983fcbb",
+      "extracted": {
+        "pickup": "railway station",
+        "destination": "Chungi",
+        "pattern": "roman_urdu"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "railway station",
+          "destination": "Chungi",
+          "pattern": "roman_urdu"
+        },
+        "pickup": {
+          "query": "railway station",
+          "name": "Railway Station",
+          "city": "Haripur",
+          "county": "Abbottābād District",
+          "state": "Khyber Pakhtunkhwa",
+          "lat": 33.9856054,
+          "lng": 72.9287574
+        },
+        "destination": {
+          "query": "Chungi",
+          "name": "22 No Chungi Stop",
+          "city": "Rawalpindi",
+          "county": "Rawalpindi District",
+          "state": "Punjab",
+          "lat": 33.5820875,
+          "lng": 73.044835
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 19,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Actually change the destination to Clifton Karachi.",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 4803,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8722974,
+                "lng": 67.3631119
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38670,
+                "durationSeconds": 2426.537
+              }
+            }
+          },
+          "conversationId": "47ce5e7c-dd8b-4573-b0a8-5075b3d924eb",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 4952,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "I found North Nazimabad Town",
+            "destination": "Clifton Karachi",
+            "pattern": "from_to"
+          },
+          "pickup": null,
+          "destination": {
+            "query": "Clifton Karachi",
+            "name": "Clifton Street 2",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.8203973,
+            "lng": 67.032157
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "47ce5e7c-dd8b-4573-b0a8-5075b3d924eb",
+      "extracted": {
+        "pickup": null,
+        "destination": "Clifton Karachi",
+        "pattern": "change_destination"
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "I found North Nazimabad Town",
+          "destination": "Clifton Karachi",
+          "pattern": "from_to"
+        },
+        "pickup": null,
+        "destination": {
+          "query": "Clifton Karachi",
+          "name": "Clifton Street 2",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.8203973,
+          "lng": 67.032157
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 20,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "Actually change the pickup to Clifton Karachi.",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 4321,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.7 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8722974,
+                "lng": 67.3631119
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": true,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38670,
+                "durationSeconds": 2426.537
+              }
+            }
+          },
+          "conversationId": "ab12a0d2-af03-4f36-93c8-303c1e7f6696",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 4015,
+      "reply": "I found Clifton Street 2 to Gulshan e Hadeed Phase 2. The estimated road route is 36.7 km and about 39 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "RESOLVED",
+          "extracted": {
+            "pickup": "Clifton Karachi",
+            "destination": "Gulshan e Hadeed Phase 2",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Clifton Karachi",
+            "name": "Clifton Street 2",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.8203973,
+            "lng": 67.032157
+          },
+          "destination": {
+            "query": "Gulshan e Hadeed Phase 2",
+            "name": "Gulshan e Hadeed Phase 2",
+            "city": "Karachi Division",
+            "county": "Malir District",
+            "state": "Sindh",
+            "lat": 24.8718234,
+            "lng": 67.3633779
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": false,
+          "city": "Karachi Division",
+          "cityMismatch": false,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 36705,
+            "durationSeconds": 2323.701
+          }
+        }
+      },
+      "conversationId": "ab12a0d2-af03-4f36-93c8-303c1e7f6696",
+      "extracted": {
+        "pickup": "Clifton Karachi",
+        "destination": null,
+        "pattern": "change_pickup"
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "RESOLVED",
+        "extracted": {
+          "pickup": "Clifton Karachi",
+          "destination": "Gulshan e Hadeed Phase 2",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Clifton Karachi",
+          "name": "Clifton Street 2",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.8203973,
+          "lng": 67.032157
+        },
+        "destination": {
+          "query": "Gulshan e Hadeed Phase 2",
+          "name": "Gulshan e Hadeed Phase 2",
+          "city": "Karachi Division",
+          "county": "Malir District",
+          "state": "Sindh",
+          "lat": 24.8718234,
+          "lng": 67.3633779
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": false,
+        "city": "Karachi Division",
+        "cityMismatch": false,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 36705,
+          "durationSeconds": 2323.701
+        }
+      }
+    },
+    {
+      "scenarioId": 27,
+      "category": "EDGE",
+      "exactUserMessage": "Take me from Gulberg to Chungi.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2710,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Gulberg",
+            "destination": "Chungi",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Gulberg",
+            "name": "Gulberg",
+            "city": "Gulberg",
+            "county": "Jhang District",
+            "state": "Punjab",
+            "lat": 30.8966357,
+            "lng": 72.0911806
+          },
+          "destination": {
+            "query": "Chungi",
+            "name": "Saddar Chungi Road",
+            "city": "Chiniot",
+            "county": "Chiniot District",
+            "state": "Punjab",
+            "lat": 31.7279254,
+            "lng": 72.9817404
+          },
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "b2296542-8bc1-4417-ba5c-61e4c8c10ce1",
+      "extracted": {
+        "pickup": "Gulberg",
+        "destination": "Chungi",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Gulberg",
+          "destination": "Chungi",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Gulberg",
+          "name": "Gulberg",
+          "city": "Gulberg",
+          "county": "Jhang District",
+          "state": "Punjab",
+          "lat": 30.8966357,
+          "lng": 72.0911806
+        },
+        "destination": {
+          "query": "Chungi",
+          "name": "Saddar Chungi Road",
+          "city": "Chiniot",
+          "county": "Chiniot District",
+          "state": "Punjab",
+          "lat": 31.7279254,
+          "lng": 72.9817404
+        },
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 28,
+      "category": "EDGE",
+      "exactUserMessage": "I explicitly want to travel from Karachi to Lahore.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3918,
+      "reply": "I found Karachi and Lahore, but they resolve to different cities. Please confirm that you intend an intercity trip before comparing local provider coverage.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "CROSS_CITY",
+          "extracted": {
+            "pickup": "Karachi",
+            "destination": "Lahore",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "Karachi",
+            "name": "Karachi",
+            "city": "Karachi",
+            "county": null,
+            "state": "Sindh",
+            "lat": 24.8546842,
+            "lng": 67.0207055
+          },
+          "destination": {
+            "query": "Lahore",
+            "name": "Lahore",
+            "city": "Lahore",
+            "county": "Lahore District",
+            "state": "Punjab",
+            "lat": 31.5656822,
+            "lng": 74.3141829
+          },
+          "pickupAmbiguous": true,
+          "destinationAmbiguous": true,
+          "city": null,
+          "cityMismatch": true,
+          "route": {
+            "unavailable": false,
+            "distanceMeters": 1204485,
+            "durationSeconds": 42578.867
+          }
+        }
+      },
+      "conversationId": "2fd4e86e-4784-4f89-af7d-9b20257471a5",
+      "extracted": {
+        "pickup": "Karachi",
+        "destination": "Lahore",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "CROSS_CITY",
+        "extracted": {
+          "pickup": "Karachi",
+          "destination": "Lahore",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "Karachi",
+          "name": "Karachi",
+          "city": "Karachi",
+          "county": null,
+          "state": "Sindh",
+          "lat": 24.8546842,
+          "lng": 67.0207055
+        },
+        "destination": {
+          "query": "Lahore",
+          "name": "Lahore",
+          "city": "Lahore",
+          "county": "Lahore District",
+          "state": "Punjab",
+          "lat": 31.5656822,
+          "lng": 74.3141829
+        },
+        "pickupAmbiguous": true,
+        "destinationAmbiguous": true,
+        "city": null,
+        "cityMismatch": true,
+        "route": {
+          "unavailable": false,
+          "distanceMeters": 1204485,
+          "durationSeconds": 42578.867
+        }
+      }
+    },
+    {
+      "scenarioId": 30,
+      "category": "EDGE",
+      "exactUserMessage": "Plan a trip from DHA Phase 6 to Johar Town and tell me what is specific about this route.",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2896,
+      "reply": "I found the pickup, but could not resolve the destination location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "DHA Phase 6",
+            "destination": "Johar Town and tell me what is specific about this route",
+            "pattern": "from_to"
+          },
+          "pickup": {
+            "query": "DHA Phase 6",
+            "name": "DHA Phase 6",
+            "city": "Karachi Division",
+            "county": "Karachi District",
+            "state": "Sindh",
+            "lat": 24.7974429,
+            "lng": 67.0616441
+          },
+          "destination": null,
+          "route": null,
+          "unresolved": "destination"
+        }
+      },
+      "conversationId": "c17fa7b5-e924-4d4c-bcb5-a504837f83cc",
+      "extracted": {
+        "pickup": "DHA Phase 6",
+        "destination": "Johar Town and tell me what is specific about this route",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "DHA Phase 6",
+          "destination": "Johar Town and tell me what is specific about this route",
+          "pattern": "from_to"
+        },
+        "pickup": {
+          "query": "DHA Phase 6",
+          "name": "DHA Phase 6",
+          "city": "Karachi Division",
+          "county": "Karachi District",
+          "state": "Sindh",
+          "lat": 24.7974429,
+          "lng": 67.0616441
+        },
+        "destination": null,
+        "route": null,
+        "unresolved": "destination"
+      }
+    }
+  ]
+}

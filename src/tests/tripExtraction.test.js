@@ -13,6 +13,10 @@ test("supports English, Roman Urdu, labels, and phase names", () => {
   assert.equal(extractTripLocations("Railway Station se Liberty jana hai").destination, "Liberty");
   assert.deepEqual(extractTripLocations("pickup is DHA Phase 6 and drop is Johar Town"), { pickup: "DHA Phase 6", destination: "Johar Town", pattern: "labeled" });
 });
+test("extracts natural airport-to-DHA request without filler or vehicle suffix", () => {
+  assert.deepEqual(extractTripLocations("hi ia wanna go tomorrow from airport to dha via car"), { pickup: "airport", destination: "dha", pattern: "from_to" });
+  assert.deepEqual(extractTripLocations("Tomorrow morning airport to DHA Phase 5"), { pickup: "airport", destination: "DHA Phase 5", pattern: "short_from_to" });
+});
 test("different districts do not become same-city merely because they share a country", async () => {
   const result = await resolveTripForAssistant({
     message: "from Karachi to Lahore",
@@ -38,6 +42,19 @@ test("geocodes both locations and routes after successful resolution", async () 
   const result = await resolveTripForAssistant({ message: "from North Nazimabad to Gulshan e Hameed Phase 2", geocode: async ({ input }) => { calls.push(`geocode:${input}`); return [{ name: input, address: `${input}, Karachi`, city: "Karachi", lat: input.includes("North") ? 24.9 : 24.93, lng: input.includes("North") ? 67.0 : 67.1 }]; }, route: async ({ origin, destination }) => { calls.push(`route:${origin.name}->${destination.name}`); return { distanceMeters: 10700, durationSeconds: 840 }; } });
   assert.equal(result.status, "RESOLVED");
   assert.deepEqual(calls, ["geocode:North Nazimabad", "geocode:Gulshan e Hameed Phase 2", "route:North Nazimabad->Gulshan e Hameed Phase 2"]);
+});
+test("resolves airport to DHA in the correct direction with mocked map results", async () => {
+  const result = await resolveTripForAssistant({
+    message: "hi ia wanna go tomorrow from airport to dha via car",
+    geocode: async ({ input }) => input.toLowerCase().includes("airport")
+      ? [{ name: "Allama Iqbal International Airport", address: "Airport Road, Lahore", city: "Lahore", county: "Lahore District", resultType: "amenity", lat: 31.52, lng: 74.4 }]
+      : [{ name: "DHA", address: "DHA Lahore, Lahore", city: "Lahore", county: "Lahore District", resultType: "suburb", lat: 31.47, lng: 74.4 }],
+    route: async ({ origin, destination }) => ({ distanceMeters: origin.lat === 31.52 && destination.lat === 31.47 ? 12000 : 0, durationSeconds: 1200 }),
+  });
+  assert.equal(result.status, "RESOLVED");
+  assert.equal(result.pickup.name, "Allama Iqbal International Airport");
+  assert.equal(result.destination.name, "DHA");
+  assert.equal(result.route.distanceMeters, 12000);
 });
 test("same administrative district prevents a false cross-city result", async () => {
   const result = await resolveTripForAssistant({

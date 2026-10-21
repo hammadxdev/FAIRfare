@@ -7,11 +7,12 @@ const MODELS = Object.freeze([
   { id: "thinkingmachines/inkling:free", label: "Inkling", enabled: true, note: "Current OpenRouter free catalog text-output model." },
   { id: "nvidia/nemotron-3-ultra-550b-a55b:free", label: "Nemotron 3 Ultra", enabled: true, note: "Current OpenRouter free catalog text-output model." },
   { id: "google/gemma-4-31b-it:free", label: "Gemma 4 31B IT", enabled: true, note: "Current OpenRouter free catalog entry." },
-]);
+].map((model) => Object.freeze({ ...model, supportsTools: model.supportsTools === true })));
 
 const BY_ID = new Map(MODELS.map((model) => [model.id, model]));
 
 function getModel(id) { return BY_ID.get(String(id || "")) || null; }
+function supportsTools(id) { return getModel(id)?.supportsTools === true; }
 function isAllowlisted(id) { return Boolean(getModel(id)?.enabled); }
 function configuredModel(env = process.env) { return String(env.AI_MODEL || "inclusionai/ling-3.1-flash").trim(); }
 function parseFallbacks(env = process.env) {
@@ -30,4 +31,4 @@ function validateConfiguredModels(env = process.env) {
   return ids;
 }
 
-module.exports = { MODELS, getModel, isAllowlisted, configuredModel, parseFallbacks, resolveConfiguredModels, validateConfiguredModels };
+module.exports = { MODELS, getModel, supportsTools, isAllowlisted, configuredModel, parseFallbacks, resolveConfiguredModels, validateConfiguredModels };

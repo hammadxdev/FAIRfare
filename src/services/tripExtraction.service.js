@@ -3,6 +3,12 @@ function cleanLocation(value) {
     .replace(/^[\s,.:;-]+|[\s,.:;!?-]+$/g, "")
     .replace(/^(?:mujhe|main|mein|yaar)\s+/i, "")
     .replace(/^(?:bike|rickshaw|car|gaari)\s+(?:pe|par)\s+/i, "")
+    .replace(/^(?:(?:hi|hello|hey)\s+)?(?:i\s+)?(?:ia|just|want|wanna)\s+(?:go\s+)?/i, "")
+    .replace(/^(?:tomorrow|today|kal|aaj)(?:\s+(?:morning|evening|raat|night|subah|shaam))?\s+/i, "")
+    .replace(/\s+(?:via|by|on)\s+(?:a\s+)?(?:bike|car|rickshaw|gaari|sedan)\b.*$/i, "")
+    .replace(/\s+(?:tomorrow|today|kal|aaj)\b.*$/i, "")
+    .replace(/\s+(?:via|by|on)\s+(?:a\s+)?(?:bike|car|rickshaw|gaari|sedan)\b.*$/i, "")
+    .replace(/\s+(?:tomorrow|today|kal|aaj)\b.*$/i, "")
     .replace(/\s+(?:and|then)\s+(?:tell|show|explain|let me know)\b.*$/i, "")
     .replace(/\s+/g, " ")
     .trim();

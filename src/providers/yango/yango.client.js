@@ -28,7 +28,7 @@ function clientError(code, message, status = null) {
   return error;
 }
 
-const ERROR_CATEGORIES = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE"]);
+const ERROR_CATEGORIES = new Set(["AUTH_ERROR", "BAD_REQUEST", "FORBIDDEN", "RATE_LIMITED", "UPSTREAM_ERROR", "NETWORK_ERROR", "TIMEOUT", "INVALID_RESPONSE", "NO_VALID_TARIFFS"]);
 
 function diagnostics(errorCategory, upstreamStatus = null, requestReachedUpstream = "unknown") {
   return {
@@ -157,7 +157,17 @@ function createYangoRouteStatsClient({ config, testContext = null, fetchImpl = g
         }
         let body;
         try { body = JSON.parse(text); } catch { throw clientErrorWithDiagnostics("PROVIDER_BAD_RESPONSE", "Yango returned malformed JSON.", response.status, "INVALID_RESPONSE", true); }
-        return normalizeRouteStatsResponse(body);
+        const normalized = normalizeRouteStatsResponse(body);
+        if (normalized?.status !== "available") {
+          throw clientErrorWithDiagnostics(
+            normalized?.error?.code || "PROVIDER_BAD_RESPONSE",
+            normalized?.error?.message || "Yango returned no valid live tariffs.",
+            response.status,
+            normalized?.error?.code === "PROVIDER_NO_VALID_TARIFFS" ? "NO_VALID_TARIFFS" : "INVALID_RESPONSE",
+            true,
+          );
+        }
+        return normalized;
       } catch (error) {
         if (error?.name === "AbortError") throw clientErrorWithDiagnostics("PROVIDER_TIMEOUT", "Yango RouteStats request timed out.", null, "TIMEOUT", "unknown");
         if (error?.yangoDiagnostics) throw error;

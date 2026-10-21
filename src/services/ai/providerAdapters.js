@@ -32,12 +32,12 @@ function rateLimitMetadata(headers = {}) {
   };
 }
 
-function groqCandidate({ model, apiKey }) {
-  return { provider: "groq", model, apiKey, endpoint: GROQ_ENDPOINT, groq: true };
+function groqCandidate({ model, apiKey, supportsTools = false }) {
+  return { provider: "groq", model, apiKey, endpoint: GROQ_ENDPOINT, groq: true, supportsTools };
 }
 
-function openRouterCandidate({ model, apiKey, endpoint }) {
-  return { provider: "openrouter", model, apiKey, endpoint, groq: false };
+function openRouterCandidate({ model, apiKey, endpoint, supportsTools = false }) {
+  return { provider: "openrouter", model, apiKey, endpoint, groq: false, supportsTools };
 }
 
 function candidatesFor(settings, registry) {
@@ -55,7 +55,7 @@ function candidatesFor(settings, registry) {
   return candidates;
 }
 
-function requestBody(candidate, { systemInstructions, message, context, history }) {
+function requestBody(candidate, { systemInstructions, message, context, history, toolDefinitions = [], toolMessages = [] }) {
   const body = {
     model: candidate.model,
     temperature: 0.2,
@@ -63,9 +63,13 @@ function requestBody(candidate, { systemInstructions, message, context, history 
       { role: "system", content: systemInstructions },
       { role: "system", content: `Fair Fare grounding (authoritative JSON; current data outranks old conversation):\n${JSON.stringify({ ...context, recentConversation: undefined })}` },
       ...history,
-      { role: "user", content: message },
+      ...(toolMessages.length ? toolMessages : [{ role: "user", content: message }]),
     ],
   };
+  if (candidate.supportsTools === true && toolDefinitions.length) {
+    body.tools = toolDefinitions.map((tool) => ({ type: "function", function: { name: tool.name, description: tool.description || tool.name, parameters: tool.schema } }));
+    body.tool_choice = "auto";
+  }
   if (candidate.groq) {
     body.max_completion_tokens = positiveInt(process.env.GROQ_MAX_COMPLETION_TOKENS, 450);
     body.reasoning_effort = process.env.GROQ_REASONING_EFFORT || "low";

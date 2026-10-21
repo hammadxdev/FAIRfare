@@ -1,0 +1,21 @@
+const SOURCE_TYPES = Object.freeze(["live_quote", "historical_observation", "forecast", "simulated", "unavailable"]);
+function inForecastHorizon(item, cutoff, horizonDays) { const observedAt = item.observedAt || item.createdAt || item.timestamp; if (!observedAt) return false; const time = new Date(observedAt).getTime(); return Number.isFinite(time) && time <= cutoff && time >= cutoff - (horizonDays * 86400000); }
+function forecastFare({ observations = [], providerId = null, route = null, vehicleType = null, city = null, timeBucket = null, forecastAt = null, dataCutoff = null, horizonDays = 180, generatedAt = new Date(), modelVersion = "fairride-forecast-v1", heldOutValidation = null } = {}) {
+  const cutoff = new Date(dataCutoff || forecastAt || generatedAt).getTime();
+  const usable = Array.isArray(observations) ? observations.filter((item) => item && item.sourceType === "historical_observation" && item.isSynthetic !== true && Number.isFinite(Number(item.fare)) && Number(item.fare) >= 0 && (!providerId || item.providerId === providerId) && (!vehicleType || (item.verifiedVehicleCategory || item.vehicleCategory) === vehicleType) && (!city || String(item.city || "").toLowerCase() === String(city).toLowerCase()) && (!timeBucket || item.timeBucket === timeBucket) && inForecastHorizon(item, cutoff, horizonDays)) : [];
+  if (usable.length < 5) return { status: "INSUFFICIENT_DATA", sourceType: "unavailable", providerId, vehicleType, route: route || null, modelVersion, generatedAt: new Date(generatedAt).toISOString(), evidenceCount: usable.length, reason: "At least five comparable, time-bounded real observations are required." };
+  const fares = usable.map((item) => Number(item.fare)).sort((a, b) => a - b); const low = fares[Math.floor((fares.length - 1) * 0.1)]; const high = fares[Math.ceil((fares.length - 1) * 0.9)];
+  const validationPass = Boolean(heldOutValidation && heldOutValidation.passed === true && Number(heldOutValidation.sampleCount) >= 5);
+  const status = usable.length >= 20 && validationPass ? "CALIBRATED" : "LIMITED_CALIBRATION";
+  return { status, sourceType: "forecast", providerId, vehicleType, estimatedMin: low, estimatedMax: high, currency: "PKR", route: route || null, modelVersion, dataSource: "qualified_historical_observations", evidenceCount: usable.length, calibrationQuality: status === "CALIBRATED" ? "calibrated" : "limited", validation: heldOutValidation || null, uncertainty: status === "CALIBRATED" ? "Held-out validated empirical interval; not a guaranteed fare." : "Limited calibration; do not treat this interval as a reliable provider forecast.", forecastHorizonDays: horizonDays, dataCutoff: new Date(cutoff).toISOString(), generatedAt: new Date(generatedAt).toISOString() };
+}
+function simulationContract(simulation = {}) { return { ...simulation, sourceType: "simulated", label: "FareRide estimate / simulation", availability: "not_verified", actions: [] }; }
+function compareTimeBuckets(bucketResults = []) {
+  const valid = bucketResults.filter((item) => ["CALIBRATED", "LIMITED_CALIBRATION"].includes(item?.status) && Number.isFinite(Number(item.estimatedMin)) && Number.isFinite(Number(item.estimatedMax)) && item.evidenceCount >= 5);
+  if (valid.length < 2) return { status: "UNDETERMINED", departureAt: null, explanation: "Reliable cheapest departure time cannot be determined from available data." };
+  const ranked = valid.map((item) => ({ ...item, midpoint: (Number(item.estimatedMin) + Number(item.estimatedMax)) / 2 })).sort((a, b) => a.midpoint - b.midpoint);
+  const best = ranked[0]; const next = ranked[1]; const uncertainty = Math.max(1, (best.estimatedMax - best.estimatedMin + next.estimatedMax - next.estimatedMin) / 4);
+  if (next.midpoint - best.midpoint <= uncertainty) return { status: "UNDETERMINED", departureAt: null, explanation: "Reliable cheapest departure time cannot be determined from available data." };
+  return { status: "SUPPORTED", departureAt: best.departureAt || null, explanation: "Comparable evidence supports this lower estimated time bucket.", evidence: ranked.map(({ midpoint: _midpoint, ...item }) => item) };
+}
+module.exports = { SOURCE_TYPES, forecastFare, simulationContract, compareTimeBuckets };

@@ -72,6 +72,7 @@ function normalizeIndriveEstimate(estimate, { currency, currencyMultiplier = 100
   return {
     categoryId: estimate?.categoryId || estimate?.rideType || null,
     categoryName: estimate?.categoryName || estimate?.vehicleCategory || null,
+    vehicleCategory: estimate?.vehicleCategory || null,
     rideType: estimate?.rideType || estimate?.categoryId || null,
     fare,
     fareMin,

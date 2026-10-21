@@ -18,7 +18,9 @@
     "evaluate:ai": "node evaluation/evaluateAi.js",
     "ai:smoke": "node scripts/aiOpenRouterSmoke.js",
     "performance:check": "node evaluation/performance.js",
-    "test": "node --test \"src/tests/**/*.test.js\"",
+    "test": "node scripts/runAiUnitTests.cjs",
+    "test:ai-unit": "node scripts/runAiUnitTests.cjs",
+    "test:integration": "node scripts/runIntegrationTests.cjs",
     "email:preview": "node scripts/previewEmailTemplates.js",
     "test:email-auth": "node scripts/emailAuthSmoke.js"
   },

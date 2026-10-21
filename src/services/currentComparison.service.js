@@ -21,4 +21,11 @@ function getComparisonForUser(comparisonId, userId) {
 
 function clearComparisonsForTests() { entries.clear(); }
 
-module.exports = { rememberComparison, getComparisonForUser, clearComparisonsForTests };
+async function getPersistedComparisonForUser(comparisonId, userId) {
+  const cached = getComparisonForUser(comparisonId, userId);
+  if (cached) return cached;
+  const { getHistoryById } = require("./history.service");
+  return getHistoryById(comparisonId, userId);
+}
+
+module.exports = { rememberComparison, getComparisonForUser, getPersistedComparisonForUser, clearComparisonsForTests };

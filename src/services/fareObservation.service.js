@@ -4,6 +4,7 @@ const { normalizeVehicleType, resolveProviderCategory } = require("./vehicleType
 const MARKET_TIMEZONE = process.env.FAIRFARE_MARKET_TIMEZONE || "Asia/Karachi";
 const WEEKDAY_NUMBERS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 const SENSITIVE_KEY = /(authorization|oauth|token|secret|password|cookie|session|credential|fingerprint|device|phone|account|profile|advertising|android|gsf|signature)/i;
+let queryReader = query;
 
 function deriveTimeFeatures(observedAt) {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -100,4 +101,28 @@ async function persistFareObservations(input) {
   return rows.length;
 }
 
-module.exports = { MARKET_TIMEZONE, deriveTimeFeatures, sanitizeRawResponse, createObservationRows, persistFareObservations };
+function bounded(value, fallback, min, max) { const n = Number(value); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback; }
+async function readHistoricalFareEvidence({ providerId, vehicleCategory, city, hourOfDay, dayOfWeek, distanceMeters, durationSeconds, dataCutoff = new Date(), horizonDays = 180, limit = 100 } = {}) {
+  if (!providerId || !vehicleCategory || !city || !Number.isFinite(Number(distanceMeters)) || !Number.isFinite(Number(durationSeconds))) return { status: "INSUFFICIENT_DATA", evidence: [], reason: "MISSING_EVIDENCE_FILTERS" };
+  const params = [providerId, vehicleCategory, String(city), Number(hourOfDay), Number(dayOfWeek), Number(distanceMeters), Number(durationSeconds), new Date(dataCutoff), Math.max(1, Math.min(365, Number(horizonDays) || 180)), Math.max(1, Math.min(100, Number(limit) || 100))];
+  const sql = `SELECT provider_id, provider_category, normalized_category, pickup_zone, destination_zone, fare, currency, observed_at, hour_of_day, day_of_week, distance_meters, duration_seconds, data_source
+    FROM fare_observations
+    WHERE provider_id=$1 AND (normalized_category=$2 OR provider_category=$2)
+      AND (lower(coalesce(pickup_zone, ''))=lower($3) OR lower(coalesce(destination_zone, ''))=lower($3)) AND hour_of_day BETWEEN $4-1 AND $4+1 AND day_of_week=$5
+      AND observed_at <= $8 AND observed_at >= $8 - ($9 * interval '1 day')
+      AND data_source='REAL' AND distance_meters BETWEEN $6*0.75 AND $6*1.25
+      AND duration_seconds BETWEEN $7*0.75 AND $7*1.25
+      AND fare IS NOT NULL AND fare >= 0
+    ORDER BY observed_at DESC LIMIT $10`;
+  try {
+    // PostgreSQL's statement_timeout (configured on the pool) owns query
+    // cancellation. Do not race the promise: that leaves an active query
+    // running while callers may reuse or release its client.
+    const result = await queryReader(sql, params);
+    return { status: result.rows.length ? "OK" : "INSUFFICIENT_DATA", evidence: result.rows.map((row) => ({ providerId: row.provider_id, vehicleCategory: row.normalized_category || row.provider_category, city: city, fare: Number(row.fare), currency: row.currency || "PKR", observedAt: row.observed_at, hourOfDay: row.hour_of_day, dayOfWeek: row.day_of_week, distanceMeters: Number(row.distance_meters), durationSeconds: Number(row.duration_seconds), sourceType: "historical_observation", dataSource: row.data_source })) };
+  } catch (error) { return { status: "UNAVAILABLE", evidence: [], reason: error.code || "OBSERVATION_QUERY_FAILED" }; }
+}
+function setQueryForTests(fn) { queryReader = fn || query; }
+function resetQueryForTests() { queryReader = query; }
+
+module.exports = { MARKET_TIMEZONE, deriveTimeFeatures, sanitizeRawResponse, createObservationRows, persistFareObservations, readHistoricalFareEvidence, setQueryForTests, resetQueryForTests };

@@ -1,0 +1,341 @@
+{
+  "config": {
+    "realModelEnabled": true,
+    "primaryProvider": "groq",
+    "groqPrimaryModel": "openai/gpt-oss-120b",
+    "groqFallbackModel": "openai/gpt-oss-20b",
+    "fallbackEnabled": true
+  },
+  "results": [
+    {
+      "scenarioId": 2,
+      "category": "TRIP",
+      "exactUserMessage": "I wanna go from Gulberg III to Lahore Garrison University",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 3219,
+      "reply": "I found the destination, but could not resolve the pickup location confidently. Please clarify only that location.",
+      "modelId": null,
+      "provider": null,
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": {
+          "status": "UNRESOLVED",
+          "extracted": {
+            "pickup": "Gulberg III",
+            "destination": "Lahore Garrison University",
+            "pattern": "from_to"
+          },
+          "pickup": null,
+          "destination": null,
+          "route": null,
+          "unresolved": "pickup"
+        }
+      },
+      "conversationId": "2b137500-78a3-44c3-9e1b-81bbc40a2ae7",
+      "extracted": {
+        "pickup": "Gulberg III",
+        "destination": "Lahore Garrison University",
+        "pattern": "from_to"
+      },
+      "geoapifyCalled": true,
+      "authoritativeFareAvailable": false,
+      "tripContext": {
+        "status": "UNRESOLVED",
+        "extracted": {
+          "pickup": "Gulberg III",
+          "destination": "Lahore Garrison University",
+          "pattern": "from_to"
+        },
+        "pickup": null,
+        "destination": null,
+        "route": null,
+        "unresolved": "pickup"
+      }
+    },
+    {
+      "scenarioId": 8,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Barish mein bike lena safe hai?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2743,
+      "reply": "Barish mein bike chalana aam tor par kam safe hota hai—slick roads, reduced visibility, aur brake lag ki wajah se accident ka risk barh jata hai. Agar aapko sirf ek ya do log le kar jana ho, thodi der ka safar ho, aur barish bahut tez na ho, to aap helmet, waterproof jacket, aur anti‑slip shoes pehn kar bike le sakte hain, lekin:\n\n1. **Road condition** check kar lein—paani ka jama hona ya oil spill na ho.  \n2. **Speed** kam rakhein; braking distance double ho sakti hai.  \n3. **Visibility** improve karne ke liye lights aur reflective gear use karein.  \n\nAgar aapko zyada luggage, passengers, ya bari barish ka samna hai, to car ya rickshaw zyada safe rahega.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "22e26ca6-cc95-464e-900c-5b95d5535fa9",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 10,
+      "category": "ROMAN_URDU",
+      "exactUserMessage": "Office timing mein ride mehngi kyun hoti hai?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2343,
+      "reply": "Office timing mein ride mehngi ho jati hai kyunke us waqt demand zyada hoti hai aur drivers ki supply kam. Zyada log ek hi waqt pe pickup lena chahte hain, is liye platforms surge pricing ya higher rates lagate hain. Saath hi traffic jam se travel time barh jata hai, jo fare ko bhi affect karta hai. Agar aap thoda off‑peak time ya alternative route use karen to fare kam ho sakta hai.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "504d96a9-5c21-402a-a514-edfc9ca81002",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 16,
+      "category": "FOLLOW_UP",
+      "exactUserMessage": "What if it rains?",
+      "setup": [
+        {
+          "message": "from North Nazimabad to Gulshan e Hameed Phase 2",
+          "httpStatus": 200,
+          "latencyMs": 4152,
+          "reply": "I found North Nazimabad Town to Gulshan e Hadeed Phase 2. The estimated road route is 38.6 km and about 40 minutes. Fair Fare does not have a verified provider comparison for this message yet, so I will not invent a fare or availability.",
+          "modelId": null,
+          "provider": null,
+          "fallbackUsed": false,
+          "status": "AVAILABLE",
+          "context": {
+            "comparisonUsed": false,
+            "comparisonFreshness": null,
+            "predictionAvailable": false,
+            "preferencesUsed": true,
+            "historyUsed": false,
+            "historyAvailable": false,
+            "trip": {
+              "status": "RESOLVED",
+              "extracted": {
+                "pickup": "North Nazimabad",
+                "destination": "Gulshan e Hameed Phase 2",
+                "pattern": "from_to"
+              },
+              "pickup": {
+                "query": "North Nazimabad",
+                "name": "North Nazimabad Town",
+                "city": "Karachi Division",
+                "county": "Nazimabad District",
+                "state": "Sindh",
+                "lat": 24.9424616,
+                "lng": 67.0477185
+              },
+              "destination": {
+                "query": "Gulshan e Hameed Phase 2",
+                "name": "Gulshan e Hadeed Phase 2",
+                "city": "Karachi Division",
+                "county": "Malir District",
+                "state": "Sindh",
+                "lat": 24.8718234,
+                "lng": 67.3633779
+              },
+              "pickupAmbiguous": true,
+              "destinationAmbiguous": false,
+              "city": "Karachi Division",
+              "cityMismatch": false,
+              "route": {
+                "unavailable": false,
+                "distanceMeters": 38611,
+                "durationSeconds": 2420.538
+              }
+            }
+          },
+          "conversationId": "f8f1026e-9945-4b69-afaf-61e7dbe00325",
+          "extracted": {
+            "pickup": "North Nazimabad",
+            "destination": "Gulshan e Hameed Phase 2",
+            "pattern": "from_to"
+          }
+        }
+      ],
+      "httpStatus": 200,
+      "latencyMs": 2329,
+      "reply": "If it’s raining, consider these tips for a comfortable and safe ride:\n\n1. **Vehicle choice** – A car (or a ride‑hailing sedan) is usually the safest and most comfortable option in rain. It protects you from splashes, wind and reduces the risk of slipping on wet roads compared with a bike or rickshaw.  \n\n2. **Safety** – Ask the driver to drive cautiously, keep a safe distance from other vehicles, and avoid sudden lane changes. Make sure the car’s windows are up and the windshield wipers are on.  \n\n3. **Budget** – A car will cost a bit more than a bike or rickshaw, but the extra expense is worth the protection from the weather and the added safety.  \n\n4. **Luggage** – If you have any bags, a car’s trunk will keep them dry.  \n\nSo, for a rainy trip from North Nazimabad to Gulshan‑e‑Hameed Phase 2, a car‑type ride is the recommended option. Stay safe!",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "f8f1026e-9945-4b69-afaf-61e7dbe00325",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 22,
+      "category": "CONDITIONS",
+      "exactUserMessage": "How is Friday prayer-time travel usually?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2669,
+      "reply": "Friday prayer time in Lahore usually brings a noticeable spike in traffic, especially around major mosques, main arteries (like Ferozepur Road, Canal Bank Road, and the Ring Road) and the surrounding neighborhoods. You can expect:\n\n1. **Heavier congestion** from about **12:30 PM to 2:30 PM**, with the peak around the actual prayer start (≈1:00 PM).  \n2. **Longer travel times** – trips that normally take 20 minutes can stretch to 35‑45 minutes on the busiest routes.  \n3. **Limited parking** near popular mosques, so drop‑offs/pick‑ups may take a few extra minutes.\n\n**Tips to avoid the worst of it**\n\n- **Leave early** (by 11:30 AM) or **wait until after 2:30 PM** if your schedule allows.  \n- Use side streets or less‑busy routes (e.g., avoid the main thoroughfares near the mosque and take parallel residential roads).  \n- If you’re traveling by bike or rickshaw, they often navigate the congestion more quickly than cars.  \n\nOverall, plan for an extra 15‑20 minutes on trips during the Friday prayer window.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "7fb4e096-de72-4a0b-bad8-c5a2fb4d8138",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 23,
+      "category": "CONDITIONS",
+      "exactUserMessage": "What vehicle is safer in heavy rain or fog?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2457,
+      "reply": "In heavy rain or fog the safest option is a **car**.  \n- **Enclosed cabin** protects you from water and low‑visibility conditions, and the windshield can be cleared with wipers and defoggers.  \n- **Four‑wheel stability** and a higher ground clearance than a bike give better traction on wet roads.  \n- **Safety features** such as airbags, ABS and traction control are standard on most cars, which you won’t get on a bike or a rickshaw.  \n\nA **rickshaw** is more exposed than a car but still offers a roof, so it’s safer than a bike but less safe than a car. A **bike** is the least safe in rain or fog because the rider is fully exposed and two‑wheel stability drops sharply on slippery surfaces.  \n\nSo, for heavy rain or fog, choose a car first, then a rickshaw if a car isn’t available, and avoid a bike if possible.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "f2dda123-b55d-4107-8bb7-c5e444e02d38",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 24,
+      "category": "CONDITIONS",
+      "exactUserMessage": "There is a protest and possible road closure. What should I do?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2172,
+      "reply": "If there’s a protest that might block the road you were planning to use, the safest move is to:\n\n1. **Check real‑time updates** – look at local news apps, traffic‑monitoring services, or social‑media posts for the latest on which streets are closed and how long the disruption is expected to last.  \n2. **Choose an alternate route** – if you can, reroute around the affected area using side streets or a different main road. Navigation apps will usually suggest the quickest detour.  \n3. **Consider other transport options** – a short ride‑share on a less‑congested route, a nearby metro/bus line, or even a bike if the distance is short can help you avoid the protest zone.  \n4. **Stay safe** – avoid the crowd, keep your belongings close, and if the situation looks volatile, postpone the trip until it’s resolved.  \n\nIf you need a specific alternate route or a vehicle recommendation for the new path, just let me know your pickup and drop‑off points.",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "48bcdbc7-d4c0-48e7-8c3e-2d3c7bf8dfe1",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    },
+    {
+      "scenarioId": 25,
+      "category": "CONDITIONS",
+      "exactUserMessage": "There is a major event tonight. Could demand be higher?",
+      "setup": [],
+      "httpStatus": 200,
+      "latencyMs": 2194,
+      "reply": "Yes—major events (concerts, festivals, sports games, etc.) usually push ride‑hailing demand up, which can lead to higher fares and longer wait times, especially near the venue. If you’re traveling to or from the event area, consider:\n\n* Booking a ride a bit earlier or later than peak arrival/departure times.  \n* Choosing a larger vehicle (car or SUV) if you have luggage or travel with others, as bikes may be scarce.  \n* Keeping an eye on the app for any surge‑price notifications and being ready to switch providers if one shows a lower estimate.\n\nPlanning ahead will help you avoid the busiest windows and keep costs more predictable. Safe travels!",
+      "modelId": "openai/gpt-oss-120b",
+      "provider": "groq",
+      "fallbackUsed": false,
+      "status": "AVAILABLE",
+      "context": {
+        "comparisonUsed": false,
+        "comparisonFreshness": null,
+        "predictionAvailable": false,
+        "preferencesUsed": true,
+        "historyUsed": false,
+        "historyAvailable": false,
+        "trip": null
+      },
+      "conversationId": "a1f62a7a-5725-4c38-9071-fc4e6b3ff0af",
+      "extracted": {
+        "pickup": null,
+        "destination": null,
+        "pattern": null
+      },
+      "geoapifyCalled": false,
+      "authoritativeFareAvailable": false,
+      "tripContext": null
+    }
+  ]
+}

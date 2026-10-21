@@ -5,7 +5,22 @@ const SENSITIVE_KEY = /(authorization|oauth|access[_-]?token|refresh[_-]?token|s
 function mapCategory(orderTypeId) {
   const id = orderTypeId === undefined || orderTypeId === null ? null : String(orderTypeId);
   const known = id && ORDER_TYPE_CATEGORIES[id];
-  return { categoryId: id, categoryName: known?.name || null, normalizedCategory: known?.normalizedCategory || "UNKNOWN" };
+  const normalizedCategory = known?.normalizedCategory || "UNKNOWN";
+  return {
+    categoryId: id,
+    categoryName: known?.name || null,
+    providerServiceName: known?.name || null,
+    normalizedCategory,
+    serviceTier: known?.serviceTier || "unknown",
+    features: Array.isArray(known?.features) ? [...known.features] : [],
+    vehicleCategory: normalizedCategory === "BIKE"
+      ? "bike"
+      : normalizedCategory === "RICKSHAW"
+        ? "rickshaw"
+        : normalizedCategory.endsWith("_CAR")
+          ? "car"
+          : "unknown",
+  };
 }
 
 function firstValue(object, keys) {
