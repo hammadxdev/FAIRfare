@@ -28,6 +28,7 @@ function extractTripLocations(message) {
     { pattern: /^\s*pickup\s+(.+?)\s+(?:kar\s+do|change\s+it|set\s+it)\s*[?.!,]?$/i, pickup: 1, destination: null, name: "change_pickup" },
     { pattern: /\bfrom\s+(.+?)\s+to\s+(.+?)(?:[?.!,]|$)/i, pickup: 1, destination: 2, name: "from_to" },
     { pattern: /\bto\s+(?:go\s+to\s+)?(.+?)\s+from\s+(.+?)(?:[?.!,]|$)/i, pickup: 2, destination: 1, name: "to_from" },
+    { pattern: /^\s*(.+?)\s+from\s+(.+?)(?:[?.!,]|$)/i, pickup: 2, destination: 1, name: "destination_from_pickup" },
     { pattern: /\bpickup\s*(?:is|:)\s*(.+?)\s+(?:and|&)\s*(?:drop(?:-?off)?|destination)\s*(?:is|:)\s*(.+?)(?:[?.!,]|$)/i, pickup: 1, destination: 2, name: "labeled" },
     { pattern: /\b(.+?)\s+se\s+(.+?)\s+(?:jana|jaana|jāna|go|going|travel)\b/i, pickup: 1, destination: 2, name: "roman_urdu" },
     { pattern: /^(?!.*\b(?:what|is|should|if|how|can|could|would|why|barish|rain|safe|book|fare)\b)(.+?)\s+to\s+(.+?)(?:[?.!,]|$)/i, pickup: 1, destination: 2, name: "short_from_to" },

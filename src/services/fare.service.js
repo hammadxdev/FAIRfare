@@ -23,6 +23,16 @@ function safeYangoDiagnostics(value) {
   return { provider: "yango", upstreamStatus: status, errorCategory: value.errorCategory, requestReachedUpstream: value.requestReachedUpstream };
 }
 
+async function boundedPersistence(work, timeoutMs = 1500) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(work),
+      new Promise((_, reject) => { timer = setTimeout(() => { const error = new Error("Non-critical persistence timed out"); error.code = "PERSISTENCE_TIMEOUT"; reject(error); }, timeoutMs); }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
+
 function dataSourceForAdapter(adapter) {
   if (process.env.NODE_ENV === "test") return "TEST";
   return adapter.liveTransportEnabled === true && ["real", "authorized-live"].includes(adapter.mode) ? "REAL" : "NONE";
@@ -71,6 +81,11 @@ function logDevelopmentProviderDiagnostics(providers, results) {
 // module-load-time prepared statement isn't safe to trust on this platform.
 
 async function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results }) {
+  if (!pickup?.name || !dropoff?.name) {
+    const error = new Error("Verified pickup and destination names are required for fare_searches persistence");
+    error.code = "PERSISTENCE_MISSING_LOCATION_NAME";
+    throw error;
+  }
   return withTransaction(async (client) => {
   const searchInfo = await client.query(`
     INSERT INTO fare_searches
@@ -88,6 +103,10 @@ async function persistSearchAndResults({ pickup, dropoff, vehicleType, distanceK
 }
 
 async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
+  const startedAt = Date.now();
+  const timing = (stage, stageStartedAt) => {
+    if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) console.info("[fare][timing]", { stage, elapsedMs: Date.now() - stageStartedAt, totalMs: Date.now() - startedAt });
+  };
   if (route?.compareFaresEligible === false) {
     throw new AppError("Fare comparison is blocked until the selected locations are confirmed for this route.", 422, [route.eligibilityReason || "ROUTE_NOT_ELIGIBLE"]);
   }
@@ -116,6 +135,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   // Weather is contextual enrichment: one pickup lookup is shared by every
   // provider/category and a failure returns UNKNOWN without blocking fares.
   const weatherContext = await resolveWeatherContext({ latitude: pickup.lat, longitude: pickup.lng, observedAt });
+  const providerStartedAt = Date.now();
   const settledResults = await Promise.allSettled(providers.map(async (provider) => {
     const adapter = getAdapter(provider.name);
     if (process.env.NODE_ENV !== "test" && (adapter.liveTransportEnabled !== true || dataSourceForAdapter(adapter) !== "REAL")) {
@@ -225,6 +245,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
         return result;
     }
   }));
+  timing("providers_complete", providerStartedAt);
   const rawResults = settledResults.map((entry, index) => {
     if (entry.status === "fulfilled") return entry.value;
     const provider = providers[index];
@@ -256,13 +277,41 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
     })
     : null;
 
-  const searchId = await persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results });
+  let searchId = null;
+  const searchPersistenceStartedAt = Date.now();
+  try {
+    searchId = await boundedPersistence(() => persistSearchAndResults({ pickup, dropoff, vehicleType, distanceKm, durationMin, results }));
+  } catch (error) {
+    // Provider quotes are already verified by the adapters. A history/search
+    // persistence mismatch must not turn a successful live comparison into an
+    // AI outage or discard the real quotes.
+    console.error("[fare] non-critical search persistence failed", {
+      code: error.code || "PERSISTENCE_FAILED",
+      table: error.table || null,
+      column: error.column || null,
+      constraint: error.constraint || null,
+    });
+  } finally {
+    timing("fare_searches_persistence", searchPersistenceStartedAt);
+  }
 
   let comparisonId = null;
   if (available.length > 0) {
-    comparisonId = await createComparisonHistory({ userId, pickup, dropoff, distanceKm, durationMin, vehicleType, results });
+    const historyPersistenceStartedAt = Date.now();
     try {
-      await persistFareObservations({
+      comparisonId = await boundedPersistence(() => createComparisonHistory({ userId, pickup, dropoff, distanceKm, durationMin, vehicleType, results }));
+    } catch (error) {
+      console.error("[fare] non-critical comparison history persistence failed", {
+        code: error.code || "HISTORY_PERSISTENCE_FAILED",
+        table: error.table || null,
+        column: error.column || null,
+        constraint: error.constraint || null,
+      });
+    } finally {
+      timing("comparison_history_persistence", historyPersistenceStartedAt);
+    }
+    try {
+      await boundedPersistence(() => persistFareObservations({
         comparisonId,
         pickup,
         dropoff,
@@ -272,7 +321,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
         observedAt,
         weatherContext,
         results: available,
-      });
+      }), 1200);
     } catch (error) {
       // Dataset logging is deliberately non-critical to fare comparison.
       console.error("[observations] persistence failed:", error.message || error);
@@ -289,7 +338,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
       requestedVehicleType: vehicleType,
     });
     try {
-      result.prediction = await predictFare({
+      result.prediction = await boundedPersistence(() => predictFare({
         providerId: result.provider.id,
         providerName: result.provider.name,
         providerCategoryId: quote.categoryId || vehicleType,
@@ -309,7 +358,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
         precipitationMm: weatherContext.precipitationMm,
         temperatureC: weatherContext.temperatureC,
         dataSource: result.dataSource || "UNKNOWN",
-      });
+      }), 800);
       result.recommendation = recommendRide({ currentFare: result.fare, prediction: result.prediction });
     } catch (error) {
       result.prediction = { status: "PREDICTION_FAILED", predictedFare: null, confidence: null };
@@ -326,7 +375,7 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
   }
 
   if (comparisonId) {
-    await updateComparisonEnrichment({ id: comparisonId, userId, results });
+    await boundedPersistence(() => updateComparisonEnrichment({ id: comparisonId, userId, results }), 800);
   }
 
   // Preferences are read once per authenticated comparison. Personalization

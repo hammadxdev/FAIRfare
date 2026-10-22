@@ -2,6 +2,7 @@ const { success } = require("../utils/apiResponse");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const { answer, validateMessage } = require("../services/tripAwareAiAssistant.service");
+const crypto = require("crypto");
 const conversations = require("../services/ai/conversation.service");
 const conversationMemory = require("../services/ai/conversationMemory.service");
 const existing = require("./ai.controller");
@@ -26,10 +27,41 @@ const chat = asyncHandler(async (req, res) => {
     }
   }
   try {
+  const requestId = req.headers["x-request-id"] ? String(req.headers["x-request-id"]).slice(0, 100) : crypto.randomUUID();
   const text = req.body.message.trim();
   const userMessage = await conversations.addMessage(req.user.id, conversation.id, "USER", text, null, clientMessageId || null);
   await conversations.titleFirstMessage(req.user.id, conversation.id, text);
-  const result = await answer({ userId: req.user.id, message: text, comparisonId, conversationId: conversation.id, clientMessageId, requestRunId: requestRun?.id || null });
+  const result = await answer({ userId: req.user.id, message: text, comparisonId, conversationId: conversation.id, clientMessageId, requestRunId: requestRun?.id || null, requestId });
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+    const semantic = result.context?.semanticUnderstanding;
+    const semanticDiagnostics = result.context?.semanticUnderstandingDiagnostics || { attempted: false, succeeded: false };
+    const execution = result.toolExecution?.results || [];
+    const diagnostics = {
+      requestId,
+      backendVersion: process.env.GIT_COMMIT || process.env.VERCEL_GIT_COMMIT_SHA || null,
+      modelFirstEnabled: String(process.env.FAIRFARE_AI_MODEL_FIRST_ENABLED || "false").toLowerCase() === "true",
+      semanticUnderstandingAttempted: semanticDiagnostics.attempted === true,
+      semanticUnderstandingSucceeded: semanticDiagnostics.succeeded === true,
+      semanticErrorCategory: semanticDiagnostics.errorCategory || null,
+      semanticParseIssue: semanticDiagnostics.parseIssue || null,
+      semanticValidationIssues: semanticDiagnostics.validationIssues || [],
+      semanticScope: semantic?.scope || null,
+      semanticIntent: semantic?.intent || null,
+      detectedLanguage: semantic?.replyLanguage || result.context?.responseLanguage || null,
+      contextMode: result.context?.trip?.source === "conversation_history" ? "follow_up" : "new",
+      routeResolutionStatus: result.context?.trip?.status || "not_attempted",
+      selectedTools: result.context?.toolIntent ? [result.context.toolIntent] : [],
+      toolsActuallyExecuted: execution.map((item) => item.name).filter(Boolean),
+      toolSuccessOrFailure: execution.map((item) => ({ name: item.name || null, success: item.ok === true, error: item.ok === true ? null : item.error?.code || "TOOL_FAILED" })),
+      liveComparisonAttempted: execution.some((item) => item.name === "compare_live_fares"),
+      liveComparisonStatus: execution.some((item) => item.name === "compare_live_fares") ? (execution.some((item) => item.ok === true) ? "completed" : "failed") : "not_attempted",
+      responseSource: result.context?.responseSource || (result.fallbackUsed ? "safe_fallback" : result.comparisonId ? "llm_grounded" : result.modelId ? "llm_direct" : "deterministic"),
+      fallbackReason: result.fallbackUsed ? result.errorCode || "llm_fallback" : null,
+      totalLatencyMs: null,
+    };
+    result.context = { ...result.context, diagnostics };
+    console.info("[AI][trace]", diagnostics);
+  }
   if (result.available) await conversations.addMessage(req.user.id, conversation.id, "ASSISTANT", result.reply, result.modelId);
   if (MEMORY_ENABLED() && result.comparisonId) {
     const identity = result.context?.serviceIdentity;

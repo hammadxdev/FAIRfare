@@ -20,6 +20,10 @@ function routeIntent(message, context = {}) {
 
 function buildServerIntent(message, context = {}) {
   const result = routeIntent(message, context);
+  if (context.semanticUnderstanding?.intent && context.semanticUnderstanding.intent !== "unknown") {
+    const mapped = { route: "current_trip", fare_comparison: "compare_fares", provider_availability: "provider_status", vehicle_recommendation: "follow_up", travel_timing: "follow_up", app_help: "app_help", service_identity: "service_identity", general_travel: "follow_up", follow_up: "follow_up" }[context.semanticUnderstanding.intent];
+    if (mapped) return { ...result, intent: mapped, confidence: context.semanticUnderstanding.confidence >= 0.65 ? "high" : "medium", explicitComparisonIntent: mapped === "compare_fares" && Boolean(context.userExplicitlyRequestedComparison) };
+  }
   return { ...result, explicitComparisonIntent: result.explicitComparisonIntent === true && Boolean(context.userExplicitlyRequestedComparison) };
 }
 

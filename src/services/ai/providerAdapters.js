@@ -74,6 +74,7 @@ function requestBody(candidate, { systemInstructions, message, context, history,
     body.max_completion_tokens = positiveInt(process.env.GROQ_MAX_COMPLETION_TOKENS, 450);
     body.reasoning_effort = process.env.GROQ_REASONING_EFFORT || "low";
     body.reasoning_format = "hidden";
+    if (context?.semanticUnderstanding === true) body.response_format = { type: "json_object" };
   } else {
     body.max_tokens = positiveInt(process.env.AI_MAX_OUTPUT_TOKENS, 450);
   }

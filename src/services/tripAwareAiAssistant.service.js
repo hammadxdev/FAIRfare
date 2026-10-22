@@ -18,6 +18,8 @@ const { readHistoricalFareEvidence } = require("./fareObservation.service");
 const providers = require("../providers/provider.registry");
 const { getMemory, resolveComparisonReference, savePlanningContext } = require("./ai/conversationMemory.service");
 const defaultLlmClient = require("./ai/llmClient");
+const { understand } = require("./ai/semanticUnderstanding.service");
+const { FAIRFARE_POLICY } = require("./ai/fairFarePolicy");
 const defaultTripResolver = resolveTripForAssistant;
 let tripResolver = defaultTripResolver;
 let comparisonBuilder = compareFares;
@@ -94,6 +96,7 @@ function plannerEnabled() { return String(process.env.FAIRFARE_AI_TRIP_PLANNER_E
 function forecastEnabled() { return String(process.env.FAIRFARE_AI_FARE_FORECAST_ENABLED || process.env.FAIRRIDE_AI_FARE_FORECAST_ENABLED || "false").toLowerCase() === "true"; }
 function routeResolutionEnabled() { return String(process.env.FAIRFARE_AI_ROUTE_RESOLUTION_ENABLED || "false").toLowerCase() === "true"; }
 function observationForecastEnabled() { return String(process.env.FAIRFARE_AI_HISTORICAL_FORECAST_ENABLED || "false").toLowerCase() === "true"; }
+function modelFirstEnabled() { return String(process.env.FAIRFARE_AI_MODEL_FIRST_ENABLED || "false").toLowerCase() === "true"; }
 function planningContext(recent = []) {
   const messages = recent.filter((item) => String(item?.role || "").toUpperCase() === "USER");
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -195,12 +198,15 @@ async function deterministicToolPath({ intent, args, recent }) {
   }
   if (["current_trip", "latest_comparison", "provider_status"].includes(intent.intent)) {
     if (intent.intent === "current_trip" && !args.comparisonId) {
-      const trip = await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
+      const trip = args.semanticUnderstanding?.pickup && args.semanticUnderstanding?.destination ? await tripResolver({ message: args.message, semantic: args.semanticUnderstanding }) : await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
       if (trip.status === "RESOLVED") {
-        const routeCall = await executeToolCalls([{ name: "calculate_route", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null } } }], context);
-        const routeResult = routeCall.results.find((item) => item.ok)?.result?.route || trip.route;
+        // resolveTripForAssistant already performed the verified Geoapify route
+        // lookup. Reuse it for this request instead of routing the same pair a
+        // second time before comparing fares.
+        const routeCall = { results: [{ ok: true, name: "calculate_route", reused: true, result: { route: trip.route } }] };
+        const routeResult = trip.route;
         {
-          const comparisonCall = await executeToolCalls([{ name: "compare_live_fares", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null }, vehicleType: trip.vehiclePreference || "car", route: fareRoutePayload(routeResult), explicitComparisonIntent: true } }], { ...context, explicitComparisonIntent: true });
+          const comparisonCall = await executeToolCalls([{ name: "compare_live_fares", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null, name: trip.pickup.name || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null, name: trip.destination.name || null }, vehicleType: trip.vehiclePreference || "car", route: fareRoutePayload(routeResult), explicitComparisonIntent: true } }], { ...context, explicitComparisonIntent: true });
           const comparisonItem = comparisonCall.results.find((item) => item.ok && item.result?.status !== "LIVE_COMPARISON_DISABLED" && Array.isArray(item.result?.results));
           if (comparisonItem) return { reply: liveComparisonReply({ ...trip, route: routeResult }, comparisonItem.result, args.message), trip, result: { results: [...routeCall.results, ...comparisonCall.results] } };
           const disabled = comparisonCall.results.find((item) => item.ok && item.result?.status === "LIVE_COMPARISON_DISABLED");
@@ -218,11 +224,11 @@ async function deterministicToolPath({ intent, args, recent }) {
     return { reply: toolResultReply(intent.intent, result, args.message), result };
   }
   if (["route_information", "compare_fares", "cheapest_ride"].includes(intent.intent)) {
-    const trip = await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
+    const trip = args.semanticUnderstanding?.pickup && args.semanticUnderstanding?.destination ? await tripResolver({ message: args.message, semantic: args.semanticUnderstanding }) : await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
     if (trip.status !== "RESOLVED") return { trip };
     const result = intent.intent === "route_information"
-      ? await executeToolCalls([{ name: "calculate_route", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null } } }], context)
-      : await executeToolCalls([{ name: "compare_live_fares", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null }, vehicleType: trip.vehiclePreference || null, route: trip.route || null, explicitComparisonIntent: intent.explicitComparisonIntent === true } }], context);
+      ? { results: [{ ok: true, name: "calculate_route", reused: true, result: { route: trip.route } }] }
+      : await executeToolCalls([{ name: "compare_live_fares", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null, name: trip.pickup.name || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null, name: trip.destination.name || null }, vehicleType: trip.vehiclePreference || null, route: trip.route || null, explicitComparisonIntent: intent.explicitComparisonIntent === true } }], context);
     return { trip, result };
   }
   return null;
@@ -232,6 +238,8 @@ async function answer(args) {
   let trip;
   let resolverMessage = args.message;
   let recent = [];
+  let semantic = null;
+  let semanticDiagnostics = { attempted: false, succeeded: false, errorCategory: null };
   try {
     recent = args.userId && args.conversationId ? await conversations.recentMessages(args.userId, args.conversationId) : [];
     let memory = null;
@@ -243,14 +251,21 @@ async function answer(args) {
       if (!args.comparisonId && candidateComparisonId) args = { ...args, comparisonId: candidateComparisonId };
     }
     const intentMessages = [...recent, ...(memory?.summaries || []).map((summary) => ({ role: "SYSTEM_MEMORY", content: summary.summary_text }))];
-    const policy = classifyDomain(args.message, { hasFareRideContext: Boolean(args.comparisonId || recent.length || memory?.summaries?.length || memory?.comparisonRefs?.length) });
+    if (modelFirstEnabled()) {
+      const understood = await understand({ llmClient: defaultLlmClient, message: args.message, context: { recentConversation: recent } });
+      semantic = understood.understanding;
+      semanticDiagnostics = understood.diagnostics || { attempted: true, succeeded: Boolean(understood.ok), errorCategory: understood.error || null };
+      if (semantic.scope === "unsafe" || semantic.scope === "out_of_scope") return { reply: outOfScopeReply(args.message), modelId: understood.modelId || null, provider: understood.provider || null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { domainDecision: semantic.scope, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics } };
+    }
+    const policy = classifyDomain(args.message, { hasFareRideContext: Boolean(args.comparisonId || recent.length || memory?.summaries?.length || memory?.comparisonRefs?.length), semanticUnderstanding: semantic });
     if (!policy.allowed) return { reply: outOfScopeReply(args.message), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { domainDecision: policy.reason } };
     const serviceQuestion = parseServiceQuestion(args.message, intentMessages);
     if (serviceQuestion) {
       const result = await lookupProviderService({ userId: args.userId, comparisonId: args.comparisonId || null, provider: null, serviceCode: serviceQuestion.serviceCode });
       return { reply: serviceIdentityReply(result, args.message), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: result.comparisonId || args.comparisonId || null, context: { comparisonUsed: Boolean(result.comparisonId), comparisonFreshness: result.evidence?.freshness || null, serviceIdentity: result } };
     }
-    const intent = buildServerIntent(args.message, { hasFareRideContext: Boolean(args.comparisonId || recent.length || memory?.summaries?.length || memory?.comparisonRefs?.length), hasComparison: Boolean(args.comparisonId), userExplicitlyRequestedComparison: /\b(?:compare|cheapest|cheaper|sasti|sasta|sab\s+se\s+sasti|which\s+ride)\b/i.test(String(args.message || "")) });
+    const intent = buildServerIntent(args.message, { hasFareRideContext: Boolean(args.comparisonId || recent.length || memory?.summaries?.length || memory?.comparisonRefs?.length), hasComparison: Boolean(args.comparisonId), semanticUnderstanding: semantic, userExplicitlyRequestedComparison: semantic?.intent === "fare_comparison" || /\b(?:compare|cheapest|cheaper|sasti|sasta|sab\s+se\s+sasti|which\s+ride)\b/i.test(String(args.message || "")) });
+    if (semantic) args = { ...args, semanticUnderstanding: semantic };
     const toolPath = await deterministicToolPath({ intent, args, recent });
     if (toolPath?.reply) {
       const structured = toolPath.reply && typeof toolPath.reply === "object" ? toolPath.reply : null;
@@ -258,15 +273,31 @@ async function answer(args) {
       if (structured?.trip && args.userId && args.conversationId) {
         planningPersistence = await savePlanningContext({ userId: args.userId, conversationId: args.conversationId, planningIntent: intent.intent, departureAt: structured.trip.departureAt || null, departureTimezone: structured.trip.timezone || "Asia/Karachi", vehiclePreference: structured.trip.vehicleType || null, providerPreferences: requestedProviders(args.message), forecastSource: structured.estimates?.some((item) => item.sourceType === "forecast") ? "forecast" : "unavailable", forecastModelVersion: structured.estimates?.find((item) => item.modelVersion)?.modelVersion || null });
       }
-      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
+      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
     }
-    if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
+    if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
     if (toolsEnabled() && String(process.env.FAIRFARE_AI_MODEL_TOOLS_ENABLED || "false").toLowerCase() === "true") {
       const agent = await runBoundedToolAgent({ llmClient: defaultLlmClient, message: args.message, context: await base.buildGroundingContext({ userId: args.userId, message: args.message, comparisonId: args.comparisonId, conversationId: args.conversationId }), serverContext: { userId: args.userId, conversationId: args.conversationId, comparisonId: args.comparisonId, explicitComparisonIntent: intent.explicitComparisonIntent === true, liveComparisonEnabled: liveComparisonEnabled(), deadlineAt: Date.now() + 12000 }, tools: listTools() });
       if (agent.handled && agent.result?.text) return { reply: agent.result.text, modelId: agent.result.modelId || null, provider: agent.result.provider || null, fallbackUsed: Boolean(agent.result.fallbackUsed), available: true, status: "AVAILABLE", toolExecution: agent.toolResults || null, context: { toolIntent: intent.intent } };
     }
+    // Once semantic understanding has classified a non-live request, let the
+    // LLM answer it directly. The legacy trip branch is intentionally reserved
+    // for requests that need verified route/fare/provider data.
+    const directIntents = new Set(["follow_up", "app_help", "vehicle_recommendation", "travel_timing", "general_travel", "ambiguous"]);
+    const liveIntents = new Set(["route_information", "compare_fares", "cheapest_ride", "current_trip", "provider_status", "latest_comparison", "location_lookup", "service_identity", "future_fare_plan", "future_fare_follow_up"]);
+    if (modelFirstEnabled() && directIntents.has(intent.intent) && !liveIntents.has(intent.intent)) {
+      const direct = await qualityAwareAssistant.answer({ ...args, tripContext: null });
+      return { ...direct, context: { ...(direct.context || {}), responseSource: direct.fallbackUsed ? "safe_fallback" : "llm_direct", fallbackReason: direct.fallbackUsed ? direct.errorCode || "llm_fallback" : null, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics } };
+    }
     const current = extractTripLocations(args.message);
-    trip = await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
+    const recoveredSemantic = {
+      ...(args.semanticUnderstanding || {}),
+      pickup: current.pickup ? { query: current.pickup } : args.semanticUnderstanding?.pickup || null,
+      destination: current.destination ? { query: current.destination } : args.semanticUnderstanding?.destination || null,
+    };
+    trip = recoveredSemantic.pickup && recoveredSemantic.destination
+      ? await tripResolver({ message: resolverMessage, semantic: recoveredSemantic })
+      : await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
     if (trip.status === "NO_TRIP" && current.pickup && current.destination) trip = await tripResolver({ message: resolverMessage });
   }
   catch (error) { trip = { status: "UNRESOLVED", error: error.code || "TRIP_RESOLUTION_FAILED" }; }
@@ -277,7 +308,9 @@ async function answer(args) {
     grounding = { decision: null, comparisonId: null };
   }
   if (grounding.decision === DECISIONS.LOCATION_UNRESOLVED) {
-    return routeDecisionResponse({ trip, decision: grounding.decision, message: args.message, hadPreviousComparison: Boolean(args.comparisonId) });
+    const response = routeDecisionResponse({ trip, decision: grounding.decision, message: args.message, hadPreviousComparison: Boolean(args.comparisonId) });
+    response.context = { ...(response.context || {}), semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics };
+    return response;
   }
   if (grounding.decision === DECISIONS.ROUTE_CHANGED && args.comparisonId) {
     try {
@@ -330,12 +363,19 @@ function routeDecisionResponse({ trip, decision, message, hadPreviousComparison 
   const language = routeResponseLanguage(message);
   const route = trip?.pickup && trip?.destination ? routeReply(trip, language) : null;
   const unresolvedField = trip?.unresolved === "pickup" ? "pickup" : trip?.unresolved === "destination" ? "destination" : "location";
+  const unresolvedQuery = trip?.extracted?.[unresolvedField] || null;
+  const unresolvedReason = trip?.unresolvedReason || null;
+  const ambiguous = unresolvedReason === "AMBIGUOUS";
   const missing = language === "roman_urdu"
-    ? unresolvedField === "pickup" ? "Kaunsi pickup location ya city use karun?"
-      : unresolvedField === "destination" ? "Kaunsi destination location ya city use karun?"
+    ? ambiguous ? `Mujhe ${unresolvedQuery || unresolvedField} ke multiple matches mile. Iski city ya area bata dein.`
+      : unresolvedReason ? `${unresolvedQuery || unresolvedField} ko map par verify nahi kar saka. Is location ka city ya area bata dein.`
+      : unresolvedField === "pickup" ? "Kaunsi pickup location ya city use karun?"
+        : unresolvedField === "destination" ? "Kaunsi destination location ya city use karun?"
         : "Aap kis location ya shehar mein travel kar rahe hain?"
-    : unresolvedField === "pickup" ? "Which pickup location or city do you mean?"
-      : unresolvedField === "destination" ? "Which destination location or city do you mean?"
+    : ambiguous ? `I found multiple matches for ${unresolvedQuery || unresolvedField}. Which city or area do you mean?`
+      : unresolvedReason ? `I couldn't verify ${unresolvedQuery || unresolvedField} on the map. Which city or area should I use?`
+      : unresolvedField === "pickup" ? "Which pickup location or city do you mean?"
+        : unresolvedField === "destination" ? "Which destination location or city do you mean?"
         : "Which location or city do you mean?";
   const fallback = decision === DECISIONS.LOCATION_UNRESOLVED
     ? missing
@@ -345,4 +385,4 @@ function routeDecisionResponse({ trip, decision, message, hadPreviousComparison 
   return { reply: route && decision === DECISIONS.FARES_UNAVAILABLE ? `${route}\n\n${fallback}` : fallback, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", groundingDecision: decision, context: { comparisonUsed: false, comparisonFreshness: null, predictionAvailable: false, preferencesUsed: true, historyUsed: false, historyAvailable: false, groundingDecision: decision, trip: trip ? publicTripContext(trip) : null } };
 }
 
-module.exports = { ...base, answer, oneShotFuturePlan, routeReply, routeResponseLanguage, serviceIdentityReply, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse, fareRoutePayload };
+module.exports = { ...base, answer, oneShotFuturePlan, routeReply, routeResponseLanguage, serviceIdentityReply, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse, fareRoutePayload, modelFirstEnabled, FAIRFARE_POLICY };

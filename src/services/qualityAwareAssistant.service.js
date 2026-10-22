@@ -87,7 +87,13 @@ async function answer(args) {
     const coverageGuardedReply = safeCoverageReply(args.message, policy.language);
     const fareGuardedReply = safeUngroundedFareReply(args.message, policy.language, { hasAuthoritativeContext: Boolean(context.comparison) });
     const vehicleGuardedReply = safeVehicleReply(args.message, policy.language, { hasAuthoritativeContext: Boolean(context.comparison) });
-    const candidateReply = guardedReply || coverageGuardedReply || fareGuardedReply || vehicleGuardedReply || result.text;
+    // A successful model answer is the primary response. These deterministic
+    // guards are only recovery/provenance barriers; they must not replace a
+    // valid, relevant LLM answer with an old canned template.
+    const deterministicGuard = Boolean(result.fallbackUsed) || !String(result.text || "").trim();
+    const candidateReply = deterministicGuard
+      ? (guardedReply || coverageGuardedReply || fareGuardedReply || vehicleGuardedReply || result.text)
+      : result.text;
     const safeReply = validateReplyAgainstGrounding(candidateReply, groundedComparison) ? candidateReply : deterministicSummary(groundedComparison, args.message, policy.language);
     const providerGuard = enforceProviderBoundary({
       message: args.message,

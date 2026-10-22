@@ -118,8 +118,10 @@ async function geocodeWithFallback({ query, geocode, lat, lng, preferredCity }) 
   }
   return { ...lastResult, queries: [...new Set(variants)], candidates: all };
 }
-async function resolveTripForAssistant({ message, geocode = maps.fetchAutocomplete, route = maps.computeRoute } = {}) {
-  const extracted = extractTripLocations(message);
+async function resolveTripForAssistant({ message, semantic, geocode = maps.fetchAutocomplete, route = maps.computeRoute } = {}) {
+  const extracted = semantic && (semantic.pickup || semantic.destination)
+    ? { pickup: semantic.pickup?.query || null, destination: semantic.destination?.query || null }
+    : extractTripLocations(message);
   const explicitIntercity = /\b(?:intercity|inter-city|between\s+different\s+cities|explicitly\s+(?:want|need)|city[- ]to[- ]city)\b/i.test(String(message || ""));
   if (!extracted.pickup || !extracted.destination) return { status: "NO_TRIP", extracted };
   let pickupSelected = await geocodeWithFallback({ query: extracted.pickup, geocode, preferredCity: cityHintFromText(extracted.destination) });
@@ -129,7 +131,17 @@ async function resolveTripForAssistant({ message, geocode = maps.fetchAutocomple
   }
   const ambiguousPickup = pickupSelected.ambiguous && isGenericLocationQuery(extracted.pickup);
   const ambiguousDestination = destinationSelected.ambiguous && isGenericLocationQuery(extracted.destination);
-  if (!pickupSelected.location || ambiguousPickup || !destinationSelected.location || ambiguousDestination) return { status: "UNRESOLVED", extracted, pickup: pickupSelected.location, destination: destinationSelected.location, unresolved: !pickupSelected.location || ambiguousPickup ? "pickup" : "destination" };
+  if (!pickupSelected.location || ambiguousPickup || !destinationSelected.location || ambiguousDestination) {
+    const pickupUnresolved = !pickupSelected.location || ambiguousPickup;
+    return {
+      status: "UNRESOLVED",
+      extracted,
+      pickup: pickupSelected.location,
+      destination: destinationSelected.location,
+      unresolved: pickupUnresolved ? "pickup" : "destination",
+      unresolvedReason: pickupUnresolved ? (ambiguousPickup ? "AMBIGUOUS" : (pickupSelected.reason || "NOT_FOUND")) : (ambiguousDestination ? "AMBIGUOUS" : (destinationSelected.reason || "NOT_FOUND")),
+    };
+  }
   const cityMismatch = pickupSelected.location.city && destinationSelected.location.city && pickupSelected.location.city.toLowerCase() !== destinationSelected.location.city.toLowerCase() && !sameAdministrativeContext(pickupSelected.location, destinationSelected.location);
   let routeResult = null;
   try { routeResult = await route({ origin: pickupSelected.location, destination: destinationSelected.location, vehicleType: "car" }); } catch (error) { routeResult = { unavailable: true, reason: error.code || "ROUTE_UNAVAILABLE" }; }

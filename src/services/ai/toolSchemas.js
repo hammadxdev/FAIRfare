@@ -7,7 +7,7 @@ function isPlainObject(value) { return Boolean(value) && typeof value === "objec
 function stringValue(value, max, nullable = true) { if (value === null && nullable) return true; return typeof value === "string" && value.trim().length > 0 && value.length <= max; }
 function numberValue(value, min, max) { return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max; }
 function objectKeysOnly(value, allowed) { return isPlainObject(value) && Object.keys(value).every((key) => allowed.includes(key)); }
-function validateLocation(value) { return objectKeysOnly(value, ["lat", "lng", "placeId"]) && numberValue(value.lat, -90, 90) && numberValue(value.lng, -180, 180) && stringValue(value.placeId, 150); }
+function validateLocation(value) { return objectKeysOnly(value, ["lat", "lng", "placeId", "name"]) && numberValue(value.lat, -90, 90) && numberValue(value.lng, -180, 180) && stringValue(value.placeId, 150) && stringValue(value.name, 200); }
 
 const schemas = Object.freeze({
   get_current_trip: { type: "object", properties: { conversationId: { type: ["string", "null"], maxLength: MAX_ID_LENGTH } }, additionalProperties: false },
