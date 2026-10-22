@@ -17,6 +17,9 @@ function cleanLocation(value) {
 function extractTripLocations(message) {
   const text = String(message || "").trim();
   const patterns = [
+    // A negated place is not a replacement destination. Keep it as a
+    // correction signal so conversation context cannot re-introduce it.
+    { pattern: /^\s*(?:no|nah|not|nahi)\s+(?:the\s+)?(.+?)[,;:]\s*(?:actually\s+)?from\s+(.+?)[?.!,]?$/i, pickup: 2, destination: null, rejected: 1, name: "reject_destination_change_pickup" },
     { pattern: /^\s*(?:no|nah|actually)\s*[,:-]?\s*from\s+(.+?)[?.!,]?$/i, pickup: 1, destination: null, name: "change_pickup" },
     { pattern: /^\s*(?:no|nah|actually|just|only)\s*[,:-]?\s*(?:(?:just|only)\s+)?(?:the\s+)?(.+?)[?.!,]?$/i, pickup: null, destination: 1, name: "change_destination" },
     { pattern: /\b(?:change|switch|update)\s+(?:the\s+)?destination\s+(?:to|as)\s+(.+?)(?:[?.!,]|$)/i, pickup: null, destination: 1, name: "change_destination" },
@@ -34,7 +37,10 @@ function extractTripLocations(message) {
     if (!match) continue;
     const pickup = candidate.pickup == null ? null : cleanLocation(match[candidate.pickup]);
     const destination = candidate.destination == null ? null : cleanLocation(match[candidate.destination]);
-    if ((pickup && destination && pickup.toLowerCase() !== destination.toLowerCase()) || ((candidate.name === "change_destination" || candidate.name === "change_pickup") && (pickup || destination))) return { pickup, destination, pattern: candidate.name };
+    const rejected = candidate.rejected == null ? null : cleanLocation(match[candidate.rejected]);
+    if ((pickup && destination && pickup.toLowerCase() !== destination.toLowerCase()) || ((candidate.name === "change_destination" || candidate.name === "change_pickup" || candidate.name === "reject_destination_change_pickup") && (pickup || destination))) {
+      return { pickup, destination, pattern: candidate.name, ...(rejected ? { rejected } : {}) };
+    }
   }
   return { pickup: null, destination: null, pattern: null };
 }

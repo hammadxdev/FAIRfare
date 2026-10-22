@@ -1,3 +1,10 @@
+const { DEFAULT_SERVICE_MAPPINGS: DEFAULT_BYKEA_SERVICE_MAPPINGS } = require("./bykea.constants");
+
+function mappingForServiceCode(serviceCode, mappings = DEFAULT_BYKEA_SERVICE_MAPPINGS) {
+  const mapping = mappings && typeof mappings === "object" ? mappings[String(serviceCode)] : null;
+  return mapping && typeof mapping === "object" ? mapping : null;
+}
+
 function numericFareFromMstr(value) {
   if (typeof value !== "string") return null;
   const match = value.match(/^\s*Est:\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s+PKR\s*$/i);
@@ -14,21 +21,22 @@ function successfulServiceEntry(item) {
   return true;
 }
 
-function normalizeBykeaServiceEntry(item) {
+function normalizeBykeaServiceEntry(item, options = {}) {
   if (!successfulServiceEntry(item)) return null;
   const fare = numericFareFromMstr(item.mstr);
   if (fare === null || item.service_code === undefined || item.service_code === null) return null;
   const serviceCode = String(item.service_code).trim();
   const currencyCode = typeof item.currency_code === "string" ? item.currency_code.trim().toUpperCase() : "";
   if (!serviceCode || !/^[A-Z]{3}$/.test(currencyCode)) return null;
+  const mapping = mappingForServiceCode(serviceCode, options.serviceMappings);
   return {
     categoryId: serviceCode,
-    categoryName: null,
-    providerServiceName: `Service ${serviceCode}`,
-    providerServiceLabel: `Service ${serviceCode}`,
-    vehicleCategory: "unknown",
-    serviceTier: "unknown",
-    features: [],
+    categoryName: mapping?.label || null,
+    providerServiceName: mapping?.label || `Service ${serviceCode}`,
+    providerServiceLabel: mapping?.label || `Service ${serviceCode}`,
+    vehicleCategory: mapping?.vehicleCategory || "unknown",
+    serviceTier: mapping?.serviceTier || "unknown",
+    features: Array.isArray(mapping?.features) ? mapping.features : [],
     rideType: serviceCode,
     fare,
     currency: currencyCode,
@@ -39,6 +47,9 @@ function normalizeBykeaServiceEntry(item) {
     priceType: "estimate",
     isEstimate: true,
     isAvailable: true,
+    ...(item.minimum_fare !== undefined ? { minimumFare: item.minimum_fare } : {}),
+    ...(item.fare_without_surge !== undefined ? { fareWithoutSurge: item.fare_without_surge } : {}),
+    ...(Array.isArray(item.bid_values) ? { bidValues: item.bid_values.slice() } : {}),
   };
 }
 
@@ -85,13 +96,13 @@ function summarizeBykeaResponse(response) {
   };
 }
 
-function normalizeBykeaFareResponse(response) {
+function normalizeBykeaFareResponse(response, options = {}) {
   if (isApplicationRejection(response)) {
     const details = applicationErrorDetails(response);
     return { status: "provider_error", source: "none", currency: null, estimates: [], error: { code: details.code, message: "Bykea API rejected the fare request.", diagnostics: details } };
   }
   const data = Array.isArray(response?.data) ? response.data : [];
-  const estimates = data.map(normalizeBykeaServiceEntry).filter(Boolean);
+  const estimates = data.map((item) => normalizeBykeaServiceEntry(item, options)).filter((estimate) => estimate && (!options.vehicleType || estimate.vehicleCategory === options.vehicleType));
   if (!estimates.length) {
     return {
       status: "provider_error",
@@ -108,5 +119,8 @@ module.exports = {
   numericFareFromMstr,
   normalizeBykeaFareResponse,
   normalizeBykeaServiceEntry,
+  DEFAULT_BYKEA_SERVICE_MAPPINGS,
+  mappingForServiceCode,
   summarizeBykeaResponse,
 };
+

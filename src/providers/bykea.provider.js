@@ -26,7 +26,7 @@ function createBykeaProvider({ config = getConfig(), transport = null, mode = nu
               || Object.prototype.hasOwnProperty.call(response, "code")
               || Object.prototype.hasOwnProperty.call(response, "error")
               || Object.prototype.hasOwnProperty.call(response, "message"));
-          return isRawBykeaResponse ? normalizeBykeaFareResponse(response) : response;
+          return isRawBykeaResponse ? normalizeBykeaFareResponse(response, { serviceMappings: config.serviceMappings, vehicleType: args.rideType || null }) : response;
         },
       }
       : configuredTransport,

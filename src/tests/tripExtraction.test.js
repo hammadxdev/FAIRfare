@@ -17,6 +17,14 @@ test("extracts natural airport-to-DHA request without filler or vehicle suffix",
   assert.deepEqual(extractTripLocations("hi ia wanna go tomorrow from airport to dha via car"), { pickup: "airport", destination: "dha", pattern: "from_to" });
   assert.deepEqual(extractTripLocations("Tomorrow morning airport to DHA Phase 5"), { pickup: "airport", destination: "DHA Phase 5", pattern: "short_from_to" });
 });
+test("keeps abbreviated locations literal and captures phases", () => {
+  assert.deepEqual(extractTripLocations("LGU to Gulberg"), { pickup: "LGU", destination: "Gulberg", pattern: "short_from_to" });
+  assert.deepEqual(extractTripLocations("LGU to Gulberg 3"), { pickup: "LGU", destination: "Gulberg 3", pattern: "short_from_to" });
+});
+test("marks a rejected stale destination instead of parsing it as a new destination", () => {
+  assert.deepEqual(extractTripLocations("Not DHA, from LGU"), { pickup: "LGU", destination: null, pattern: "reject_destination_change_pickup", rejected: "DHA" });
+  assert.deepEqual(extractTripLocations("From Gulberg to Askari"), { pickup: "Gulberg", destination: "Askari", pattern: "from_to" });
+});
 test("different districts do not become same-city merely because they share a country", async () => {
   const result = await resolveTripForAssistant({
     message: "from Karachi to Lahore",

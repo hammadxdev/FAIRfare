@@ -263,14 +263,31 @@ test("removes case-insensitive duplicate mandatory headers while preserving auth
   assert.equal(request.headers["X-Custom"], "kept");
 });
 
-test("normalizes Bykea mstr estimates by service code without inventing category names", () => {
+test("normalizes Bykea mstr estimates with configured service mappings and preserves metadata", () => {
   const result = normalizeBykeaFareResponse(fixtures.sanitizedData);
   assert.equal(result.status, "available");
   assert.deepEqual(result.estimates.map((item) => [item.service_code, item.fare]), [[23, 196], [70, 336], [44, 742], [45, 643], [48, 1125]]);
   assert.deepEqual(result.estimates.map((item) => item.displayFare), ["Est: 196 PKR", "Est: 336 PKR", "Est: 742 PKR", "Est: 643 PKR", "Est: 1125 PKR"]);
   assert.deepEqual(result.estimates.map((item) => item.currency_code), ["PKR", "PKR", "PKR", "PKR", "PKR"]);
-  assert.deepEqual(result.estimates.map((item) => item.categoryName), [null, null, null, null, null]);
+  assert.deepEqual(result.estimates.map((item) => item.categoryName), ["Bike", "Rickshaw", "Car AC", "Car", "Car Premium"]);
+  assert.deepEqual(result.estimates.map((item) => item.vehicleCategory), ["bike", "rickshaw", "car", "car", "car"]);
+  assert.deepEqual(result.estimates.map((item) => item.serviceTier), ["standard", "standard", "standard", "standard", "premium"]);
+  assert.deepEqual(result.estimates[0].bidValues, [180, 220]);
+  assert.equal(result.estimates[0].minimumFare, 100);
+  assert.equal(result.estimates[0].fareWithoutSurge, 180);
   assert.equal(result.estimates[0].fare, result.estimates.slice().sort((a, b) => a.fare - b.fare)[0].fare);
+});
+
+test("filters mapped Bykea estimates by requested vehicle type without duplicating variants", () => {
+  const result = normalizeBykeaFareResponse(fixtures.sanitizedData, { vehicleType: "car" });
+  assert.deepEqual(result.estimates.map((item) => item.service_code), [44, 45, 48]);
+  assert.deepEqual(result.estimates.map((item) => item.providerServiceName), ["Car AC", "Car", "Car Premium"]);
+});
+
+test("unmapped Bykea code 47 remains unknown", () => {
+  const result = normalizeBykeaFareResponse({ data: [{ success: true, service_code: 47, currency_code: "PKR", mstr: "Est: 400 PKR" }] });
+  assert.equal(result.estimates[0].vehicleCategory, "unknown");
+  assert.equal(result.estimates[0].providerServiceName, "Service 47");
 });
 
 test("skips unsuccessful or malformed Bykea mstr entries independently", () => {

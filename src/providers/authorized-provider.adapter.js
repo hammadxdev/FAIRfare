@@ -109,6 +109,9 @@ function normalizeLiveQuote(estimate, { currency, currencyMultiplier = 100, requ
     ...(Array.isArray(estimate?.features) ? { features: estimate.features.map((feature) => String(feature)) } : {}),
     ...(estimate?.service_code !== undefined ? { service_code: estimate.service_code } : {}),
     ...(estimate?.currency_code !== undefined ? { currency_code: estimate.currency_code } : {}),
+    ...(estimate?.minimumFare !== undefined ? { minimumFare: estimate.minimumFare } : {}),
+    ...(estimate?.fareWithoutSurge !== undefined ? { fareWithoutSurge: estimate.fareWithoutSurge } : {}),
+    ...(Array.isArray(estimate?.bidValues) ? { bidValues: estimate.bidValues.slice() } : {}),
   };
 }
 

@@ -28,11 +28,13 @@ test("Yango exposes explicit Bike/Rickshaw metadata and keeps generic tariffs un
   assert.equal(normalizeTariff({ id: "comfort", name: "Comfort", price: 400, currency: "PKR" }).serviceTier, "standard");
 });
 
-test("Bykea service codes remain unknown without provider-supplied vehicle metadata", () => {
-  const normalized = normalizeBykeaServiceEntry({ service_code: 23, success: true, mstr: "Est: 196 PKR", currency_code: "PKR" });
-  assert.equal(normalized.vehicleCategory, "unknown");
-  assert.equal(normalized.providerServiceLabel, "Service 23");
-  assert.equal(normalized.providerServiceName, "Service 23");
-  assert.equal(normalized.serviceTier, "unknown");
-  assert.deepEqual(normalized.features, []);
+test("Bykea user-confirmed service mappings preserve variants and unknown codes", () => {
+  const entries = [23, 70, 44, 45, 48].map((service_code) => normalizeBykeaServiceEntry({ service_code, success: true, mstr: "Est: 196 PKR", currency_code: "PKR" }));
+  assert.deepEqual(entries.map((item) => [item.service_code, item.providerServiceName, item.vehicleCategory, item.serviceTier]), [
+    [23, "Bike", "bike", "standard"], [70, "Rickshaw", "rickshaw", "standard"], [44, "Car AC", "car", "standard"], [45, "Car", "car", "standard"], [48, "Car Premium", "car", "premium"],
+  ]);
+  assert.deepEqual(entries[2].features, ["AC"]);
+  const unknown = normalizeBykeaServiceEntry({ service_code: 47, success: true, mstr: "Est: 196 PKR", currency_code: "PKR" });
+  assert.equal(unknown.vehicleCategory, "unknown");
+  assert.equal(unknown.providerServiceName, "Service 47");
 });

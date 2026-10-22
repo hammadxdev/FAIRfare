@@ -5,7 +5,7 @@ const conversations = require("./ai/conversation.service");
 const qualityAwareAssistant = require("./qualityAwareAssistant.service");
 const { buildConversationTripContext, publicTripContext } = require("./tripContext.service");
 const { getPersistedComparisonForUser } = require("./currentComparison.service");
-const { compareFares } = require("./fare.service");
+const { compareFares, isLiveFareResult } = require("./fare.service");
 const { DECISIONS, decideGrounding } = require("./ai/groundingDecision.service");
 const { lookupProviderService, parseServiceQuestion } = require("./ai/serviceIdentityResolver.service");
 const { classifyDomain, outOfScopeReply } = require("./ai/domainPolicy.service");
@@ -109,6 +109,33 @@ function plannerReply(plan, forecast, message) {
   return { type: "trip_plan", status: plan.status, trip: plan, forecast: forecast || null, booking: { created: false } };
 }
 function requestedProviders(message) { const text = String(message || ""); return ["yango", "bykea", "indrive"].filter((name) => new RegExp(`\\b${name}\\b`, "i").test(text)); }
+function fareRoutePayload(route) {
+  if (!route) return null;
+  return {
+    distanceKm: route.distanceKm ?? (Number.isFinite(Number(route.distanceMeters)) ? Number(route.distanceMeters) / 1000 : null),
+    durationMin: route.durationMin ?? (Number.isFinite(Number(route.durationSeconds)) ? Number(route.durationSeconds) / 60 : null),
+    distanceMeters: route.distanceMeters ?? null,
+    durationSeconds: route.durationSeconds ?? null,
+    compareFaresEligible: route.compareFaresEligible,
+    eligibilityReason: route.eligibilityReason || null,
+  };
+}
+function liveComparisonReply(trip, comparison, message) {
+  const language = routeResponseLanguage(message);
+  const pickup = trip.pickup?.name || trip.extracted?.pickup;
+  const destination = trip.destination?.name || trip.extracted?.destination;
+  const distance = trip.route?.distanceMeters == null ? null : `${Math.round(Number(trip.route.distanceMeters) / 100) / 10} km`;
+  const duration = trip.route?.durationSeconds == null ? null : `${Math.round(Number(trip.route.durationSeconds) / 60)} minutes`;
+  const rawQuotes = comparison?.quotes || comparison?.results || [];
+  const quotes = rawQuotes.filter((item) => isLiveFareResult(item));
+  const unavailable = rawQuotes.filter((item) => item && !isLiveFareResult(item));
+  const providerName = (item) => item.providerDisplayName || item.provider?.displayName || item.provider?.name || item.provider || "Provider";
+  const lines = quotes.map((item) => `${providerName(item)}: ${item.fare} ${item.currency || "PKR"}`);
+  const unavailableLines = unavailable.map((item) => `${providerName(item)}: ${item.availabilityReason || item.reason || item.error || "no usable live fare"}`);
+  const intro = language === "roman_urdu" ? `Maine ${pickup} se ${destination} ka verified route dhoond liya${distance && duration ? `: ${distance}, taqriban ${duration}` : ""}.` : `I found your verified route from ${pickup} to ${destination}${distance && duration ? `: ${distance}, about ${duration}` : ""}.`;
+  if (!lines.length) return `${intro}\n\n${language === "roman_urdu" ? "Is request ke liye koi usable live fare nahi mila; main historical ya simulated amount ko live nahi bataunga." : "No usable live fare was returned for this request; I will not present historical or simulated amounts as live fares."}${unavailableLines.length ? `\n${unavailableLines.join("\n")}` : ""}`;
+  return `${intro}\n\n${language === "roman_urdu" ? "Current verified live fares:" : "Current verified live fares:"}\n${lines.join("\n")}${unavailableLines.length ? `\n\n${unavailableLines.join("\n")}` : ""}`;
+}
 async function oneShotFuturePlan({ args, plan, message }) {
   if (!routeResolutionEnabled()) return { status: "PARTIAL", trip: plan, route: null, estimates: [], cheapestTime: null, limitations: ["Verified route resolution is disabled."], booking: { created: false } };
   const resolved = await tripResolver({ message });
@@ -145,7 +172,7 @@ function toolResultReply(intent, result, message) {
 }
 
 async function deterministicToolPath({ intent, args, recent }) {
-  if ((!toolsEnabled() && !["future_fare_plan", "future_fare_follow_up"].includes(intent.intent)) || ["service_identity", "app_help", "follow_up", "ambiguous"].includes(intent.intent)) return null;
+  if ((!toolsEnabled() && !["future_fare_plan", "future_fare_follow_up", "current_trip"].includes(intent.intent)) || ["service_identity", "app_help", "follow_up", "ambiguous"].includes(intent.intent)) return null;
   const context = { userId: args.userId, conversationId: args.conversationId, comparisonId: args.comparisonId || null, explicitComparisonIntent: intent.explicitComparisonIntent === true, liveComparisonEnabled: liveComparisonEnabled(), deadlineAt: Date.now() + 12000 };
   if (["future_fare_plan", "future_fare_follow_up"].includes(intent.intent)) {
     if (!plannerEnabled()) return { reply: "Future trip planning is not enabled for this FareRide environment.", result: null };
@@ -155,6 +182,24 @@ async function deterministicToolPath({ intent, args, recent }) {
     return { reply: result, result: { results: [{ ok: true, name: "plan_trip", result }] } };
   }
   if (["current_trip", "latest_comparison", "provider_status"].includes(intent.intent)) {
+    if (intent.intent === "current_trip" && !args.comparisonId) {
+      const trip = await buildConversationTripContext({ message: args.message, recentMessages: recent, tripResolver });
+      if (trip.status === "RESOLVED") {
+        const routeCall = await executeToolCalls([{ name: "calculate_route", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null } } }], context);
+        const routeResult = routeCall.results.find((item) => item.ok)?.result?.route || trip.route;
+        {
+          const comparisonCall = await executeToolCalls([{ name: "compare_live_fares", arguments: { pickup: { lat: trip.pickup.lat, lng: trip.pickup.lng, placeId: trip.pickup.placeId || null }, dropoff: { lat: trip.destination.lat, lng: trip.destination.lng, placeId: trip.destination.placeId || null }, vehicleType: trip.vehiclePreference || "car", route: fareRoutePayload(routeResult), explicitComparisonIntent: true } }], { ...context, explicitComparisonIntent: true });
+          const comparisonItem = comparisonCall.results.find((item) => item.ok && item.result?.status !== "LIVE_COMPARISON_DISABLED" && Array.isArray(item.result?.results));
+          if (comparisonItem) return { reply: liveComparisonReply({ ...trip, route: routeResult }, comparisonItem.result, args.message), trip, result: { results: [...routeCall.results, ...comparisonCall.results] } };
+          const disabled = comparisonCall.results.find((item) => item.ok && item.result?.status === "LIVE_COMPARISON_DISABLED");
+          const language = routeResponseLanguage(args.message);
+          const reason = disabled ? (language === "roman_urdu" ? "Current live fare comparison disabled hai (FAIRFARE_AI_LIVE_COMPARISON_ENABLED=false)." : "Current live fare comparison is disabled (FAIRFARE_AI_LIVE_COMPARISON_ENABLED=false).") : (language === "roman_urdu" ? "Maine live fares check kiye, lekin koi verified quote available nahi tha." : "I checked current provider fares, but no verified live quote was available.");
+          return { reply: `${routeReply({ ...trip, route: routeResult }, language)}\n\n${reason}`, trip, result: { results: [...routeCall.results, ...comparisonCall.results] } };
+        }
+        return { reply: routeReply({ ...trip, route: routeResult }, routeResponseLanguage(args.message)), trip, result: { results: routeCall.results } };
+      }
+      return { reply: routeDecisionResponse({ trip, decision: DECISIONS.LOCATION_UNRESOLVED, message: args.message }).reply, trip, result: null };
+    }
     const name = intent.intent === "current_trip" ? "get_current_trip" : intent.intent === "latest_comparison" ? "get_latest_comparison" : "get_provider_status";
     const toolArgs = name === "get_current_trip" ? { conversationId: args.conversationId || null } : name === "get_latest_comparison" ? { comparisonId: args.comparisonId || null, includeHistorical: true } : {};
     const result = await executeToolCalls([{ name, arguments: toolArgs }], context);
@@ -201,7 +246,7 @@ async function answer(args) {
       if (structured?.trip && args.userId && args.conversationId) {
         planningPersistence = await savePlanningContext({ userId: args.userId, conversationId: args.conversationId, planningIntent: intent.intent, departureAt: structured.trip.departureAt || null, departureTimezone: structured.trip.timezone || "Asia/Karachi", vehiclePreference: structured.trip.vehicleType || null, providerPreferences: requestedProviders(args.message), forecastSource: structured.estimates?.some((item) => item.sourceType === "forecast") ? "forecast" : "unavailable", forecastModelVersion: structured.estimates?.find((item) => item.modelVersion)?.modelVersion || null });
       }
-      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence } };
+      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence } };
     }
     if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent } };
     if (toolsEnabled() && String(process.env.FAIRFARE_AI_MODEL_TOOLS_ENABLED || "false").toLowerCase() === "true") {
@@ -281,4 +326,4 @@ function routeDecisionResponse({ trip, decision, message, hadPreviousComparison 
   return { reply: route && decision === DECISIONS.FARES_UNAVAILABLE ? `${route}\n\n${fallback}` : fallback, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", groundingDecision: decision, context: { comparisonUsed: false, comparisonFreshness: null, predictionAvailable: false, preferencesUsed: true, historyUsed: false, historyAvailable: false, groundingDecision: decision, trip: trip ? publicTripContext(trip) : null } };
 }
 
-module.exports = { ...base, answer, oneShotFuturePlan, routeReply, routeResponseLanguage, serviceIdentityReply, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse };
+module.exports = { ...base, answer, oneShotFuturePlan, routeReply, routeResponseLanguage, serviceIdentityReply, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse, fareRoutePayload };

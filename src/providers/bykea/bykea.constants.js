@@ -2,6 +2,13 @@ const DEFAULT_CURRENCY = "PKR";
 const DEFAULT_CURRENCY_MULTIPLIER = 1;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_FARE_ENDPOINT = "/talos/api/v3/users/estimation/fare";
+const DEFAULT_SERVICE_MAPPINGS = Object.freeze({
+  "23": { label: "Bike", vehicleCategory: "bike", serviceTier: "standard", features: [] },
+  "70": { label: "Rickshaw", vehicleCategory: "rickshaw", serviceTier: "standard", features: [] },
+  "44": { label: "Car AC", vehicleCategory: "car", serviceTier: "standard", features: ["AC"] },
+  "45": { label: "Car", vehicleCategory: "car", serviceTier: "standard", features: [] },
+  "48": { label: "Car Premium", vehicleCategory: "car", serviceTier: "premium", features: [] },
+});
 
 function booleanValue(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
@@ -33,6 +40,14 @@ function serviceCodes(value) {
     .map((item) => item.trim())
     .filter(Boolean);
   return [...new Set(codes)];
+}
+
+function serviceMappings(value) {
+  if (!value) return DEFAULT_SERVICE_MAPPINGS;
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? { ...DEFAULT_SERVICE_MAPPINGS, ...parsed } : DEFAULT_SERVICE_MAPPINGS;
+  } catch { return DEFAULT_SERVICE_MAPPINGS; }
 }
 
 function validEndpoint(value) {
@@ -106,6 +121,7 @@ function getConfig(env = process.env) {
     appVersion,
     appLanguage,
     serviceCodes: configuredServiceCodes,
+    serviceMappings: serviceMappings(env.BYKEA_SERVICE_MAPPINGS),
     requestType,
     vehicleType,
     appUserType,
@@ -129,4 +145,5 @@ module.exports = {
   DEFAULT_FARE_ENDPOINT,
   getConfig,
   normalizedMode,
+  DEFAULT_SERVICE_MAPPINGS,
 };

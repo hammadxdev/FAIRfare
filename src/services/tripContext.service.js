@@ -23,6 +23,9 @@ function detectIntent(message) {
 }
 
 function completeTripFromHistory(current, recentMessages) {
+  // An explicit rejection means the old endpoint is no longer valid. Do not
+  // silently complete this correction with stale conversation state.
+  if (current?.rejected) return null;
   const users = (Array.isArray(recentMessages) ? recentMessages : [])
     .filter((item) => item?.role === "USER")
     .map((item) => extractTripLocations(item.content));
@@ -41,6 +44,9 @@ async function buildConversationTripContext({ message, recentMessages = [], trip
   const vehiclePreference = detectVehiclePreference(message);
   const intent = detectIntent(message);
   if (!complete || typeof tripResolver !== "function") {
+    if (current.rejected && current.pickup) {
+      return { status: "UNRESOLVED", extracted: current, unresolved: "destination", vehiclePreference, intent, pendingClarification: "destination", source: "current_message" };
+    }
     return { status: "NO_TRIP", extracted: current, vehiclePreference, intent, pendingClarification: null, source: "none" };
   }
   const trip = await tripResolver({ message: `from ${complete.pickup} to ${complete.destination}` });

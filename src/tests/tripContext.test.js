@@ -42,6 +42,20 @@ test("natural correction phrases preserve the unchanged endpoint", async () => {
   assert.equal(pickupChange.extracted.pickup, "LGU");
   assert.equal(pickupChange.extracted.destination, "Punjab Mall");
 });
+test("a rejected destination does not leak from the previous trip", async () => {
+  const result = await buildConversationTripContext({ message: "Not DHA, from LGU", recentMessages: [{ role: "USER", content: "from airport to DHA" }], tripResolver: resolver });
+  assert.equal(result.status, "UNRESOLVED");
+  assert.equal(result.unresolved, "destination");
+  assert.equal(result.extracted.pickup, "LGU");
+  assert.equal(result.extracted.destination, null);
+  assert.equal(result.extracted.rejected, "DHA");
+});
+test("a complete new route replaces the previous trip", async () => {
+  const result = await buildConversationTripContext({ message: "From Gulberg to Askari", recentMessages: [{ role: "USER", content: "from airport to DHA" }], tripResolver: resolver });
+  assert.equal(result.source, "current_message");
+  assert.equal(result.extracted.pickup, "Gulberg");
+  assert.equal(result.extracted.destination, "Askari");
+});
 
 test("a new conversation does not inherit a previous conversation trip", async () => {
   const result = await buildConversationTripContext({ message: "Bike pe kitna hoga?", recentMessages: [], tripResolver: resolver });
