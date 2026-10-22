@@ -170,6 +170,18 @@ function toolResultReply(intent, result, message) {
   }
   return null;
 }
+function runtimeDiagnostics(intent, toolExecution, trip) {
+  const results = Array.isArray(toolExecution?.results) ? toolExecution.results : [];
+  return {
+    intentType: intent?.intent || null,
+    contextMode: trip?.source === "current_message" ? "new" : trip?.source === "conversation_history" ? "follow_up" : "unknown",
+    toolsSelected: results.map((item) => item.name).filter(Boolean),
+    toolExecution: results.map((item) => ({ name: item.name || null, success: item.ok === true, error: item.ok === true ? null : item.error?.code || "TOOL_FAILED" })),
+    disambiguationReason: trip?.status === "UNRESOLVED" ? trip.unresolved || "location" : null,
+    liveComparison: results.some((item) => item.name === "compare_live_fares") ? (results.some((item) => item.result?.status === "LIVE_COMPARISON_DISABLED") ? "disabled" : "attempted") : "not_requested",
+    responseProvenance: results.some((item) => item.result?.results?.some?.((quote) => quote?.dataSource === "REAL" || quote?.sourceType === "live")) ? "verified_live" : trip?.status === "RESOLVED" ? "verified_route" : "unresolved",
+  };
+}
 
 async function deterministicToolPath({ intent, args, recent }) {
   if ((!toolsEnabled() && !["future_fare_plan", "future_fare_follow_up", "current_trip"].includes(intent.intent)) || ["service_identity", "app_help", "follow_up", "ambiguous"].includes(intent.intent)) return null;
@@ -246,9 +258,9 @@ async function answer(args) {
       if (structured?.trip && args.userId && args.conversationId) {
         planningPersistence = await savePlanningContext({ userId: args.userId, conversationId: args.conversationId, planningIntent: intent.intent, departureAt: structured.trip.departureAt || null, departureTimezone: structured.trip.timezone || "Asia/Karachi", vehiclePreference: structured.trip.vehicleType || null, providerPreferences: requestedProviders(args.message), forecastSource: structured.estimates?.some((item) => item.sourceType === "forecast") ? "forecast" : "unavailable", forecastModelVersion: structured.estimates?.find((item) => item.modelVersion)?.modelVersion || null });
       }
-      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence } };
+      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
     }
-    if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent } };
+    if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
     if (toolsEnabled() && String(process.env.FAIRFARE_AI_MODEL_TOOLS_ENABLED || "false").toLowerCase() === "true") {
       const agent = await runBoundedToolAgent({ llmClient: defaultLlmClient, message: args.message, context: await base.buildGroundingContext({ userId: args.userId, message: args.message, comparisonId: args.comparisonId, conversationId: args.conversationId }), serverContext: { userId: args.userId, conversationId: args.conversationId, comparisonId: args.comparisonId, explicitComparisonIntent: intent.explicitComparisonIntent === true, liveComparisonEnabled: liveComparisonEnabled(), deadlineAt: Date.now() + 12000 }, tools: listTools() });
       if (agent.handled && agent.result?.text) return { reply: agent.result.text, modelId: agent.result.modelId || null, provider: agent.result.provider || null, fallbackUsed: Boolean(agent.result.fallbackUsed), available: true, status: "AVAILABLE", toolExecution: agent.toolResults || null, context: { toolIntent: intent.intent } };
@@ -317,7 +329,14 @@ function withGroundingDecision(result, grounding) { return { ...result, comparis
 function routeDecisionResponse({ trip, decision, message, hadPreviousComparison = false }) {
   const language = routeResponseLanguage(message);
   const route = trip?.pickup && trip?.destination ? routeReply(trip, language) : null;
-  const missing = trip?.unresolved === "destination" ? (language === "roman_urdu" ? "DHA ka phase ya destination address batayein." : "Which DHA phase or destination address are you going to?") : trip?.unresolved === "pickup" ? (language === "roman_urdu" ? "Pickup airport ka naam aur city batayein." : "Which airport and city should I use for pickup?") : (language === "roman_urdu" ? "Aap kis shehar mein travel kar rahe hain?" : "Which city are you travelling in?");
+  const unresolvedField = trip?.unresolved === "pickup" ? "pickup" : trip?.unresolved === "destination" ? "destination" : "location";
+  const missing = language === "roman_urdu"
+    ? unresolvedField === "pickup" ? "Kaunsi pickup location ya city use karun?"
+      : unresolvedField === "destination" ? "Kaunsi destination location ya city use karun?"
+        : "Aap kis location ya shehar mein travel kar rahe hain?"
+    : unresolvedField === "pickup" ? "Which pickup location or city do you mean?"
+      : unresolvedField === "destination" ? "Which destination location or city do you mean?"
+        : "Which location or city do you mean?";
   const fallback = decision === DECISIONS.LOCATION_UNRESOLVED
     ? missing
     : hadPreviousComparison

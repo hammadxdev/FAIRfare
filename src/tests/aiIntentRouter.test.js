@@ -7,6 +7,8 @@ test("recognizes service, route and comparison intents", () => {
   assert.equal(routeIntent("DHA se airport jana hai").intent, "current_trip");
   assert.equal(routeIntent("DHA se airport ki sabse sasti ride batao").intent, "cheapest_ride");
   assert.equal(routeIntent("route distance kitni hai").intent, "route_information");
+  assert.equal(routeIntent("compare fares for this route").intent, "compare_fares");
+  assert.equal(routeIntent("Why is Bykea unavailable?").intent, "provider_status");
 });
 
 test("server derives explicit comparison intent from user text, not model arguments", () => {

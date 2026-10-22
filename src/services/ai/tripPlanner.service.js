@@ -17,11 +17,19 @@ function resolveDepartureAt(text, requestTimestamp = new Date(), timezone = DEFA
 }
 function extractPlanningFields(message, { requestTimestamp = new Date(), timezone = DEFAULT_TIMEZONE, context = {} } = {}) {
   const text = String(message || "").trim();
-  const route = text.match(/(.+?)\s+(?:from|se)\s+(.+?)\s+(?:to|tak)\b/i) || text.match(/(.+?)\s+se\s+(.+?)\s+(?:jana|jaana|jane)\b/i);
-  const pickup = route ? route[1].replace(/\b(?:kal|tomorrow|aaj|today|subah|morning|shaam|evening|raat|night)\b/ig, "").replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)?\b/ig, "").trim() : context.pickup || null;
-  const destination = route ? route[2].trim() : context.destination || null;
+  const route = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:[?.!,]|$)/i) || text.match(/(.+)\s+se\s+(.+?)\s+jana(?:\s+hai)?/i) || text.match(/\bto\s+(.+?)\s+from\s+(.+?)(?:[?.!,]|$)/i);
+  const reversed = Boolean(route && /^to\b/i.test(route[0]));
+  const pickupRaw = route ? (reversed ? route[2] : route[1]) : context.pickup || null;
+  const stripTemporal = (value) => String(value || "").replace(/\s+(?:at|on)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)?\b.*$/i, "").replace(/\s+(?:kal|tomorrow|aaj|today|subah|morning|shaam|evening|raat|night)\b.*$/i, "").trim();
+  const destination = route ? stripTemporal(reversed ? route[1] : route[2]) : context.destination || null;
+  const pickup = pickupRaw ? String(pickupRaw).replace(/\b(?:kal|tomorrow|aaj|today|subah|morning|shaam|evening|raat|night)\b/ig, "").replace(/\b\d{1,2}(?::\d{2})?\s*(?:am|pm|baje)\b/ig, "").trim() : null;
   const vehicleType = /\b(?:bike|motorbike|car|rickshaw|gaari|gari)\b/i.exec(text)?.[0]?.toLowerCase() || context.vehicleType || null;
   const departure = resolveDepartureAt(text, requestTimestamp, timezone);
+  if (!departure.value && route && /\b\d{1,2}\s+baje\b/i.test(text)) {
+    const impliedMeridiem = /\b(?:shaam|evening|raat|night)\b/i.test(text) ? "pm" : "am";
+    const implied = resolveDepartureAt(text.replace(/\bbaje\b/ig, impliedMeridiem), requestTimestamp, timezone);
+    if (implied.value) departure.value = implied.value;
+  }
   const hasFutureCue = /\b(?:kal|tomorrow|aaj|today|subah|morning|shaam|evening|raat|night|later|baad)\b/i.test(text);
   const missingFields = []; if (!pickup) missingFields.push("pickup"); if (!destination) missingFields.push("destination"); if (!departure.value && (hasFutureCue || /\b(?:fare|price|kiraya)\b/i.test(text))) missingFields.push("departureTime");
   return { pickup, destination, city: /\b(lahore|karachi|islamabad|rawalpindi|multan|peshawar|quetta|faisalabad)\b/i.exec(text)?.[1] || context.city || null, timezone, departureAt: departure.value, vehicleType, budget: null, oneWay: true, missingFields, status: missingFields.length ? "NEEDS_CLARIFICATION" : "READY", source: "parsed_text" };

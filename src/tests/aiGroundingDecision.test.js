@@ -59,3 +59,22 @@ test("route clarification response is deterministic and contains no prices", () 
   assert.equal(result.groundingDecision, DECISIONS.LOCATION_UNRESOLVED);
   assert.doesNotMatch(result.reply, /PKR|Rs\.?\s*\d+|\b\d+\s*minutes?/i);
 });
+
+test("unresolved pickup clarification is derived from the field, never hard-coded as airport", () => {
+  const result = routeDecisionResponse({ trip: { status: "UNRESOLVED", unresolved: "pickup" }, decision: DECISIONS.LOCATION_UNRESOLVED, message: "from Gulberg to Lari Adda" });
+  assert.match(result.reply, /pickup location or city/i);
+  assert.doesNotMatch(result.reply, /airport|DHA/i);
+});
+
+test("a complete current route does not inherit a previous airport route", async () => {
+  const { buildConversationTripContext } = require("../services/tripContext.service");
+  const calls = [];
+  const trip = await buildConversationTripContext({
+    message: "I wanna go from Gulberg to Lari Adda",
+    recentMessages: [{ role: "USER", content: "from airport to DHA" }],
+    tripResolver: async ({ message }) => { calls.push(message); return { status: "RESOLVED", extracted: extractTripLocations(message), pickup: { name: "Gulberg", lat: 1, lng: 1 }, destination: { name: "Lari Adda", lat: 2, lng: 2 }, route: { distanceMeters: 1000, durationSeconds: 100 } }; },
+  });
+  assert.equal(calls[0], "from Gulberg to Lari Adda");
+  assert.equal(trip.extracted.pickup, "Gulberg");
+  assert.equal(trip.extracted.destination, "Lari Adda");
+});
