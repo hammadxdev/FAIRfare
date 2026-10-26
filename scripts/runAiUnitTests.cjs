@@ -9,6 +9,7 @@ const files = [
   "src/tests/aiToolSchemas.test.js",
   "src/tests/aiToolAuthorization.test.js",
   "src/tests/aiToolExecutor.test.js",
+  "src/tests/vehicleType.test.js",
   "src/tests/aiTripPlannerAuthorization.test.js",
   "src/tests/serviceIdentityResolver.test.js",
   "src/tests/tripPlanner.test.js",
