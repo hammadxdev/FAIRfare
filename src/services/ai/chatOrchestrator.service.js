@@ -11,7 +11,7 @@ const enabled = (name) => String(process.env[name] || "false").toLowerCase() ===
 const TOOL_DESCRIPTIONS = {
   search_locations: "For every named stop in a route request, call this before routing (pickup, destination, and each intermediate stop). Search the user's exact place wording, including Roman Urdu spellings. If a stop has multiple plausible candidates, do not choose coordinates: ask the user to clarify.",
   calculate_route: "Calculate one verified road leg between two coordinates returned by search_locations in this request. Representative points returned by search_locations may be used for broad areas only when the result is relevant and credible; the response must be labeled approximate, never exact pickup. For a multi-stop request, calculate each consecutive leg in order (A→B, then B→C). Never invent coordinates, distance, duration, fare, or live driver availability; these are road estimates, not driver pickup times.",
-  compare_live_fares: "Request current provider quotes only when the user asks for a fare comparison, after calculate_route succeeds. Set explicitComparisonIntent only for such a request. A client message id is required for idempotent comparison; if the backend rejects this call, explain that the user should retry with a client message id.",
+  compare_live_fares: "Request current provider quotes only when the user asks for a fare comparison and both pickup and destination have been verified by search_locations. Set explicitComparisonIntent only for such a request. A client message id is required for idempotent comparison; if the backend rejects this call, explain that the user should retry with a client message id.",
   get_latest_comparison: "Read an authorized stored comparison. Stored quotes are observations, not newly fetched live prices.",
   get_provider_status: "Read integration configuration and operational status. This does not verify drivers or ride availability.",
   get_nearby_observation_context: "Read aggregate historical nearby observations for a searched location. Never interpret this as live driver availability or pickup ETA.",
@@ -26,6 +26,27 @@ function hasUngroundedNumericRouteClaim(text) {
   const value = String(text || "");
   return /\b(?:distance|route|travel|drive|duration|time|km|kilometers?|meters?|minutes?)\b/i.test(value)
     && /\b\d+(?:\.\d+)?\s*(?:km|kilometers?|meters?|minutes?|mins?|hours?)\b/i.test(value);
+}
+
+function unavailableFareReply(message, agent = {}) {
+  const romanUrdu = responseLanguage(message) === "roman_urdu";
+  const results = Array.isArray(agent.toolResults) ? agent.toolResults : [];
+  const comparison = results.find((item) => item?.name === "compare_live_fares");
+  const code = comparison?.result?.status === "LIVE_COMPARISON_DISABLED"
+    ? "LIVE_COMPARISON_DISABLED"
+    : comparison?.error?.code || agent.errorCode || results.find((item) => item?.error?.code)?.error?.code || "UNAVAILABLE";
+  if (code === "LIVE_COMPARISON_DISABLED") return romanUrdu
+    ? "Live fare comparison abhi disabled hai. FAIRFARE_AI_LIVE_COMPARISON_ENABLED=true karne ke liye approval aur provider configuration darkar hai."
+    : "Live fare comparison is currently disabled. Approval and provider configuration are required to enable FAIRFARE_AI_LIVE_COMPARISON_ENABLED=true.";
+  if (["TOOL_TIMEOUT", "LLM_TIMEOUT", "REQUEST_DEADLINE_EXCEEDED", "PROVIDER_TIMEOUT"].includes(code)) return romanUrdu
+    ? "Abhi updated live fares retrieve nahi ho rahe. Thori dair baad dobara try karein."
+    : "Updated live fares could not be retrieved right now. Please try again shortly.";
+  if (["LOCATION_LOOKUP_FAILED", "LOCATION_NOT_VERIFIED", "LOCATION_AMBIGUOUS", "INVALID_LOCATION_ARGUMENTS"].includes(code)) return romanUrdu
+    ? "Pickup ya destination ko reliably verify nahi kar saka. Dono locations dobara bhej dein."
+    : "I could not reliably verify the pickup or destination. Please send both locations again.";
+  return romanUrdu
+    ? "Abhi is route ke updated live fares available nahi hain. Main koi fare invent nahi karunga; thori dair baad dobara try karein."
+    : "Updated live fares are not available for this route right now. I will not invent a fare; please try again shortly.";
 }
 
 async function answer(args, dependencies = {}) {
@@ -98,14 +119,15 @@ async function answer(args, dependencies = {}) {
   context.comparisonFreshness = comparison ? "stored_observation" : null;
   const toolsEnabled = enabled("FAIRFARE_AI_TOOL_AGENT_ENABLED") && enabled("FAIRFARE_AI_MODEL_TOOLS_ENABLED");
   const liveEnabled = enabled("FAIRFARE_AI_LIVE_COMPARISON_ENABLED");
-  const tools = toolsEnabled ? listTools().filter((tool) => {
-    if (tool.name === "plan_trip") return false; // Semantic planning belongs to Groq.
-    if (["search_locations", "calculate_route"].includes(tool.name)) return enabled("FAIRFARE_AI_ROUTE_RESOLUTION_ENABLED");
-    if (tool.name === "compare_live_fares") return liveEnabled;
-    if (tool.name === "forecast_fare") return enabled("FAIRFARE_AI_HISTORICAL_FORECAST_ENABLED");
-    return true;
-  }).map((tool) => ({ name: tool.name, schema: tool.schema, description: TOOL_DESCRIPTIONS[tool.name] || tool.name.replaceAll("_", " ") })) : [];
-  const routeToolAuthorized = tools.some((tool) => tool.name === "search_locations") && enabled("FAIRFARE_AI_ROUTE_RESOLUTION_ENABLED");
+  // Native Gemini function calling intentionally has a two-tool surface. Keep
+  // the complete registry available to the other AI flows and services.
+  const nativeToolNames = new Set(["search_locations", "compare_live_fares"]);
+  const tools = toolsEnabled ? listTools().filter((tool) => nativeToolNames.has(tool.name)).map((tool) => ({
+    name: tool.name,
+    schema: tool.schema,
+    description: TOOL_DESCRIPTIONS[tool.name] || tool.name.replaceAll("_", " "),
+  })) : [];
+  const routeToolAuthorized = tools.some((tool) => tool.name === "search_locations");
   // The model selects tools; flags and authorization only constrain exposure.
   const toolChoice = "auto";
   context.toolChoiceMode = toolChoice;
@@ -124,7 +146,15 @@ async function answer(args, dependencies = {}) {
       explicitComparisonIntent: liveEnabled && Boolean(args.requestRunId),
     },
   });
-  if (!agent.result?.text) return unavailable(agent.errorCode || "LLM_PROVIDER_ERROR", agent);
+  if (!agent.result?.text) {
+    const reply = unavailableFareReply(args.message, agent);
+    return {
+      reply, modelId: agent.result?.modelId || null, provider: agent.result?.provider || null,
+      fallbackUsed: true, available: true, status: "AVAILABLE", comparisonId: null,
+      toolExecution: { results: agent.toolResults || [] },
+      context: { ...context, responseSource: "safe_fallback", modelSelectedTools: agent.modelSelectedTools || [], modelRequests: agent.modelRequests || 0, fallbackReason: agent.errorCode || "LLM_PROVIDER_ERROR" },
+    };
+  }
   const routeToolSucceeded = agent.toolResults.some((item) => item.name === "calculate_route" && item.ok === true && item.result?.status === "OK" && item.result?.sourceType === "verified_road_route");
   const directNumericClaim = !routeToolSucceeded && hasUngroundedNumericRouteClaim(agent.result.text);
   let reply = directNumericClaim

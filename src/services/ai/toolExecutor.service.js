@@ -85,11 +85,12 @@ async function executeToolCall(call, context = {}, state = {}) {
       if (name === "compare_live_fares") {
         if (context.liveComparisonEnabled !== true || String(process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED).toLowerCase() !== "true") return denied("LIVE_COMPARISON_DISABLED");
         if (!context.requestRunId) return denied("IDEMPOTENCY_REQUIRED");
-        const trip = state.resolvedTrip;
-        if (!trip || pointKey(trip.pickup) !== pointKey(pickup) || pointKey(trip.destination) !== pointKey(dropoff)) return denied("VERIFIED_ROUTE_REQUIRED");
-        if (trip.route.compareFaresEligible === false) return denied("ROUTE_NOT_ELIGIBLE");
-        // Model-supplied distances and durations are never trusted.
-        args.route = trip.route;
+        // Model-supplied distances and durations are never trusted. The
+        // existing fare service computes its bounded fallback route when no
+        // verified road-route result is available.
+        if (state.resolvedTrip && (pointKey(state.resolvedTrip.pickup) !== pointKey(pickup) || pointKey(state.resolvedTrip.destination) !== pointKey(dropoff))) return denied("VERIFIED_ROUTE_REQUIRED");
+        if (state.resolvedTrip?.route?.compareFaresEligible === false) return denied("ROUTE_NOT_ELIGIBLE");
+        args.route = state.resolvedTrip?.route || null;
       }
     }
   }
