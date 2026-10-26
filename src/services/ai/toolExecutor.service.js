@@ -58,6 +58,13 @@ function normalizeAgentToolCall(call, roundNumber, index) {
   return { normalized, missing, argumentError, generatedId: call?.id === undefined || call?.id === null, rawShape: { keys: Object.keys(call || {}), idPresent: call?.id !== undefined && call?.id !== null, idType: typeof call?.id, argumentType: typeof rawArguments, argumentKeys: argumentsValue && typeof argumentsValue === "object" && !Array.isArray(argumentsValue) ? Object.keys(argumentsValue).slice(0, 20) : [] } };
 }
 
+function recordVerifiedLeg(state, { pickup, destination, route, city }) {
+  const leg = { pickup, destination, route: { distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds, distanceKm: route.distanceMeters / 1000, durationMin: route.durationSeconds / 60, compareFaresEligible: route.compareFaresEligible !== false } };
+  const legs = [...(state.resolvedTrip?.legs || []), leg];
+  const totals = legs.reduce((sum, item) => ({ distanceMeters: sum.distanceMeters + item.route.distanceMeters, durationSeconds: sum.durationSeconds + item.route.durationSeconds }), { distanceMeters: 0, durationSeconds: 0 });
+  state.resolvedTrip = { status: "RESOLVED", pickup: legs[0].pickup, destination: legs.at(-1).destination, stops: legs.flatMap((item, index) => index === 0 ? [item.pickup, item.destination] : [item.destination]), legs, city, route: { ...totals, distanceKm: totals.distanceMeters / 1000, durationMin: totals.durationSeconds / 60, compareFaresEligible: legs.every((item) => item.route.compareFaresEligible !== false) } };
+}
+
 async function executeToolCall(call, context = {}, state = {}) {
   const name = String(call?.name || "");
   const denied = (code) => ({ ok: false, name, executed: false, error: { code } });
@@ -90,6 +97,15 @@ async function executeToolCall(call, context = {}, state = {}) {
         // verified road-route result is available.
         if (state.resolvedTrip && (pointKey(state.resolvedTrip.pickup) !== pointKey(pickup) || pointKey(state.resolvedTrip.destination) !== pointKey(dropoff))) return denied("VERIFIED_ROUTE_REQUIRED");
         if (state.resolvedTrip?.route?.compareFaresEligible === false) return denied("ROUTE_NOT_ELIGIBLE");
+        if (!state.resolvedTrip) {
+          // The model may go straight to the fare tool; verify the road route here so
+          // fares and the reported distance/duration never rest on a straight-line guess.
+          try {
+            const routeTool = getTool("calculate_route");
+            const routed = sanitize(await withTimeout(Promise.resolve().then(() => routeTool.execute({ pickup: args.pickup, dropoff: args.dropoff }, context)), Math.min(routeTool.timeoutMs, remainingMs(context))));
+            if (routed?.status === "OK" && routed.route?.distanceMeters > 0 && routed.route?.durationSeconds > 0) recordVerifiedLeg(state, { pickup: args.pickup, destination: args.dropoff, route: routed.route, city: pickup.city });
+          } catch { /* fall through: fare service uses its bounded fallback route */ }
+        }
         args.route = state.resolvedTrip?.route || null;
       }
     }
@@ -141,13 +157,13 @@ async function executeToolCall(call, context = {}, state = {}) {
     if (context.nativeToolAgent && name === "calculate_route" && result?.status === "OK") {
       const route = result.route;
       if (!(route?.distanceMeters > 0 && route?.durationSeconds > 0)) return { ...denied("INVALID_ROUTE_RESULT"), executed: true };
-      const pickup = state.locations.get(`${args.pickup.lat},${args.pickup.lng}`);
-      const leg = { pickup: args.pickup, destination: args.dropoff, route: { distanceMeters: route.distanceMeters, durationSeconds: route.durationSeconds, distanceKm: route.distanceMeters / 1000, durationMin: route.durationSeconds / 60, compareFaresEligible: route.compareFaresEligible !== false } };
-      const legs = [...(state.resolvedTrip?.legs || []), leg];
-      const totals = legs.reduce((sum, item) => ({ distanceMeters: sum.distanceMeters + item.route.distanceMeters, durationSeconds: sum.durationSeconds + item.route.durationSeconds }), { distanceMeters: 0, durationSeconds: 0 });
-      state.resolvedTrip = { status: "RESOLVED", pickup: legs[0].pickup, destination: legs.at(-1).destination, stops: legs.flatMap((item, index) => index === 0 ? [item.pickup, item.destination] : [item.destination]), legs, city: pickup.city, route: { ...totals, distanceKm: totals.distanceMeters / 1000, durationMin: totals.durationSeconds / 60, compareFaresEligible: legs.every((item) => item.route.compareFaresEligible !== false) } };
+      recordVerifiedLeg(state, { pickup: args.pickup, destination: args.dropoff, route, city: state.locations.get(`${args.pickup.lat},${args.pickup.lng}`).city });
       result.sourceType = "verified_road_route";
       result.pickupEtaAvailable = false;
+    }
+    if (context.nativeToolAgent && name === "compare_live_fares" && result?.status === "OK" && state.resolvedTrip?.route) {
+      const { distanceMeters, durationSeconds, distanceKm, durationMin } = state.resolvedTrip.route;
+      result.route = { distanceMeters, durationSeconds, distanceKm, durationMin, sourceType: "verified_road_route" };
     }
     const completed = { ok: true, name, executed: true, result, executionDiagnostics: { queueWaitMs: 0, executionMs: Date.now() - toolStartedAt, elapsedMs: Date.now() - toolStartedAt, upstreamHttpDurationMs: result?.diagnostics?.upstreamHttpDurationMs ?? null, upstreamHttpStatus: result?.diagnostics?.upstreamHttpStatus ?? null, timeoutOwner: null, abortCategory: null, cache: result?.diagnostics?.cache || "miss", retryCount: result?.diagnostics?.retryCount ?? 0, timeoutCategory: null, resultBytes: Buffer.byteLength(JSON.stringify(result || {}), "utf8") } };
     if (name === "search_locations") state.locationSearchCache.set(stable({ query: args.query, cityHint: args.cityHint || null }), completed);

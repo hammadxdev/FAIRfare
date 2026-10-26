@@ -44,6 +44,8 @@ function currentRealQuote(result, now = Date.now()) {
     category: result.vehicleCategory || result.quotes?.[0]?.vehicleCategory || result.quotes?.[0]?.categoryName || null,
     fare,
     currency: result.currency || result.quotes?.[0]?.currency || "PKR",
+    // For inDrive this is inDrive's own route, which can differ slightly from our road route.
+    ...(Number(result.quotes?.[0]?.distanceMeters) > 0 && Number(result.quotes?.[0]?.tripDurationSeconds) > 0 ? { providerRoute: { distanceMeters: Number(result.quotes[0].distanceMeters), durationSeconds: Number(result.quotes[0].tripDurationSeconds) } } : {}),
     source: "REAL",
     freshness: "current",
     ...(Number.isFinite(expiresAt) ? { expiresAt: new Date(expiresAt).toISOString() } : {}),

@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { TOKEN_RENEW_URL, PRICING_URL, LOCATIONS_URL } = require("./indrive.constants");
+const { TOKEN_RENEW_URL, PRICING_URL, LOCATIONS_URL, ROUTE_URL } = require("./indrive.constants");
 const { IndriveError, CODES } = require("./indrive.errors");
 const { recordProviderApiPayload } = require("../../services/providerApiPayloadStorage.service");
 
@@ -136,6 +136,27 @@ function createIndriveClient({ config, fetchImpl = global.fetch, logger = consol
         headers: { ...headers(config, accessToken), "X-Local-Req-Id": crypto.randomUUID() },
         body: JSON.stringify(requestPayload),
       }, config, fetchImpl, record("pricing", requestPayload));
+    },
+    // inDrive's own geo service returns the route distance/duration that the
+    // app itself feeds into pricing (request_source below mirrors the app).
+    async getRoute(accessToken, { pickup, destination } = {}) {
+      if (!accessToken) throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive access token is required");
+      const url = new URL(config.routeUrl || ROUTE_URL);
+      url.search = new URLSearchParams({ locale: config.language || "en_US", cid: String(config.cityId), requester: "mobile" }).toString();
+      const body = new URLSearchParams({
+        route: JSON.stringify([
+          { latitude: Number(pickup.latitude), longitude: Number(pickup.longitude) },
+          { latitude: Number(destination.latitude), longitude: Number(destination.longitude) },
+        ]),
+        order_id: "",
+        request_source: "client_order_form_rec_price_data_from_geo",
+        heading: "0.0",
+      });
+      return requestJson(url.toString(), {
+        method: "POST",
+        headers: { ...headers(config, accessToken), "Content-Type": "application/x-www-form-urlencoded", "X-Local-Req-Id": crypto.randomUUID() },
+        body: body.toString(),
+      }, config, fetchImpl);
     },
     async getAutocomplete(accessToken, request) {
       if (!accessToken) throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive access token is required");

@@ -129,3 +129,39 @@ test("forecast tool fails closed without trusted route, enough evidence, or data
   assert.equal(unavailable.result.reason, "QUERY_FAILED");
   assert.equal(unavailable.result.sourceType, "unavailable");
 });
+
+test("native compare_live_fares verifies the road route itself and returns distance, duration and provider route", async () => {
+  const previous = process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED;
+  process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED = "true";
+  try {
+    let routedWith;
+    let comparedWith;
+    registry.setToolDependenciesForTests({
+      maps: { computeRoute: async (input) => { routedWith = input; return { distanceMeters: 8980, durationSeconds: 933 }; } },
+      compareFares: async (input) => {
+        comparedWith = input;
+        return { comparisonId: "cmp-1", results: [{ dataSource: "REAL", source: "live", isAvailable: true, fare: 432, provider: { name: "indrive", displayName: "inDrive" }, metadata: { providerFreshness: "current" }, quotes: [{ distanceMeters: 7153, tripDurationSeconds: 962 }] }] };
+      },
+    });
+    const pickup = { lat: 31.4743225, lng: 74.4163742, name: "A", placeId: "p1", city: "Lahore" };
+    const dropoff = { lat: 31.4640061, lng: 74.4426299, name: "B", placeId: "p2", city: "Lahore" };
+    const state = { seen: new Set(), calls: 0, liveComparisons: 0, locations: new Map([[`${pickup.lat},${pickup.lng}`, pickup], [`${dropoff.lat},${dropoff.lng}`, dropoff]]) };
+    const result = await executeToolCall(
+      { name: "compare_live_fares", arguments: { pickup: { lat: pickup.lat, lng: pickup.lng }, dropoff: { lat: dropoff.lat, lng: dropoff.lng }, vehicleType: "bike", explicitComparisonIntent: true } },
+      { userId: "user-1", nativeToolAgent: true, liveComparisonEnabled: true, explicitComparisonIntent: true, requestRunId: "run-1", deadlineAt: Date.now() + 5000 },
+      state,
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.result.status, "OK");
+    assert.deepEqual(routedWith.origin, { lat: pickup.lat, lng: pickup.lng, name: "A", placeId: "p1" });
+    assert.equal(comparedWith.route.distanceKm, 8.98);
+    assert.equal(comparedWith.route.durationMin, 933 / 60);
+    assert.equal(result.result.route.distanceMeters, 8980);
+    assert.equal(result.result.route.durationSeconds, 933);
+    assert.equal(result.result.route.sourceType, "verified_road_route");
+    assert.deepEqual(result.result.quotes[0].providerRoute, { distanceMeters: 7153, durationSeconds: 962 });
+  } finally {
+    if (previous === undefined) delete process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED;
+    else process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED = previous;
+  }
+});

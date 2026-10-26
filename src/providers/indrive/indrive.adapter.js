@@ -29,6 +29,26 @@ function buildPricingPayload(route) {
   return payload;
 }
 
+// Replaces the caller's distance/duration with inDrive's own route values so
+// the pricing request matches what the inDrive app would send. Any failure
+// falls back to the caller-supplied route rather than failing the quote.
+async function resolveRoute(client, accessToken, route, logger = console) {
+  if (typeof client.getRoute !== "function") return route;
+  try {
+    const response = await client.getRoute(accessToken, { pickup: route.pickup, destination: route.destination });
+    const item = response.status >= 200 && response.status < 300 ? response.body?.response?.items?.[0] : null;
+    const distanceMeters = Number(item?.distance);
+    const durationSeconds = Number(item?.duration);
+    if (item?.status === "OK" && distanceMeters > 0 && durationSeconds > 0) {
+      return { ...route, distanceMeters, durationSeconds, routeSource: "indrive" };
+    }
+    logger.warn?.("[inDrive] route lookup unusable, using supplied route", { httpStatus: response.status, itemStatus: item?.status ?? null });
+  } catch (error) {
+    logger.warn?.("[inDrive] route lookup failed, using supplied route", { code: error.code || null });
+  }
+  return route;
+}
+
 function normalizeNearbyLocations(body) {
   const contractors = Array.isArray(body?.contractors) ? body.contractors : null;
   if (!contractors) return null;
@@ -76,19 +96,20 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
       if (!effectiveConfig.enabled) throw new IndriveError(CODES.UNAVAILABLE, "inDrive is disabled");
       const requestClient = ownsClient && runtime.activated ? createIndriveClient({ config: effectiveConfig }) : indriveClient;
       const accessToken = await sessionManager.ensureValidSession();
-      const first = await requestClient.getPricing(accessToken, buildPricingPayload({ ...route, vehicleType }));
+      const pricingRoute = await resolveRoute(requestClient, accessToken, route);
+      const first = await requestClient.getPricing(accessToken, buildPricingPayload({ ...pricingRoute, vehicleType }));
       if (first.status === 401) {
         const retryToken = await sessionManager.ensureValidSession({ force: true });
-        const second = await requestClient.getPricing(retryToken, buildPricingPayload({ ...route, vehicleType }));
+        const second = await requestClient.getPricing(retryToken, buildPricingPayload({ ...pricingRoute, vehicleType }));
         if (second.status === 401) { await sessionManager.markAuthRequired(); throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive pricing authentication failed"); }
         if (second.status === 403) { await sessionManager.markAccessDenied(); throw new IndriveError(CODES.ACCESS_DENIED, "inDrive pricing access was denied", { status: second.status }); }
         if (second.status < 200 || second.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive pricing failed", { status: second.status });
-        return mapPricingResponse(second.body, route).map((quote) => ({ ...quote, source: "live" }));
+        return mapPricingResponse(second.body, pricingRoute).map((quote) => ({ ...quote, source: "live" }));
       }
       if (first.status === 403) { await sessionManager.markAccessDenied(); throw new IndriveError(CODES.ACCESS_DENIED, "inDrive pricing access was denied", { status: first.status }); }
       if (first.status === 429) throw new IndriveError(CODES.RATE_LIMITED, "inDrive pricing rate limited");
       if (first.status < 200 || first.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive pricing failed", { status: first.status });
-      return mapPricingResponse(first.body, route).map((quote) => ({ ...quote, source: "live" }));
+      return mapPricingResponse(first.body, pricingRoute).map((quote) => ({ ...quote, source: "live" }));
     },
     async getAutocomplete(input) {
       if (!config.enabled) throw new IndriveError(CODES.UNAVAILABLE, "inDrive is disabled");
@@ -131,5 +152,6 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
 const defaultAdapter = createIndriveAdapter();
 module.exports = defaultAdapter;
 module.exports.createIndriveAdapter = createIndriveAdapter;
+module.exports.resolveRoute = resolveRoute;
 module.exports.buildPricingPayload = buildPricingPayload;
 module.exports.normalizeNearbyLocations = normalizeNearbyLocations;

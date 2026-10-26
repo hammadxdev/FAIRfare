@@ -11,7 +11,7 @@ const enabled = (name) => String(process.env[name] || "false").toLowerCase() ===
 const TOOL_DESCRIPTIONS = {
   search_locations: "For every named stop in a route request, call this before routing (pickup, destination, and each intermediate stop). Search the user's exact place wording, including Roman Urdu spellings. If a stop has multiple plausible candidates, do not choose coordinates: ask the user to clarify.",
   calculate_route: "Calculate one verified road leg between two coordinates returned by search_locations in this request. Representative points returned by search_locations may be used for broad areas only when the result is relevant and credible; the response must be labeled approximate, never exact pickup. For a multi-stop request, calculate each consecutive leg in order (A→B, then B→C). Never invent coordinates, distance, duration, fare, or live driver availability; these are road estimates, not driver pickup times.",
-  compare_live_fares: "Request current provider quotes only when the user asks for a fare comparison and both pickup and destination have been verified by search_locations. Set explicitComparisonIntent only for such a request. A client message id is required for idempotent comparison; if the backend rejects this call, explain that the user should retry with a client message id.",
+  compare_live_fares: "Fetch current live provider quotes whenever the user asks what a trip will cost (fare, price, kiraya, how much), which provider or ride type is cheapest, or wants a ride-type suggestion that depends on price, and both pickup and destination have been verified by search_locations. The result also carries the verified road route (distance and duration), so you do not need calculate_route first. Set explicitComparisonIntent for such a request. A client message id is required for idempotent comparison; if the backend rejects this call, explain that the user should retry with a client message id.",
   get_latest_comparison: "Read an authorized stored comparison. Stored quotes are observations, not newly fetched live prices.",
   get_provider_status: "Read integration configuration and operational status. This does not verify drivers or ride availability.",
   get_nearby_observation_context: "Read aggregate historical nearby observations for a searched location. Never interpret this as live driver availability or pickup ETA.",
@@ -122,9 +122,9 @@ async function answer(args, dependencies = {}) {
   context.comparisonFreshness = comparison ? "stored_observation" : null;
   const toolsEnabled = enabled("FAIRFARE_AI_TOOL_AGENT_ENABLED") && enabled("FAIRFARE_AI_MODEL_TOOLS_ENABLED");
   const liveEnabled = enabled("FAIRFARE_AI_LIVE_COMPARISON_ENABLED");
-  // Native Gemini function calling intentionally has a two-tool surface. Keep
+  // Native Gemini function calling intentionally has a small tool surface. Keep
   // the complete registry available to the other AI flows and services.
-  const nativeToolNames = new Set(["search_locations", "compare_live_fares"]);
+  const nativeToolNames = new Set(["search_locations", "calculate_route", "compare_live_fares"]);
   const tools = toolsEnabled ? listTools().filter((tool) => nativeToolNames.has(tool.name)).map((tool) => ({
     name: tool.name,
     schema: tool.schema,
@@ -158,7 +158,7 @@ async function answer(args, dependencies = {}) {
       context: { ...context, responseSource: "safe_fallback", modelSelectedTools: agent.modelSelectedTools || [], modelRequests: agent.modelRequests || 0, fallbackReason: agent.errorCode || "LLM_PROVIDER_ERROR" },
     };
   }
-  const routeToolSucceeded = agent.toolResults.some((item) => item.name === "calculate_route" && item.ok === true && item.result?.status === "OK" && item.result?.sourceType === "verified_road_route");
+  const routeToolSucceeded = agent.toolResults.some((item) => item.ok === true && item.result?.status === "OK" && ((item.name === "calculate_route" && item.result?.sourceType === "verified_road_route") || (item.name === "compare_live_fares" && item.result?.route?.sourceType === "verified_road_route")));
   const directNumericClaim = !routeToolSucceeded && hasUngroundedNumericRouteClaim(agent.result.text);
   let reply = directNumericClaim
     ? (language === "roman_urdu" ? "Main is waqt route ko verify nahi kar saka, isliye distance ya travel time ko confirmed nahi bata sakta. Thori dair baad dobara try karein." : "I could not verify this route in the current request, so I cannot present a distance or travel time as confirmed. Please try again shortly.")

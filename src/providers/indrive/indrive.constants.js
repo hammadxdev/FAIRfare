@@ -4,6 +4,7 @@ const PROVIDER_NAME = "inDrive";
 const TOKEN_RENEW_URL = "https://ath-gw-cf.euce1.indriverapp.com/api/auth/v1/token/renew";
 const PRICING_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/recprice-gateway-backend/api/pricing/v6/price";
 const AUTOCOMPLETE_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/geo2dev/api/autocomplete";
+const ROUTE_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/geo2dev/api/getwaypoints";
 const LOCATIONS_URL = "https://api-gw-cf.sa.apse1.aws.indriverapp.com/new-order/api/new-order/v1/locations";
 const ORDER_TYPE_IDS = [2, 33, 31, 29, 11];
 const ORDER_TYPE_CATEGORIES = {
@@ -41,6 +42,7 @@ function getConfig(env = process.env) {
     pricingUrl: env.INDRIVE_AUTHORIZED_PRICING_URL || PRICING_URL,
     autocompleteUrl: env.INDRIVE_AUTHORIZED_AUTOCOMPLETE_URL || AUTOCOMPLETE_URL,
     locationsUrl: env.INDRIVE_AUTHORIZED_LOCATIONS_URL || LOCATIONS_URL,
+    routeUrl: env.INDRIVE_AUTHORIZED_ROUTE_URL || ROUTE_URL,
     cityId: Number(env.INDRIVE_CITY_ID || 5388),
     autocompleteRoutePointType: env.INDRIVE_AUTOCOMPLETE_ROUTE_POINT_TYPE || "to",
     currencyMultiplier: Number(env.INDRIVE_CURRENCY_MULTIPLIER || 100),
@@ -62,6 +64,7 @@ module.exports = {
   PRICING_URL,
   AUTOCOMPLETE_URL,
   LOCATIONS_URL,
+  ROUTE_URL,
   ORDER_TYPE_IDS,
   ORDER_TYPE_CATEGORIES,
   VEHICLE_TYPE_ORDER_IDS,
