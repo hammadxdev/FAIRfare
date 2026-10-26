@@ -50,7 +50,7 @@ function getConfig(env = process.env) {
     language: env.INDRIVE_LANGUAGE || "en_US",
     osType: env.INDRIVE_OS_TYPE || "android",
     appFlavor: env.INDRIVE_APP_FLAVOR || "indriver",
-    timeoutMs: Number(env.INDRIVE_REQUEST_TIMEOUT_MS || 10000),
+    timeoutMs: Number(env.INDRIVE_REQUEST_TIMEOUT_MS || 30000),
     refreshBufferSeconds: Number(env.INDRIVE_REFRESH_BUFFER_SECONDS || 300),
   };
 }

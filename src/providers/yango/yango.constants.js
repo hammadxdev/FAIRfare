@@ -64,7 +64,7 @@ function getConfig(env = process.env) {
       hasOngoingOrders: String(env.YANGO_HAS_ONGOING_ORDERS || "").trim(),
       ongoingOrdersStatuses: String(env.YANGO_ONGOING_ORDERS_STATUSES || "").trim(),
     },
-    timeoutMs: Number(env.YANGO_REQUEST_TIMEOUT_MS || 10000),
+    timeoutMs: Number(env.YANGO_REQUEST_TIMEOUT_MS || 30000),
     testContext: getTestConfig(env),
     authorizationConfigured,
     configError,

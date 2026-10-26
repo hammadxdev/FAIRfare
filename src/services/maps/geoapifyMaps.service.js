@@ -1,7 +1,7 @@
 const AppError = require("../../utils/AppError");
 
 const BASE_URL = "https://api.geoapify.com";
-const REQUEST_TIMEOUT_MS = 10000;
+const REQUEST_TIMEOUT_MS = 30000;
 const COUNTRY_FILTER = "countrycode:pk";
 const PLACES_RADIUS_METERS = 25000;
 const PLACES_LIMIT = 10;

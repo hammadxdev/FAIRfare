@@ -38,6 +38,9 @@ function unavailableFareReply(message, agent = {}) {
   if (code === "LIVE_COMPARISON_DISABLED") return romanUrdu
     ? "Live fare comparison abhi disabled hai. FAIRFARE_AI_LIVE_COMPARISON_ENABLED=true karne ke liye approval aur provider configuration darkar hai."
     : "Live fare comparison is currently disabled. Approval and provider configuration are required to enable FAIRFARE_AI_LIVE_COMPARISON_ENABLED=true.";
+  if (!comparison && ["LLM_TIMEOUT", "LLM_TOTAL_TIMEOUT", "LLM_PROVIDER_ERROR", "LLM_MODEL_ERROR"].includes(code)) return romanUrdu
+    ? "AI abhi response generate nahi kar saka. Thori dair baad dobara try karein."
+    : "The AI service could not generate a response right now. Please try again shortly.";
   if (["TOOL_TIMEOUT", "LLM_TIMEOUT", "REQUEST_DEADLINE_EXCEEDED", "PROVIDER_TIMEOUT"].includes(code)) return romanUrdu
     ? "Abhi updated live fares retrieve nahi ho rahe. Thori dair baad dobara try karein."
     : "Updated live fares could not be retrieved right now. Please try again shortly.";
@@ -75,7 +78,7 @@ async function answer(args, dependencies = {}) {
   if (!enabled("AI_ASSISTANT_ENABLED")) return unavailable("AI_DISABLED");
   // AI requests have their own bounded budget; this does not alter other API
   // endpoint timeouts. Keep the hard cap aligned with the deployed AI budget.
-  const deadlineAt = Date.now() + Math.min(60000, Math.max(1000, Number(process.env.AI_TOTAL_REQUEST_TIMEOUT_MS) || 60000));
+  const deadlineAt = Date.now() + Math.min(135000, Math.max(1000, Number(process.env.AI_TOTAL_REQUEST_TIMEOUT_MS) || 135000));
   // Ownership checks remain in the repositories. Do not swallow authorization or
   // persistence errors and proceed with a different user's/missing context.
   const recent = args.conversationId ? await recentMessages(args.userId, args.conversationId) : [];

@@ -1,6 +1,6 @@
 const DEFAULT_CURRENCY = "PKR";
 const DEFAULT_CURRENCY_MULTIPLIER = 1;
-const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_FARE_ENDPOINT = "/talos/api/v3/users/estimation/fare";
 const DEFAULT_NEARBY_ENDPOINT = "/talos/api/v1/eta";
 const DEFAULT_SERVICE_MAPPINGS = Object.freeze({

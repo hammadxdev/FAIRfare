@@ -108,7 +108,7 @@ async function executeToolCall(call, context = {}, state = {}) {
   if (state.seen?.has(key)) return { ok: false, name, error: { code: "DUPLICATE_TOOL_CALL" } };
   state.seen ||= new Set(); state.seen.add(key);
   const configuredTimeout = name === "search_locations"
-    ? Number(process.env.FAIRFARE_AI_SEARCH_LOCATIONS_TIMEOUT_MS || 10000)
+    ? Number(process.env.FAIRFARE_AI_SEARCH_LOCATIONS_TIMEOUT_MS || 30000)
     : Number(tool.timeoutMs);
   const deadline = Math.min(configuredTimeout, remainingMs(context));
   if (deadline <= 0) return { ok: false, name, error: { code: "REQUEST_DEADLINE_EXCEEDED" } };

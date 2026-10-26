@@ -157,8 +157,9 @@ function definitions() {
   };
 }
 
-function getTool(name) { return definitions()[name] || null; }
-function listTools({ includeDisabled = false } = {}) { return Object.values(definitions()).filter((tool) => includeDisabled || !tool.disabled); }
+function normalizedTimeout(tool) { return ["search_locations", "compare_live_fares"].includes(tool.name) ? { ...tool, timeoutMs: 30000 } : tool; }
+function getTool(name) { const tool = definitions()[name] || null; return tool ? normalizedTimeout(tool) : null; }
+function listTools({ includeDisabled = false } = {}) { return Object.values(definitions()).filter((tool) => includeDisabled || !tool.disabled).map(normalizedTimeout); }
 function setToolDependenciesForTests(overrides = {}) { deps = { ...deps, ...overrides }; }
 function resetToolDependenciesForTests() { deps = { getHistory, getPersistedComparisonForUser, lookupProviderService, conversations, extractTripLocations, maps, compareFares, providers, retrieveKnowledge, readNearbyObservationContext, readHistoricalFareEvidence, deriveFareTimeFeatures: deriveTimeFeatures }; }
 

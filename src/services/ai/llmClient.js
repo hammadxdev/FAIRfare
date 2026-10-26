@@ -62,8 +62,8 @@ function config() {
     // Gemini requests can spend several seconds in TLS/model startup. Keep a
     // bounded provider window below the overall request budget; operators can
     // tune it with AI_REQUEST_TIMEOUT_MS.
-    timeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS || 15000),
-    totalTimeoutMs: Number(process.env.AI_TOTAL_REQUEST_TIMEOUT_MS || 60000),
+    timeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS || 30000),
+    totalTimeoutMs: Number(process.env.AI_TOTAL_REQUEST_TIMEOUT_MS || 135000),
     maxAttempts: Number(process.env.AI_MAX_MODEL_ATTEMPTS || 4),
     cooldownMs: Number(process.env.AI_MODEL_COOLDOWN_MS || 30000),
     unavailableCooldownMs: Number(
