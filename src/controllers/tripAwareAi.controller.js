@@ -10,12 +10,23 @@ const TOOL_AGENT_ENABLED = () => String(process.env.FAIRFARE_AI_TOOL_AGENT_ENABL
 const MEMORY_ENABLED = () => String(process.env.FAIRFARE_AI_PHASE3_SCHEMA_VERIFIED || "false").toLowerCase() === "true" && String(process.env.FAIRFARE_AI_MEMORY_ENABLED || "false").toLowerCase() === "true";
 
 function idParam(value) { const id = String(value || ""); if (!id) throw new AppError("Invalid conversation id", 400); return id; }
-function buildTraceDiagnostics(result, requestId) {
+function buildTraceDiagnostics(result, requestId, requestMeta = {}) {
   const semantic = result.context?.semanticUnderstanding;
   const semanticDiagnostics = result.context?.semanticUnderstandingDiagnostics || { attempted: false, succeeded: false };
   const execution = Array.isArray(result.toolExecution) ? result.toolExecution : result.toolExecution?.results || [];
   const safeToolName = (value) => String(value || "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 80) || null;
   const toolNames = execution.map((item) => safeToolName(item.name)).filter(Boolean);
+  const comparison = execution.find((item) => item?.name === "compare_live_fares");
+  const comparisonDiagnostics = comparison?.result?.diagnostics || {};
+  const searchItems = execution.filter((item) => item?.name === "search_locations");
+  const safeStatus = (value) => {
+    const normalized = String(value || "UNKNOWN").toUpperCase();
+    return ["OK", "UNAVAILABLE", "DISABLED", "LIVE_COMPARISON_DISABLED", "FAILED", "TIMEOUT", "NO_CURRENT_VERIFIED_REAL_PROVIDER_QUOTES", "UNKNOWN"].includes(normalized) ? normalized : "UNKNOWN";
+  };
+  const safeRejection = (value) => {
+    const normalized = String(value || "").toUpperCase();
+    return ["IDEMPOTENCY_REQUIRED", "LOCATION_NOT_VERIFIED", "LOCATION_AMBIGUOUS", "INVALID_LOCATION_ARGUMENTS", "VERIFIED_ROUTE_REQUIRED", "ROUTE_NOT_ELIGIBLE", "LIVE_COMPARISON_DISABLED", "TOOL_TIMEOUT", "REQUEST_DEADLINE_EXCEEDED", "LIVE_COMPARISON_LIMIT", "TOOL_NOT_ALLOWED", "TOOL_EXECUTION_FAILED", "UNKNOWN"].includes(normalized) ? normalized : "UNKNOWN";
+  };
   const toolCallingMode = result.context?.toolCallingMode || null;
   let noToolExecutionReason = null;
   if (!toolNames.length) {
@@ -50,6 +61,19 @@ function buildTraceDiagnostics(result, requestId) {
     liveComparisonStatus: execution.some((item) => item.name === "compare_live_fares" && item.executed === true) ? (execution.some((item) => item.name === "compare_live_fares" && item.ok === true && item.result?.status === "OK") ? "completed" : "failed") : "not_attempted",
     responseSource: result.context?.responseSource || (result.fallbackUsed ? "safe_fallback" : result.comparisonId ? "llm_grounded" : result.modelId ? "llm_direct" : "deterministic"),
     fallbackReason: result.fallbackUsed ? result.errorCode || "llm_fallback" : null,
+    requestRunIdPresent: Boolean(requestMeta.requestRunId),
+    clientMessageIdPresent: Boolean(requestMeta.clientMessageId),
+    searchLocationsExecutedSuccessfully: searchItems.some((item) => item.ok === true && safeStatus(item.result?.status) === "OK"),
+    verifiedLocationCandidateCounts: searchItems.map((item) => Number.isInteger(item.result?.diagnostics?.validCandidateCount) ? item.result.diagnostics.validCandidateCount : 0),
+    compareLiveFaresExecuted: comparison?.executed === true,
+    comparisonRejectionCode: comparison?.ok === false ? safeRejection(comparison.error?.code) : null,
+    comparisonResultStatus: comparison?.ok === true ? safeStatus(comparison.result?.status) : null,
+    comparisonResultReason: comparison?.ok === true ? safeStatus(comparison.result?.reason) : null,
+    realLiveCurrentQuoteCount: Number.isInteger(comparisonDiagnostics.realLiveCurrentQuoteCount) ? comparisonDiagnostics.realLiveCurrentQuoteCount : 0,
+    simulatedQuoteCount: Number.isInteger(comparisonDiagnostics.simulatedQuoteCount) ? comparisonDiagnostics.simulatedQuoteCount : 0,
+    unavailableQuoteCount: Number.isInteger(comparisonDiagnostics.unavailableQuoteCount) ? comparisonDiagnostics.unavailableQuoteCount : 0,
+    providerModesStatuses: Array.isArray(comparisonDiagnostics.providerModesStatuses) ? comparisonDiagnostics.providerModesStatuses : [],
+    remainingAiRequestBudgetMs: Number.isFinite(result.context?.toolRequestDiagnostics?.rounds?.at?.(-1)?.remainingRequestBudgetMs) ? Math.max(0, Math.floor(result.context.toolRequestDiagnostics.rounds.at(-1).remainingRequestBudgetMs)) : null,
     totalLatencyMs: null,
   };
 }
@@ -106,9 +130,26 @@ const chat = asyncHandler(async (req, res) => {
   await conversations.titleFirstMessage(req.user.id, conversation.id, text);
   const result = await answer({ userId: req.user.id, message: text, comparisonId, conversationId: conversation.id, clientMessageId, requestRunId: requestRun?.id || null, requestId });
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-    const diagnostics = buildTraceDiagnostics(result, requestId);
+    const diagnostics = buildTraceDiagnostics(result, requestId, { requestRunId: requestRun?.id || null, clientMessageId });
     result.context = { ...result.context, diagnostics };
-    console.info("[AI][trace]", diagnostics);
+    console.info("[AI][fare_diagnostic]", {
+      requestId: diagnostics.requestId,
+      requestRunIdPresent: diagnostics.requestRunIdPresent,
+      clientMessageIdPresent: diagnostics.clientMessageIdPresent,
+      toolNamesExecuted: diagnostics.toolsActuallyExecuted,
+      searchLocationsExecutedSuccessfully: diagnostics.searchLocationsExecutedSuccessfully,
+      verifiedLocationCandidateCounts: diagnostics.verifiedLocationCandidateCounts,
+      compareLiveFaresExecuted: diagnostics.compareLiveFaresExecuted,
+      comparisonRejectionCode: diagnostics.comparisonRejectionCode,
+      comparisonResultStatus: diagnostics.comparisonResultStatus,
+      comparisonResultReason: diagnostics.comparisonResultReason,
+      realLiveCurrentQuoteCount: diagnostics.realLiveCurrentQuoteCount,
+      simulatedQuoteCount: diagnostics.simulatedQuoteCount,
+      unavailableQuoteCount: diagnostics.unavailableQuoteCount,
+      providerModesStatuses: diagnostics.providerModesStatuses,
+      remainingAiRequestBudgetMs: diagnostics.remainingAiRequestBudgetMs,
+      responseSource: diagnostics.responseSource,
+    });
   }
   if (result.available) await conversations.addMessage(req.user.id, conversation.id, "ASSISTANT", result.reply, result.modelId);
   if (MEMORY_ENABLED() && result.comparisonId) {

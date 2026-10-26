@@ -406,6 +406,14 @@ async function compareFares({ userId, pickup, dropoff, vehicleType, route }) {
       providers: rawResults.map((result) => ({ provider: result.provider.name, displayName: result.provider.displayName, status: result.coverage?.status || (result.fare != null ? "LEGACY_APPROVED" : "UNKNOWN"), supported: result.coverage?.supported === true })),
       provenance: "Live provider data only; provider availability is not inferred locally",
     },
+    providerModesStatuses: providers.map((provider, index) => {
+      const adapter = getAdapter(provider.name);
+      const mode = ["simulated", "real", "authorized-live", "unavailable"].includes(String(adapter.mode || "").toLowerCase()) ? String(adapter.mode).toLowerCase() : "unknown";
+      const result = rawResults[index] || {};
+      const statusValue = String(result.status || (result.isAvailable === true ? "available" : "unavailable")).toLowerCase();
+      const status = ["available", "ready", "unavailable", "not_configured", "auth_required", "temporarily_unavailable"].includes(statusValue) ? statusValue : "unknown";
+      return { provider: String(provider.name || "unknown").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "unknown", mode, status };
+    }),
     results: personalizedResults,
   };
   if (datasetPreview) comparison.datasetPreview = datasetPreview;

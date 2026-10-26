@@ -52,8 +52,27 @@ function currentRealQuote(result, now = Date.now()) {
 }
 
 function currentRealComparison(comparison) {
-  const quotes = (Array.isArray(comparison?.results) ? comparison.results : []).map((item) => currentRealQuote(item)).filter(Boolean);
-  return quotes.length ? { status: "OK", source: "REAL_PROVIDER_QUOTES", comparisonId: comparison.comparisonId || null, searchedAt: comparison.searchedAt || null, quotes } : { status: "UNAVAILABLE", reason: "NO_CURRENT_VERIFIED_REAL_PROVIDER_QUOTES", quotes: [] };
+  const rawResults = Array.isArray(comparison?.results) ? comparison.results : [];
+  const quotes = rawResults.map((item) => currentRealQuote(item)).filter(Boolean);
+  const safeProviderMode = (value) => {
+    const mode = String(value || "unknown").toLowerCase();
+    return ["simulated", "real", "authorized-live", "unavailable", "unknown"].includes(mode) ? mode : "unknown";
+  };
+  const safeProviderStatus = (value) => {
+    const status = String(value || "unknown").toLowerCase();
+    return ["available", "ready", "unavailable", "not_configured", "auth_required", "temporarily_unavailable", "unknown"].includes(status) ? status : "unknown";
+  };
+  const diagnostics = {
+    realLiveCurrentQuoteCount: quotes.length,
+    simulatedQuoteCount: rawResults.filter((item) => String(item?.dataSource || item?.source || "").toUpperCase() === "SIMULATED").length,
+    unavailableQuoteCount: rawResults.filter((item) => item?.isAvailable !== true || !currentRealQuote(item)).length,
+    providerModesStatuses: (Array.isArray(comparison?.providerModesStatuses) ? comparison.providerModesStatuses : rawResults.map((item) => ({
+      provider: String(item?.provider?.name || item?.provider?.id || "unknown").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "unknown",
+      mode: safeProviderMode(item?.mode || item?.provider?.mode || (item?.dataSource === "REAL" ? "real" : item?.dataSource === "SIMULATED" ? "simulated" : "unavailable")),
+      status: safeProviderStatus(item?.status || (item?.isAvailable === true ? "available" : "unavailable")),
+    }))).map((item) => ({ provider: String(item.provider || "unknown").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "unknown", mode: safeProviderMode(item.mode), status: safeProviderStatus(item.status) })),
+  };
+  return quotes.length ? { status: "OK", source: "REAL_PROVIDER_QUOTES", comparisonId: comparison.comparisonId || null, searchedAt: comparison.searchedAt || null, quotes, diagnostics } : { status: "UNAVAILABLE", reason: "NO_CURRENT_VERIFIED_REAL_PROVIDER_QUOTES", quotes: [], diagnostics };
 }
 
 function unavailableForecast(status, reason, evidenceCount = 0) {
