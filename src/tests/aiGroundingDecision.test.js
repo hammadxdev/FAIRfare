@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { DECISIONS, decideGrounding, routeMatchesComparison } = require("../services/ai/groundingDecision.service");
 const { extractTripLocations } = require("../services/tripExtraction.service");
-const { routeDecisionResponse, setComparisonBuilderForTests, setTripResolverForTests, answer } = require("../services/tripAwareAiAssistant.service");
+const { routeDecisionResponse, setComparisonBuilderForTests, setTripResolverForTests, legacyAnswer } = require("../services/tripAwareAiAssistant.service");
 const { rememberComparison, clearComparisonsForTests } = require("../services/currentComparison.service");
 
 const oldComparison = {
@@ -45,7 +45,7 @@ test("mismatched comparison returns no stale fare summary when new comparison is
     route: { distanceMeters: 12000, durationSeconds: 1800 },
   }));
   setComparisonBuilderForTests(async () => { throw Object.assign(new Error("provider unavailable"), { code: "PROVIDER_UNAVAILABLE" }); });
-  const result = await answer({ userId: "user-1", message: "I want to go from LGU to Punjab Mall", comparisonId: "old-comparison" });
+  const result = await legacyAnswer({ userId: "user-1", message: "I want to go from LGU to Punjab Mall", comparisonId: "old-comparison" });
   assert.equal(result.groundingDecision, DECISIONS.FARES_UNAVAILABLE);
   assert.doesNotMatch(result.reply, /PKR\s*101|Moto|DHA Phase 6|current fare comparison/i);
   assert.match(result.reply, /previous comparison does not apply|purani comparison/i);

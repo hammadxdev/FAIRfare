@@ -1,8 +1,9 @@
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
+  name TEXT,
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
+  is_guest BOOLEAN NOT NULL DEFAULT 0,
   phone_number TEXT UNIQUE,
   phone_verified_at TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -38,6 +39,28 @@ CREATE TABLE IF NOT EXISTS user_sessions (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   revoked_at INTEGER,
   last_used_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS email_login_challenges (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  otp_hash TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count >= 0),
+  resend_count INTEGER NOT NULL DEFAULT 0 CHECK(resend_count BETWEEN 0 AND 2),
+  last_sent_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_login_challenges_active
+  ON email_login_challenges(email, created_at DESC) WHERE used_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_normalized
+  ON users(lower(trim(email)));
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+  bucket_key TEXT NOT NULL,
+  subject_hash TEXT NOT NULL,
+  window_started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  request_count INTEGER NOT NULL DEFAULT 0 CHECK(request_count >= 0),
+  PRIMARY KEY(bucket_key, subject_hash)
 );
 CREATE TABLE IF NOT EXISTS user_identities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

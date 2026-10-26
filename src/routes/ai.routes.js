@@ -1,8 +1,10 @@
 const { Router } = require("express");
 const { chat, listConversations, createConversation, getConversation, renameConversation, deleteConversation } = require("../controllers/ai.controller");
 const { requireAuth } = require("../middlewares/auth.middleware");
+const { createGuestRateLimiter } = require("../middlewares/guestRateLimit.middleware");
 const router = Router();
-router.post("/chat", requireAuth, chat);
+const aiLimit = createGuestRateLimiter({ bucket: "ai-request", limit: 10, windowSeconds: 60 });
+router.post("/chat", requireAuth, aiLimit, chat);
 router.get("/conversations", requireAuth, listConversations);
 router.post("/conversations", requireAuth, createConversation);
 router.get("/conversations/:id", requireAuth, getConversation);

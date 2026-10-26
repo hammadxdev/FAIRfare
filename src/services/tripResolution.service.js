@@ -18,7 +18,7 @@ function sameAdministrativeContext(left, right) {
   return leftContext.length > 0 && rightContext.length > 0 && leftContext.some((value) => rightContext.some((other) => value === other || value.includes(other) || other.includes(value)));
 }
 function isGenericLocationQuery(query) {
-  return /^(?:the\s+)?(?:airport|railway\s+station|station|saddar|gulberg|chungi|lgu)$/i.test(String(query || "").trim());
+  return /^(?:the\s+)?(?:airport|railway\s+station|station|saddar|market|university|hospital|mall|park|town|area|district|neighborhood|neighbourhood)$/i.test(String(query || "").trim());
 }
 function cityHintFromText(value) {
   const text = normalizedText(value);
@@ -36,7 +36,13 @@ function normalizeCandidate(candidate, query) {
   const resultType = candidate.resultType || candidate.result_type || null;
   const rawName = candidate.mainText || candidate.name || candidate.description || query;
   const name = /^lahore\s+garission\s+university$/i.test(String(rawName).trim()) ? "Lahore Garrison University" : rawName;
-  return { query, placeId: candidate.placeId || null, name, address: candidate.address || candidate.secondaryText || candidate.description || query, city: cityOf(candidate), county: candidate.county || candidate.district || null, state: candidate.state || candidate.state_district || null, countryCode: candidate.countryCode || candidate.country_code || null, resultType, category: candidate.category || null, confidence: Number.isFinite(Number(candidate.confidence)) ? Number(candidate.confidence) : null, approximate: /city|town|municipality|district|suburb|neighbourhood|locality|street|road|address/i.test(String(resultType || "")), lat: Number(candidate.lat), lng: Number(candidate.lng), source: "geoapify" };
+  const broad = /city|town|municipality|district|suburb|neighbourhood|neighborhood|locality|street|road/i.test(String(resultType || ""));
+  const exact = /address|amenity|building|house|poi/i.test(String(resultType || "")) || /university|school|hospital|airport|station|market|mall/i.test(String(candidate.category || ""));
+  const queryText = normalizedText(query);
+  const nameText = normalizedText(name);
+  const unrelatedBusiness = isAreaLikeQuery(query) && exact && !nameText.includes(queryText) && !queryText.includes(nameText);
+  const resolutionType = unrelatedBusiness ? "unrelated_business" : exact ? "verified_named_landmark" : broad ? "approximate_representative_area" : "verified_named_landmark";
+  return { query, placeId: candidate.placeId || null, name, address: candidate.address || candidate.secondaryText || candidate.description || query, city: cityOf(candidate), county: candidate.county || candidate.district || null, state: candidate.state || candidate.state_district || null, countryCode: candidate.countryCode || candidate.country_code || null, resultType, category: candidate.category || null, confidence: Number.isFinite(Number(candidate.confidence)) ? Number(candidate.confidence) : null, approximate: resolutionType === "approximate_representative_area", resolutionType, candidateType: resolutionType === "unrelated_business" ? "unrelated_business" : resolutionType === "approximate_representative_area" ? "area" : "landmark", lat: Number(candidate.lat), lng: Number(candidate.lng), source: "geoapify" };
 }
 function normalizedText(value) {
   return String(value || "").toLowerCase().replace(/\bgulberg\s+iii\b/g, "gulberg 3").replace(/\bgarission\b/g, "garrison").replace(/\blgu\b/g, "lahore garrison university").replace(/[-\s]+/g, " ").trim();
@@ -87,7 +93,7 @@ function selectCandidate(query, candidates = [], options = {}) {
     const confidenceBonus = item.confidence == null ? 0 : Math.round(item.confidence * 250);
     const unrelatedPoi = isAreaLikeQuery(query) && poiLike && !placeLike && nameCoverage < 1;
     const nonAreaResult = isAreaLikeQuery(query) && Boolean(item.resultType) && !placeLike && !poiLike;
-    const rejected = unrelatedPoi || nonAreaResult;
+    const rejected = unrelatedPoi || nonAreaResult || item.resolutionType === "unrelated_business";
     const score = rejected ? -10000 - index : (exact ? 1000 : 0) + Math.round(coverage * 500) + (cityMatch ? 350 : 0) + confidenceBonus + (placeLike ? 140 : 0) - (poiLike && !placeLike ? 180 : 0) - index;
     return { item, score, coverage, nameCoverage, exact, placeLike, unrelatedPoi, nonAreaResult, rejected };
   }).sort((a, b) => b.score - a.score);
@@ -120,31 +126,47 @@ async function geocodeWithFallback({ query, geocode, lat, lng, preferredCity }) 
 }
 async function resolveTripForAssistant({ message, semantic, geocode = maps.fetchAutocomplete, route = maps.computeRoute } = {}) {
   const extracted = semantic && (semantic.pickup || semantic.destination)
-    ? { pickup: semantic.pickup?.query || null, destination: semantic.destination?.query || null }
+    ? { pickup: semantic.pickup?.query || null, destination: semantic.destination?.query || null, stops: semantic.stops?.map((stop) => stop.query).filter(Boolean) }
     : extractTripLocations(message);
   const explicitIntercity = /\b(?:intercity|inter-city|between\s+different\s+cities|explicitly\s+(?:want|need)|city[- ]to[- ]city)\b/i.test(String(message || ""));
-  if (!extracted.pickup || !extracted.destination) return { status: "NO_TRIP", extracted };
-  let pickupSelected = await geocodeWithFallback({ query: extracted.pickup, geocode, preferredCity: cityHintFromText(extracted.destination) });
-  const destinationSelected = await geocodeWithFallback({ query: extracted.destination, geocode, lat: pickupSelected.location?.lat, lng: pickupSelected.location?.lng, preferredCity: cityHintFromText(extracted.destination) || cityPreferenceFromLocation(pickupSelected.location) });
+  const queries = extracted.stops?.length >= 2 ? extracted.stops : [extracted.pickup, extracted.destination].filter(Boolean);
+  if (queries.length < 2) return { status: "NO_TRIP", extracted };
+  const selected = [];
+  for (let index = 0; index < queries.length; index += 1) {
+    const previous = selected[index - 1]?.location;
+    const semanticStop = semantic?.stops?.[index] || (index === 0 ? semantic?.pickup : index === queries.length - 1 ? semantic?.destination : null);
+    if (semanticStop && Number.isFinite(Number(semanticStop.lat)) && Number.isFinite(Number(semanticStop.lng))) {
+      selected.push({ location: { query: queries[index], name: semanticStop.name || queries[index], address: semanticStop.address || queries[index], placeId: semanticStop.placeId || null, lat: Number(semanticStop.lat), lng: Number(semanticStop.lng), approximate: false, resolutionType: "exact_user_coordinates", source: "user" }, ambiguous: false, candidates: [] });
+    } else {
+      selected.push(await geocodeWithFallback({ query: queries[index], geocode, lat: previous?.lat, lng: previous?.lng, preferredCity: cityHintFromText(queries[index]) || cityPreferenceFromLocation(previous) }));
+    }
+  }
+  let pickupSelected = selected[0];
+  const destinationSelected = selected[selected.length - 1];
   if (!pickupSelected.location && destinationSelected.location) {
     pickupSelected = await geocodeWithFallback({ query: extracted.pickup, geocode, preferredCity: cityPreferenceFromLocation(destinationSelected.location) });
   }
-  const ambiguousPickup = pickupSelected.ambiguous && isGenericLocationQuery(extracted.pickup);
-  const ambiguousDestination = destinationSelected.ambiguous && isGenericLocationQuery(extracted.destination);
-  if (!pickupSelected.location || ambiguousPickup || !destinationSelected.location || ambiguousDestination) {
+  const ambiguousPickup = pickupSelected.ambiguous;
+  const ambiguousDestination = destinationSelected.ambiguous;
+  const unresolvedIndex = selected.findIndex((item) => !item.location || item.ambiguous);
+  if (unresolvedIndex >= 0) {
     const pickupUnresolved = !pickupSelected.location || ambiguousPickup;
     return {
       status: "UNRESOLVED",
       extracted,
       pickup: pickupSelected.location,
       destination: destinationSelected.location,
-      unresolved: pickupUnresolved ? "pickup" : "destination",
-      unresolvedReason: pickupUnresolved ? (ambiguousPickup ? "AMBIGUOUS" : (pickupSelected.reason || "NOT_FOUND")) : (ambiguousDestination ? "AMBIGUOUS" : (destinationSelected.reason || "NOT_FOUND")),
+      unresolved: unresolvedIndex === 0 ? "pickup" : unresolvedIndex === selected.length - 1 ? "destination" : `stop_${unresolvedIndex + 1}`,
+      unresolvedReason: selected[unresolvedIndex].ambiguous ? "AMBIGUOUS" : (selected[unresolvedIndex].reason || "NOT_FOUND"),
     };
   }
   const cityMismatch = pickupSelected.location.city && destinationSelected.location.city && pickupSelected.location.city.toLowerCase() !== destinationSelected.location.city.toLowerCase() && !sameAdministrativeContext(pickupSelected.location, destinationSelected.location);
-  let routeResult = null;
-  try { routeResult = await route({ origin: pickupSelected.location, destination: destinationSelected.location, vehicleType: "car" }); } catch (error) { routeResult = { unavailable: true, reason: error.code || "ROUTE_UNAVAILABLE" }; }
-  return { status: cityMismatch ? "CROSS_CITY" : routeResult?.unavailable ? "ROUTE_UNAVAILABLE" : "RESOLVED", extracted, pickup: pickupSelected.location, destination: destinationSelected.location, pickupAmbiguous: pickupSelected.ambiguous, destinationAmbiguous: destinationSelected.ambiguous, city: cityMismatch ? null : pickupSelected.location.city, cityMismatch, explicitIntercity, route: routeResult };
+  const legs = [];
+  for (let index = 0; index < selected.length - 1; index += 1) {
+    try { legs.push(await route({ origin: selected[index].location, destination: selected[index + 1].location, vehicleType: "car" })); }
+    catch (error) { legs.push({ unavailable: true, reason: error.code || "ROUTE_UNAVAILABLE" }); }
+  }
+  const routeResult = legs.some((leg) => leg?.unavailable) ? { unavailable: true, reason: "ROUTE_UNAVAILABLE", legs } : { distanceMeters: legs.reduce((sum, leg) => sum + Number(leg?.distanceMeters || 0), 0), durationSeconds: legs.reduce((sum, leg) => sum + Number(leg?.durationSeconds || 0), 0), legs };
+  return { status: cityMismatch ? "CROSS_CITY" : routeResult?.unavailable ? "ROUTE_UNAVAILABLE" : "RESOLVED", extracted, pickup: pickupSelected.location, destination: destinationSelected.location, stops: selected.map((item) => item.location), legs, resolution: selected.map((item) => item.location.resolutionType), approximate: selected.some((item) => item.location.approximate), pickupAmbiguous: pickupSelected.ambiguous, destinationAmbiguous: destinationSelected.ambiguous, city: cityMismatch ? null : pickupSelected.location.city, cityMismatch, explicitIntercity, route: routeResult };
 }
 module.exports = { cityOf, administrativeContextOf, sameAdministrativeContext, isGenericLocationQuery, cityHintFromText, cityPreferenceFromLocation, normalizeCandidate, normalizedText, queryVariants, selectCandidate, geocodeWithFallback, resolveTripForAssistant };

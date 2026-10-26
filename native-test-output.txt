@@ -1,0 +1,1823 @@
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 3
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 16
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 3
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 2
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 6,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 9,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'compare_live_fares',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_RATE_LIMIT'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_RATE_LIMIT'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+✔ isolation blocks network and database access (5.9044ms)
+✔ normal english chat uses one request and no tools (9.1641ms)
+✔ normal roman_urdu chat uses one request and no tools (20.5743ms)
+✔ follow-up context is bounded, untrusted, and current message appears once (4.79ms)
+✔ model-selected searches, route and final reply preserve all call IDs (14.1149ms)
+✔ Roman Urdu multi-stop request resolves consecutive verified legs (8.6081ms)
+✔ rejects delete_user: TOOL_NOT_ALLOWED and returns matching error to model (6.0826ms)
+✔ rejects search_locations: INVALID_TOOL_ARGUMENTS and returns matching error to model (3.6374ms)
+✔ rejects calculate_route: LOCATION_NOT_VERIFIED and returns matching error to model (4.4366ms)
+✔ rejects compare_live_fares: TOOL_NOT_ALLOWED and returns matching error to model (3.7584ms)
+✔ rejects get_latest_comparison: INVALID_TOOL_ARGUMENTS and returns matching error to model (2.3265ms)
+✔ invalid JSON arguments are rejected without execution (3.1692ms)
+✔ unauthenticated tool execution and chat fail closed (1.2819ms)
+✔ duplicate route calculation is blocked despite changed labels (3.6165ms)
+✔ live comparison requires a verified route even with feature and request run (3.4436ms)
+✔ live comparison without a client request run reaches the model and returns an actionable idempotency error (4.0921ms)
+✔ disabled route tools do not trigger keyword-based routing logic (1.562ms)
+✔ the native model may clarify instead of being forced into a route tool (1.5936ms)
+✔ comparison uses backend route and current REAL quote provenance (4.1881ms)
+✔ LLM_RATE_LIMIT fails closed without OpenRouter (2.4849ms)
+✔ LLM_TIMEOUT fails closed without OpenRouter (1.777ms)
+✔ LLM_MALFORMED_RESPONSE fails closed without OpenRouter (3.1132ms)
+✔ LLM_AUTH_ERROR fails closed without OpenRouter (1.677ms)
+✔ provider mismatch is rejected before executing tools (1.3051ms)
+✔ duplicate or missing tool-call IDs fail before execution (2.2129ms)
+✔ disabled model tools still allow one conversational request (1.4762ms)
+✔ repeated tool requests are bounded and final-round calls never execute (3.101ms)
+✔ history persistence failure propagates before a model call (1.4367ms)
+✔ expired request deadline prevents the model request (2.5343ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 230.8683
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI][trace] {
+  requestId: '69fd0b84-3680-4ad7-9997-bd4f42a6f281',
+  backendVersion: null,
+  modelFirstEnabled: false,
+  semanticUnderstandingAttempted: false,
+  semanticUnderstandingSucceeded: false,
+  semanticErrorCategory: null,
+  semanticParseIssue: null,
+  semanticValidationIssues: [],
+  semanticScope: null,
+  semanticIntent: null,
+  detectedLanguage: 'english',
+  contextMode: 'new',
+  routeResolutionStatus: 'not_attempted',
+  toolCallingMode: 'model_selected',
+  serverSelectedIntent: null,
+  modelSelectedTools: [],
+  toolsActuallyExecuted: [],
+  toolCallCount: 0,
+  toolRejectedCount: 0,
+  modelRequestCount: 1,
+  toolSuccessOrFailure: [],
+  noToolExecutionReason: null,
+  liveComparisonAttempted: false,
+  liveComparisonStatus: 'not_attempted',
+  responseSource: 'llm_direct',
+  fallbackReason: null,
+  totalLatencyMs: null
+}
+✔ JWT-authenticated chat preserves envelope, persistence and completed replay (40.0518ms)
+✔ missing JWT rejects before persistence and model (2.4831ms)
+✔ pending and uncertain requests cannot re-execute tools (4.6386ms)
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI][trace] {
+  requestId: 'd09c43e6-7be5-4358-be7f-d907d214a47e',
+  backendVersion: null,
+  modelFirstEnabled: false,
+  semanticUnderstandingAttempted: false,
+  semanticUnderstandingSucceeded: false,
+  semanticErrorCategory: null,
+  semanticParseIssue: null,
+  semanticValidationIssues: [],
+  semanticScope: null,
+  semanticIntent: null,
+  detectedLanguage: 'english',
+  contextMode: 'new',
+  routeResolutionStatus: 'not_attempted',
+  toolCallingMode: 'model_selected',
+  serverSelectedIntent: null,
+  modelSelectedTools: [],
+  toolsActuallyExecuted: [],
+  toolCallCount: 0,
+  toolRejectedCount: 0,
+  modelRequestCount: 1,
+  toolSuccessOrFailure: [],
+  noToolExecutionReason: null,
+  liveComparisonAttempted: false,
+  liveComparisonStatus: 'not_attempted',
+  responseSource: 'llm_direct',
+  fallbackReason: null,
+  totalLatencyMs: null
+}
+✔ assistant persistence failure marks run failed and does not claim success (4.0431ms)
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI][trace] {
+  requestId: '57890011-9a12-45f1-a660-f2d4c17901bb',
+  backendVersion: null,
+  modelFirstEnabled: false,
+  semanticUnderstandingAttempted: false,
+  semanticUnderstandingSucceeded: false,
+  semanticErrorCategory: null,
+  semanticParseIssue: null,
+  semanticValidationIssues: [],
+  semanticScope: null,
+  semanticIntent: null,
+  detectedLanguage: 'english',
+  contextMode: 'new',
+  routeResolutionStatus: 'not_attempted',
+  toolCallingMode: 'model_selected',
+  serverSelectedIntent: null,
+  modelSelectedTools: [ 'get_provider_status' ],
+  toolsActuallyExecuted: [ 'get_provider_status' ],
+  toolCallCount: 1,
+  toolRejectedCount: 0,
+  modelRequestCount: 2,
+  toolSuccessOrFailure: [ { name: 'get_provider_status', success: true, error: null } ],
+  noToolExecutionReason: null,
+  liveComparisonAttempted: false,
+  liveComparisonStatus: 'not_attempted',
+  responseSource: 'llm_grounded',
+  fallbackReason: null,
+  totalLatencyMs: null
+}
+✔ full endpoint executes the selected tool and returns its result to Groq (6.5465ms)
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 8,
+  toolNames: [
+    'get_current_trip',
+    'get_latest_comparison',
+    'lookup_provider_service',
+    'search_locations',
+    'calculate_route',
+    'get_provider_status',
+    'get_app_capabilities',
+    'get_conversation_context'
+  ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI][trace] {
+  requestId: '52e241da-9d3a-4b13-acb8-ab10cd4f1d4e',
+  backendVersion: null,
+  modelFirstEnabled: false,
+  semanticUnderstandingAttempted: false,
+  semanticUnderstandingSucceeded: false,
+  semanticErrorCategory: null,
+  semanticParseIssue: null,
+  semanticValidationIssues: [],
+  semanticScope: null,
+  semanticIntent: null,
+  detectedLanguage: 'english',
+  contextMode: 'new',
+  routeResolutionStatus: 'RESOLVED',
+  toolCallingMode: 'model_selected',
+  serverSelectedIntent: null,
+  modelSelectedTools: [
+    'search_locations',
+    'search_locations',
+    'search_locations',
+    'calculate_route',
+    'calculate_route'
+  ],
+  toolsActuallyExecuted: [
+    'search_locations',
+    'search_locations',
+    'search_locations',
+    'calculate_route',
+    'calculate_route'
+  ],
+  toolCallCount: 5,
+  toolRejectedCount: 0,
+  modelRequestCount: 2,
+  toolSuccessOrFailure: [
+    { name: 'search_locations', success: true, error: null },
+    { name: 'search_locations', success: true, error: null },
+    { name: 'search_locations', success: true, error: null },
+    { name: 'calculate_route', success: true, error: null },
+    { name: 'calculate_route', success: true, error: null }
+  ],
+  noToolExecutionReason: null,
+  liveComparisonAttempted: false,
+  liveComparisonStatus: 'not_attempted',
+  responseSource: 'llm_grounded',
+  fallbackReason: null,
+  totalLatencyMs: null
+}
+✔ active endpoint executes arbitrary multi-stop native search and ordered route legs with grounded approximate metadata (8.7878ms)
+✔ request-run SQL has seven matching bound values (1.8971ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 456.9475
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 429,
+  category: 'unknown_provider_failure',
+  providerErrorCode: null
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 429,
+  category: 'unknown_provider_failure',
+  providerErrorCode: null
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 429,
+  category: 'rate_limit',
+  providerErrorCode: null
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 1,
+  toolNames: [ 'search_locations' ],
+  toolChoice: 'required'
+}
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 400,
+  category: 'tool_choice_rejected',
+  providerErrorCode: 'tool_choice_required'
+}
+[AI] required tool choice rejected; retrying once with auto {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 400,
+  providerErrorCode: 'tool_choice_required',
+  category: 'tool_choice_rejected'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 1,
+  toolNames: [ 'search_locations' ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 1,
+  toolNames: [ 'calculate_route' ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 2,
+  toolNames: [ 'search_locations', 'calculate_route' ],
+  toolChoice: 'required'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 1,
+  toolNames: [ 'search_locations' ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  toolCount: 1,
+  toolNames: [ 'get_provider_status' ],
+  toolChoice: 'auto'
+}
+[AI] model attempt { provider: 'groq', model: 'unsupported/model', attempt: 1 }
+[AI] tool request {
+  provider: 'groq',
+  model: 'unsupported/model',
+  toolCount: 1,
+  toolNames: [ 'get_provider_status' ],
+  toolChoice: 'auto'
+}
+[AI] model success {
+  provider: 'groq',
+  model: 'unsupported/model',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  elapsedMs: 0
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 429,
+  category: 'unknown_provider_failure',
+  providerErrorCode: null
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 429,
+  category: 'unknown_provider_failure',
+  providerErrorCode: null
+}
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: 429,
+  classification: 'LLM_RATE_LIMIT'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model success {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] fallback continuing {
+  nextProvider: 'openrouter',
+  nextModel: 'inclusionai/ling-3.1-flash',
+  attempt: 3
+}
+[AI] model attempt {
+  provider: 'openrouter',
+  model: 'inclusionai/ling-3.1-flash',
+  attempt: 3
+}
+[AI] recoverable model failure {
+  provider: 'openrouter',
+  model: 'inclusionai/ling-3.1-flash',
+  attempt: 3,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] fallback continuing {
+  nextProvider: 'openrouter',
+  nextModel: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4
+}
+[AI] model attempt {
+  provider: 'openrouter',
+  model: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4
+}
+[AI] recoverable model failure {
+  provider: 'openrouter',
+  model: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4,
+  httpStatus: null,
+  classification: 'LLM_TIMEOUT'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] fallback continuing {
+  nextProvider: 'openrouter',
+  nextModel: 'inclusionai/ling-3.1-flash',
+  attempt: 3
+}
+[AI] model attempt {
+  provider: 'openrouter',
+  model: 'inclusionai/ling-3.1-flash',
+  attempt: 3
+}
+[AI] recoverable model failure {
+  provider: 'openrouter',
+  model: 'inclusionai/ling-3.1-flash',
+  attempt: 3,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] fallback continuing {
+  nextProvider: 'openrouter',
+  nextModel: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4
+}
+[AI] model attempt {
+  provider: 'openrouter',
+  model: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4
+}
+[AI] recoverable model failure {
+  provider: 'openrouter',
+  model: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4,
+  httpStatus: null,
+  classification: 'LLM_MALFORMED_RESPONSE'
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 401,
+  category: 'unknown_provider_failure',
+  providerErrorCode: null
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  attempt: 1,
+  httpStatus: null,
+  classification: 'LLM_NETWORK_ERROR'
+}
+[AI] fallback continuing { nextProvider: 'groq', nextModel: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-20b', attempt: 2 }
+[AI] recoverable model failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  attempt: 2,
+  httpStatus: null,
+  classification: 'LLM_NETWORK_ERROR'
+}
+[AI] fallback continuing {
+  nextProvider: 'openrouter',
+  nextModel: 'inclusionai/ling-3.1-flash',
+  attempt: 3
+}
+[AI] model attempt {
+  provider: 'openrouter',
+  model: 'inclusionai/ling-3.1-flash',
+  attempt: 3
+}
+[AI] recoverable model failure {
+  provider: 'openrouter',
+  model: 'inclusionai/ling-3.1-flash',
+  attempt: 3,
+  httpStatus: null,
+  classification: 'LLM_NETWORK_ERROR'
+}
+[AI] fallback continuing {
+  nextProvider: 'openrouter',
+  nextModel: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4
+}
+[AI] model attempt {
+  provider: 'openrouter',
+  model: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4
+}
+[AI] model success {
+  provider: 'openrouter',
+  model: 'nvidia/nemotron-3.5-lightning:free',
+  attempt: 4,
+  elapsedMs: 1
+}
+[AI] model attempt { provider: 'groq', model: 'openai/gpt-oss-120b', attempt: 1 }
+[AI] provider failure {
+  provider: 'groq',
+  model: 'openai/gpt-oss-120b',
+  httpStatus: 429,
+  category: 'unknown_provider_failure',
+  providerErrorCode: null
+}
+✔ Groq-only LLM_RATE_LIMIT exhausts only Groq candidates then fails closed on cooldown (12.1355ms)
+✔ Groq-only LLM_MALFORMED_RESPONSE exhausts only Groq candidates then fails closed on cooldown (7.8339ms)
+✔ Groq-only missing key or ineligible provider makes zero requests (3.4536ms)
+✔ metadata-free Groq 429 fails closed without a secondary attempt (3.9471ms)
+✔ Groq HTTP parsing, 429 and timeout paths are fully mocked (7.5654ms)
+✔ Groq required-tool rejection preserves sanitized provider diagnostics (2.8178ms)
+✔ Groq required-tool rejection retries once with auto and exposes recovery (3.6786ms)
+✔ Groq GPT-OSS 120B is primary with hidden low reasoning and bounded output (4.3812ms)
+✔ confirmed Groq GPT-OSS 120B receives registered tool schemas and auto choice (2.5255ms)
+✔ verified route requests use required native tool choice (3.9308ms)
+✔ unsupported required tool choice is downgraded safely to auto (4.8231ms)
+✔ Groq parses model-selected tool_calls; unsupported Groq model receives no tools (7.5231ms)
+✔ Groq semantic JSON response accepts valid JSON and diagnoses malformed or empty content (8.669ms)
+✔ OPENROUTER_API_KEY is preferred over the legacy AI_API_KEY alias (4.5565ms)
+✔ legacy AI_API_KEY still configures OpenRouter when canonical key is absent (5.1948ms)
+✔ Groq 429 with Retry-After longer than the deadline fails closed (6.925ms)
+✔ Groq 429 with a short Retry-After can use one bounded secondary (4.7754ms)
+✔ classifies Groq tokens-per-minute exhaustion safely (3.227ms)
+✔ classifies Groq requests-per-minute exhaustion safely (5.6366ms)
+✔ classifies Groq quota exhaustion exhaustion safely (5.5018ms)
+✔ Groq timeout, malformed output, and credential errors follow existing contracts (6.4804ms)
+✔ Groq failure reaches OpenRouter, and total failure remains retryable/unavailable (4.7134ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 181.8966
+✔ all Phase 2 tools use closed object schemas (1.5679ms)
+✔ route tools validate nested coordinates and reject extra fields (1.0446ms)
+✔ live fare comparison requires a server-validated intent flag (0.5217ms)
+✔ nested route and planner arguments reject unexpected or malformed values (0.5295ms)
+✔ historical fare forecast requires supported provider, category and zoned forecast time (0.7842ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 49.8144
+✔ executes an allowlisted tool with server-owned user context (3.4932ms)
+✔ rejects duplicate and excessive tool calls (1.7501ms)
+✔ enforces live comparison intent and feature flag at execution time (1.0343ms)
+✔ one call budget is shared across agent rounds and deadline is passed to model (3.3085ms)
+✔ tool deadline expires before execution (0.6066ms)
+✔ AI fare tool passes only current REAL quotes and blocks other provenance (3.9599ms)
+✔ forecast tool reads REAL historical evidence and never labels it a Live Quote (32.1763ms)
+✔ forecast tool fails closed without trusted route, enough evidence, or database availability (2.9474ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 173.7175
+✔ comparison lookup uses authenticated server context only (7.952ms)
+✔ knowledge tool is unavailable before Phase 3 (0.5399ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 119.7013
+✔ compact native request retains routing data while context grows by round (1.5703ms)
+✔ generic ranking prefers a matching area or landmark and rejects unrelated business (1.9279ms)
+✔ exact matching business remains a valid named landmark (0.29ms)
+✔ compact search results preserve identity and routing references (2.4536ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 89.9352
+✔ nearby history suppresses details below sample/day thresholds and exposes no timestamps or coordinates (4.648ms)
+✔ eligible history returns coarse aggregates without exact dates, event times, or marker positions (0.9891ms)
+✔ detailed historical groups below minimum group size are excluded by SQL (0.4447ms)
+✔ AI tool arguments allow only supported provider/category and bounded pickup coordinates (1.1006ms)
+✔ nearby context remains a read-only opt-in AI tool (1.2637ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 98.7668

@@ -3,14 +3,8 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
 const { query } = require("../config/postgres");
-const emailProvider = require("../services/email/emailProvider");
+const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
 const { MAX_VERIFICATION_RESENDS, resendMetadata, cooldownRemainingSeconds } = require("../services/emailAuth.service");
-
-const email = `auth-${Date.now()}@example.com`;
-const otherEmail = `auth-other-${Date.now()}@example.com`;
-const password = "correct horse battery";
-async function register(value = email, name = "Ali") { return request(app).post("/api/auth/register").send({ name, email: value, password }); }
-async function login(value = email) { let result = await request(app).post("/api/auth/login").send({ email: value, password }); if (result.status === 403 && result.body.errorCode === "EMAIL_NOT_VERIFIED") { const code = global.__emailTestCodes.get(`${value}:verify`); assert.equal((await request(app).post("/api/auth/email/verify").send({ email: value, code })).status, 200); result = await request(app).post("/api/auth/login").send({ email: value, password }); } return result; }
 
 test("verification resend metadata is bounded to two user-requested resends", () => {
   assert.equal(MAX_VERIFICATION_RESENDS, 2);
@@ -25,45 +19,42 @@ test("verification resend cooldown reports remaining seconds without exposing st
   assert.equal(cooldownRemainingSeconds("2026-01-01T00:00:00.000Z", 60, now + 60000), 0);
 });
 
-test("registration hashes password and returns an account without a session", async () => {
-  const res = await register();
-  assert.equal(res.status, 200); assert.equal(res.body.data.accessToken, undefined); assert.equal(res.body.data.refreshToken, undefined); assert.equal(res.body.data.user.email, email); assert.equal(res.body.data.user.password_hash, undefined);
-  const row = (await query("SELECT password_hash FROM users WHERE email = $1", [email])).rows[0];
-  assert.ok(row.password_hash.startsWith("$2")); assert.notEqual(row.password_hash, password);
+test("password, signup, guest and legacy email-verification routes are not exposed", async () => {
+  for (const [method, path] of [["post", "/api/auth/register"], ["post", "/api/auth/login"], ["post", "/api/auth/guest"], ["post", "/api/auth/email/verify"], ["post", "/api/auth/forgot-password"]]) {
+    assert.equal((await request(app)[method](path).send({})).status, 404, `${path} should not be exposed`);
+  }
 });
-test("registration validation and duplicate email are rejected", async () => {
-  assert.equal((await register(email)).status, 409);
-  assert.equal((await request(app).post("/api/auth/register").send({ name: "x", email: "bad", password: "short" })).status, 400);
-});
-test("login, me, refresh rotation, logout and ownership are enforced", async () => {
-  const logged = await login(); assert.equal(logged.status, 200); const session = logged.body.data;
-  const me = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${session.accessToken}`); assert.equal(me.status, 200); assert.equal(me.body.data.email, email); assert.equal(me.body.data.password_hash, undefined);
-  assert.equal((await request(app).get("/api/auth/me")).status, 401); assert.equal((await request(app).get("/api/auth/me").set("Authorization", "Bearer invalid")).status, 401);
-  const refreshed = await request(app).post("/api/auth/refresh").send({ refreshToken: session.refreshToken }); assert.equal(refreshed.status, 200); assert.notEqual(refreshed.body.data.refreshToken, session.refreshToken);
-  assert.equal((await request(app).post("/api/auth/refresh").send({ refreshToken: session.refreshToken })).status, 401);
-  await register(otherEmail, "Sara"); const other = await login(otherEmail);
-  const comparison = await request(app).post("/api/fares/compare").set("Authorization", `Bearer ${session.accessToken}`).send({ pickup: { name: "A", lat: 31.5, lng: 74.3 }, dropoff: { name: "B", lat: 31.6, lng: 74.4 }, vehicleType: "bike" });
-  assert.equal(comparison.status, 200);
-  const own = await request(app).get("/api/history").set("Authorization", `Bearer ${session.accessToken}`); assert.equal(own.status, 200); assert.ok(own.body.data.length > 0);
-  const id = own.body.data[0].id;
-  const otherHistory = await request(app).get("/api/history").set("Authorization", `Bearer ${other.body.data.accessToken}`); assert.equal(otherHistory.status, 200); assert.equal(otherHistory.body.data.some((row) => row.id === id), false);
-  assert.equal((await request(app).get(`/api/history/${id}`).set("Authorization", `Bearer ${other.body.data.accessToken}`)).status, 404);
+
+test("OTP session rotates refresh credentials, logout revokes them, and protected routes require auth", async () => {
+  const auth = await createAuthenticatedTestUser(app, "Auth User");
+  const me = await request(app).get("/api/auth/me").set("Authorization", authHeader(auth));
+  assert.equal(me.status, 200);
+  assert.equal(me.body.data.id, auth.user.id);
+  assert.equal(me.body.data.email, auth.email);
+  assert.equal(me.body.data.password_hash, undefined);
+  assert.equal((await request(app).get("/api/auth/me")).status, 401);
+  assert.equal((await request(app).get("/api/auth/me").set("Authorization", "Bearer invalid")).status, 401);
+
+  const refreshed = await request(app).post("/api/auth/refresh").send({ refreshToken: auth.refreshToken });
+  assert.equal(refreshed.status, 200);
+  assert.equal(refreshed.body.data.user.id, auth.user.id);
+  assert.notEqual(refreshed.body.data.refreshToken, auth.refreshToken);
+  assert.equal((await request(app).post("/api/auth/refresh").send({ refreshToken: auth.refreshToken })).status, 401);
   assert.equal((await request(app).post("/api/auth/logout").send({ refreshToken: refreshed.body.data.refreshToken })).status, 200);
   assert.equal((await request(app).post("/api/auth/refresh").send({ refreshToken: refreshed.body.data.refreshToken })).status, 401);
 });
 
-test("protected comparison and history endpoints reject anonymous requests", async () => {
+test("history remains isolated by verified email identity", async () => {
+  const a = await createAuthenticatedTestUser(app, "History A");
+  const b = await createAuthenticatedTestUser(app, "History B");
+  const row = (await query("INSERT INTO comparison_history (user_id,pickup_label,pickup_latitude,pickup_longitude,destination_label,destination_latitude,destination_longitude) VALUES ($1,'A',31.5,74.3,'B',31.6,74.4) RETURNING id", [a.user.id])).rows[0];
+  assert.equal((await request(app).get("/api/history").set("Authorization", authHeader(a))).body.data.some((item) => item.id === row.id), true);
+  assert.equal((await request(app).get("/api/history").set("Authorization", authHeader(b))).body.data.some((item) => item.id === row.id), false);
+  assert.equal((await request(app).get(`/api/history/${row.id}`).set("Authorization", authHeader(b))).status, 404);
+});
+
+test("protected fare and history endpoints reject missing authentication", async () => {
   assert.equal((await request(app).post("/api/fares/compare").send({})).status, 401);
   assert.equal((await request(app).get("/api/history")).status, 401);
   assert.equal((await request(app).get("/api/history/1")).status, 401);
-});
-
-test("successful password reset is not invalidated by password-changed email failure", async () => {
-  assert.equal((await request(app).post("/api/auth/forgot-password").send({ email })).status, 200);
-  const code = global.__emailTestCodes.get(`${email}:reset`);
-  const verified = await request(app).post("/api/auth/forgot-password/verify").send({ email, code });
-  assert.equal(verified.status, 200);
-  emailProvider.setEmailProviderForTests({ async send() { throw new Error("informational delivery failed"); } });
-  const reset = await request(app).post("/api/auth/reset-password").send({ resetToken: verified.body.data.resetToken, newPassword: "new correct horse", confirmPassword: "new correct horse" });
-  assert.equal(reset.status, 200);
 });

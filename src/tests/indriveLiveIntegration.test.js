@@ -30,7 +30,7 @@ function persistedSession(access = token()) {
 
 const route = { pickup: { latitude: 31.4742, longitude: 74.4163 }, destination: { latitude: 31.464, longitude: 74.4426 }, distanceMeters: 4200, durationSeconds: 900 };
 
-test("pricing v6 payload uses dynamic route metrics and all verified categories", () => {
+test("pricing v6 payload uses dynamic route metrics and configured categories", () => {
   assert.deepEqual(buildPricingPayload({ ...route, vehicleType: "car" }), {
     order_type_ids: [2, 33, 31, 29, 11],
     route: [{ latitude: 31.4742, longitude: 74.4163 }, { latitude: 31.464, longitude: 74.4426 }],
@@ -38,19 +38,26 @@ test("pricing v6 payload uses dynamic route metrics and all verified categories"
   });
 });
 
-test("live pricing maps PKR multiplier, ranges, categories and provider TTL", async () => {
+test("adapter maps the captured pricing response shape, currency, categories and TTL", async () => {
   let payload;
+  const createdAt = new Date(Date.now() - 1_000).toISOString();
   const adapter = createIndriveAdapter({ config: config(), session: persistedSession(), client: {
-    getPricing: async (accessToken, body) => { assert.ok(accessToken); payload = body; return { status: 200, body: { currency: { code: "PKR", multiplier: 100 }, ttl: 300, calculations: [
-      { order_type_id: 2, autofill_price: 16300, price_min: 14000, price_max: 18500 },
-      { order_type_id: 33, autofill_price: 45000, price_min: 45000, price_max: 45000 },
-      { order_type_id: 31, autofill_price: 30000 }, { order_type_id: 29, autofill_price: 62000 }, { order_type_id: 11, autofill_price: 78000 },
+    getPricing: async (accessToken, body) => { assert.ok(accessToken); payload = body; return { status: 200, body: { currency: { code: "PKR", multiplier: 100 }, created_at: createdAt, ttl: 300, calculations: [
+      { order_type_id: 2, price: 16300, autofill_price: 16300, price_min: 14000, price_max: 18500 },
+      { order_type_id: 33, price: 45000, autofill_price: 45000, price_min: 45000, price_max: 45000 },
+      { order_type_id: 31, price: 30000, autofill_price: 30000 },
+      { order_type_id: 29, price: 62000, autofill_price: 62000 },
+      { order_type_id: 11, price: 78000, autofill_price: 78000 },
     ] } };
   } } });
   const quotes = await adapter.getQuotes({ route: { ...route }, vehicleType: "car" });
   assert.equal(payload.geo.distance_meters, 4200);
   assert.deepEqual(quotes.map((quote) => [quote.categoryId, quote.fare]), [["2", 163], ["33", 450], ["31", 300], ["29", 620], ["11", 780]]);
   assert.equal(quotes[0].fareMin, 140); assert.equal(quotes[0].fareMax, 185); assert.equal(quotes[0].metadata.providerTtlSeconds, 300); assert.equal(quotes[0].source, "live");
+  assert.equal(quotes[0].metadata.providerCreatedAt, createdAt);
+  assert.equal(quotes[0].metadata.providerFreshness, "current");
+  assert.ok(quotes[0].metadata.backendProcessedAt);
+  assert.notEqual(quotes[0].metadata.backendProcessedAt, quotes[0].metadata.providerCreatedAt);
 });
 
 test("autocomplete request is URL/form encoded and response.items is normalized", () => {

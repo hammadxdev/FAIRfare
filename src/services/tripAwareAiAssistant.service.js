@@ -9,12 +9,12 @@ const { compareFares, isLiveFareResult } = require("./fare.service");
 const { DECISIONS, decideGrounding } = require("./ai/groundingDecision.service");
 const { lookupProviderService, parseServiceQuestion } = require("./ai/serviceIdentityResolver.service");
 const { classifyDomain, outOfScopeReply } = require("./ai/domainPolicy.service");
-const { buildServerIntent } = require("./ai/intentRouter.service");
+const { buildServerIntent, routeIntent } = require("./ai/intentRouter.service");
 const { executeToolCalls, runBoundedToolAgent } = require("./ai/toolExecutor.service");
 const { listTools } = require("./ai/toolRegistry");
 const { planTrip } = require("./ai/tripPlanner.service");
 const { forecastFare, compareTimeBuckets } = require("./ai/fareForecast.service");
-const { readHistoricalFareEvidence } = require("./fareObservation.service");
+const { readHistoricalFareEvidence, deriveTimeFeatures } = require("./fareObservation.service");
 const providers = require("../providers/provider.registry");
 const { getMemory, resolveComparisonReference, savePlanningContext } = require("./ai/conversationMemory.service");
 const defaultLlmClient = require("./ai/llmClient");
@@ -91,6 +91,7 @@ function serviceIdentityReply(result, message) {
 }
 
 function toolsEnabled() { return String(process.env.FAIRFARE_AI_TOOL_AGENT_ENABLED || "false").toLowerCase() === "true"; }
+function modelToolsEnabled() { return toolsEnabled() && String(process.env.FAIRFARE_AI_MODEL_TOOLS_ENABLED || "false").toLowerCase() === "true"; }
 function liveComparisonEnabled() { return String(process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED || "false").toLowerCase() === "true"; }
 function plannerEnabled() { return String(process.env.FAIRFARE_AI_TRIP_PLANNER_ENABLED || process.env.FAIRRIDE_AI_TRIP_PLANNER_ENABLED || "false").toLowerCase() === "true"; }
 function forecastEnabled() { return String(process.env.FAIRFARE_AI_FARE_FORECAST_ENABLED || process.env.FAIRRIDE_AI_FARE_FORECAST_ENABLED || "false").toLowerCase() === "true"; }
@@ -123,6 +124,18 @@ function fareRoutePayload(route) {
     eligibilityReason: route.eligibilityReason || null,
   };
 }
+function hasVerifiedForecastRoute(trip) {
+  const route = trip?.route || {};
+  const pickup = trip?.pickup || {};
+  const destination = trip?.destination || {};
+  const validCoordinate = (value, minimum, maximum) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) >= minimum && Number(value) <= maximum;
+  const validPositiveNumber = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) > 0;
+  return trip?.status === "RESOLVED"
+    && typeof trip.city === "string" && trip.city.trim().length > 0
+    && validCoordinate(pickup.lat, -90, 90) && validCoordinate(pickup.lng, -180, 180)
+    && validCoordinate(destination.lat, -90, 90) && validCoordinate(destination.lng, -180, 180)
+    && validPositiveNumber(route.distanceMeters) && validPositiveNumber(route.durationSeconds);
+}
 function liveComparisonReply(trip, comparison, message) {
   const language = routeResponseLanguage(message);
   const pickup = trip.pickup?.name || trip.extracted?.pickup;
@@ -139,16 +152,28 @@ function liveComparisonReply(trip, comparison, message) {
   if (!lines.length) return `${intro}\n\n${language === "roman_urdu" ? "Is request ke liye koi usable live fare nahi mila; main historical ya simulated amount ko live nahi bataunga." : "No usable live fare was returned for this request; I will not present historical or simulated amounts as live fares."}${unavailableLines.length ? `\n${unavailableLines.join("\n")}` : ""}`;
   return `${intro}\n\n${language === "roman_urdu" ? "Current verified live fares:" : "Current verified live fares:"}\n${lines.join("\n")}${unavailableLines.length ? `\n\n${unavailableLines.join("\n")}` : ""}`;
 }
-async function oneShotFuturePlan({ args, plan, message }) {
+function liveFareToolReply(toolExecution, message) {
+  const language = routeResponseLanguage(message);
+  const item = toolExecution?.results?.find((result) => result.name === "compare_live_fares");
+  const result = item?.ok ? item.result : null;
+  const quotes = result?.status === "OK" && Array.isArray(result.quotes) ? result.quotes : [];
+  if (!quotes.length) return language === "roman_urdu"
+    ? "Is request ke liye current verified provider fare available nahi hai. Main simulated ya purane fare ko live nahi bataunga."
+    : "No current verified provider fare is available for this request. I will not present a simulated or historical fare as live.";
+  const lines = quotes.map((quote) => `${quote.provider}: ${quote.fare} ${quote.currency || "PKR"}${quote.fareSemantics ? ` — ${quote.fareSemantics}` : ""}`);
+  return `${language === "roman_urdu" ? "Current verified provider fares:" : "Current verified provider fares:"}\n${lines.join("\n")}`;
+}
+async function oneShotFuturePlan({ args, plan, message, resolvedTrip }) {
   if (!routeResolutionEnabled()) return { status: "PARTIAL", trip: plan, route: null, estimates: [], cheapestTime: null, limitations: ["Verified route resolution is disabled."], booking: { created: false } };
-  const resolved = await tripResolver({ message });
-  if (!resolved || resolved.status !== "RESOLVED") return { status: "PARTIAL", trip: plan, route: resolved?.route || null, estimates: [], cheapestTime: null, limitations: [resolved?.status === "UNRESOLVED" ? "Pickup or destination could not be verified." : "Verified road routing is unavailable."], booking: { created: false } };
+  const resolved = resolvedTrip === undefined ? await tripResolver({ message }) : resolvedTrip;
+  if (!hasVerifiedForecastRoute(resolved)) return { status: "PARTIAL", trip: plan, route: resolved?.route || null, estimates: [], cheapestTime: null, limitations: [resolved?.status === "UNRESOLVED" ? "Pickup or destination could not be verified." : "Verified road routing is unavailable."], booking: { created: false } };
   if (!forecastEnabled() || !observationForecastEnabled()) return { status: "PARTIAL", trip: { ...plan, pickup: resolved.pickup, destination: resolved.destination, city: resolved.city }, route: { ...resolved.route, verified: true, source: "geoapify" }, estimates: [], cheapestTime: null, limitations: ["Historical forecasting is disabled."], booking: { created: false } };
   const vehicleCategory = plan.vehicleType || "car";
   const names = requestedProviders(message); const estimateResults = [];
   for (const requested of names.length ? names : ["yango", "bykea", "indrive"]) {
     const providerId = providers.canonicalProviderId(requested);
-    const evidence = await readHistoricalFareEvidence({ providerId, vehicleCategory, city: resolved.city || plan.city, hourOfDay: new Date(plan.departureAt).getUTCHours(), dayOfWeek: new Date(plan.departureAt).getUTCDay(), distanceMeters: resolved.route.distanceMeters, durationSeconds: resolved.route.durationSeconds, dataCutoff: new Date(), limit: 100 });
+    const marketTime = deriveTimeFeatures(plan.departureAt);
+    const evidence = await readHistoricalFareEvidence({ providerId, vehicleCategory, city: resolved.city || plan.city, hourOfDay: marketTime.hourOfDay, dayOfWeek: marketTime.dayOfWeek, distanceMeters: resolved.route.distanceMeters, durationSeconds: resolved.route.durationSeconds, dataCutoff: new Date(), limit: 100 });
     const forecast = forecastFare({ observations: evidence.evidence, providerId, vehicleType: vehicleCategory, city: resolved.city || plan.city, forecastAt: plan.departureAt || new Date(), dataCutoff: new Date() });
     estimateResults.push({ providerId, providerName: requested, ...forecast, reason: evidence.reason || null });
   }
@@ -186,14 +211,18 @@ function runtimeDiagnostics(intent, toolExecution, trip) {
   };
 }
 
-async function deterministicToolPath({ intent, args, recent }) {
+async function deterministicToolPath({ intent, args, recent, futurePlan, futureResolvedTrip }) {
   if ((!toolsEnabled() && !["future_fare_plan", "future_fare_follow_up", "current_trip"].includes(intent.intent)) || ["service_identity", "app_help", "follow_up", "ambiguous"].includes(intent.intent)) return null;
   const context = { userId: args.userId, conversationId: args.conversationId, comparisonId: args.comparisonId || null, explicitComparisonIntent: intent.explicitComparisonIntent === true, liveComparisonEnabled: liveComparisonEnabled(), deadlineAt: Date.now() + 12000 };
   if (["future_fare_plan", "future_fare_follow_up"].includes(intent.intent)) {
     if (!plannerEnabled()) return { reply: "Future trip planning is not enabled for this FareRide environment.", result: null };
     const prior = planningContext(recent);
-    const plan = planTrip({ message: args.message, requestTimestamp: args.requestTimestamp || new Date(), timezone: "Asia/Karachi", context: prior });
-    const result = plan.status === "READY" ? await oneShotFuturePlan({ args, plan, message: args.message }) : { status: "NEEDS_CLARIFICATION", trip: plan, route: null, estimates: [], cheapestTime: null, limitations: [], booking: { created: false } };
+    const plan = futurePlan || planTrip({ message: args.message, requestTimestamp: args.requestTimestamp || new Date(), timezone: "Asia/Karachi", context: prior });
+    if (plan.status === "READY" && futureResolvedTrip?.status === "UNRESOLVED") {
+      const clarification = routeDecisionResponse({ trip: futureResolvedTrip, decision: DECISIONS.LOCATION_UNRESOLVED, message: args.message });
+      return { reply: clarification.reply, trip: futureResolvedTrip, result: null };
+    }
+    const result = plan.status === "READY" ? await oneShotFuturePlan({ args, plan, message: args.message, resolvedTrip: futureResolvedTrip }) : { status: "NEEDS_CLARIFICATION", trip: plan, route: null, estimates: [], cheapestTime: null, limitations: [], booking: { created: false } };
     return { reply: result, result: { results: [{ ok: true, name: "plan_trip", result }] } };
   }
   if (["current_trip", "latest_comparison", "provider_status"].includes(intent.intent)) {
@@ -234,7 +263,10 @@ async function deterministicToolPath({ intent, args, recent }) {
   return null;
 }
 
-async function answer(args) {
+// Retained only for legacy callers/tests during migration. Repository search
+// confirms the active chat endpoint does not call this path; remove it only
+// after downstream callers and the legacy planner regression suite are retired.
+async function legacyAnswer(args) {
   let trip;
   let resolverMessage = args.message;
   let recent = [];
@@ -251,35 +283,100 @@ async function answer(args) {
       if (!args.comparisonId && candidateComparisonId) args = { ...args, comparisonId: candidateComparisonId };
     }
     const intentMessages = [...recent, ...(memory?.summaries || []).map((summary) => ({ role: "SYSTEM_MEMORY", content: summary.summary_text }))];
-    if (modelFirstEnabled()) {
+    const hasTrustedConversationContext = Boolean(args.comparisonId || recent.some((item) => { const locations = extractTripLocations(item?.content); return locations.pickup && locations.destination; }) || memory?.comparisonRefs?.length);
+    const deterministicIntent = routeIntent(String(args.message || "").replace(/\bfair\s*fare\b/gi, " "), { hasFareRideContext: hasTrustedConversationContext, hasComparison: Boolean(args.comparisonId) });
+    const bookingDecision = /\b(?:book|booking)\b/i.test(String(args.message || ""));
+    const hasExplicitTripLocations = Boolean(extractTripLocations(args.message).pickup && extractTripLocations(args.message).destination);
+    if (bookingDecision && !hasTrustedConversationContext && !hasExplicitTripLocations) {
+      const roman = routeResponseLanguage(args.message) === "roman_urdu";
+      return { reply: roman ? "Booking ka mashwara dene se pehle pickup, destination aur current ride options chahiye. Main bina verified context ke book karne ka mashwara nahi dunga." : "I need your pickup, destination, and current ride options before advising whether to book. I won’t recommend booking without verified trip context.", modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { semanticUnderstanding: null, semanticUnderstandingDiagnostics: { attempted: false, succeeded: false, errorCategory: null } } };
+    }
+    const clearHelpQuestion = /\b(?:help|how\s+do\s+i|how\s+can\s+i|how\s+to\s+use)\b/i.test(String(args.message || "").replace(/\bfair\s*fare\b/gi, " "))
+      && !/\b(?:fare|ride|route|provider|book|booking|compare|cheapest)\b/i.test(String(args.message || "").replace(/\bfair\s*fare\b/gi, " "));
+    const skipSemanticForClearHelp = (deterministicIntent.intent === "app_help" || clearHelpQuestion) && !hasTrustedConversationContext;
+    if (modelFirstEnabled() && !skipSemanticForClearHelp) {
       const understood = await understand({ llmClient: defaultLlmClient, message: args.message, context: { recentConversation: recent } });
       semantic = understood.understanding;
       semanticDiagnostics = understood.diagnostics || { attempted: true, succeeded: Boolean(understood.ok), errorCategory: understood.error || null };
       if (semantic.scope === "unsafe" || semantic.scope === "out_of_scope") return { reply: outOfScopeReply(args.message), modelId: understood.modelId || null, provider: understood.provider || null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { domainDecision: semantic.scope, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics } };
     }
-    const policy = classifyDomain(args.message, { hasFareRideContext: Boolean(args.comparisonId || recent.length || memory?.summaries?.length || memory?.comparisonRefs?.length), semanticUnderstanding: semantic });
+    const policy = skipSemanticForClearHelp
+      ? { intent: "app_help", allowed: true, reason: "CLEAR_APP_HELP" }
+      : classifyDomain(args.message, { hasFareRideContext: hasTrustedConversationContext, semanticUnderstanding: semantic });
     if (!policy.allowed) return { reply: outOfScopeReply(args.message), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", context: { domainDecision: policy.reason } };
+    if (skipSemanticForClearHelp) {
+      const direct = await qualityAwareAssistant.answer({ ...args, tripContext: null });
+      return { ...direct, context: { ...(direct.context || {}), responseSource: direct.fallbackUsed ? "safe_fallback" : "llm_direct", semanticUnderstanding: null, semanticUnderstandingDiagnostics: semanticDiagnostics } };
+    }
     const serviceQuestion = parseServiceQuestion(args.message, intentMessages);
     if (serviceQuestion) {
       const result = await lookupProviderService({ userId: args.userId, comparisonId: args.comparisonId || null, provider: null, serviceCode: serviceQuestion.serviceCode });
       return { reply: serviceIdentityReply(result, args.message), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: result.comparisonId || args.comparisonId || null, context: { comparisonUsed: Boolean(result.comparisonId), comparisonFreshness: result.evidence?.freshness || null, serviceIdentity: result } };
     }
-    const intent = buildServerIntent(args.message, { hasFareRideContext: Boolean(args.comparisonId || recent.length || memory?.summaries?.length || memory?.comparisonRefs?.length), hasComparison: Boolean(args.comparisonId), semanticUnderstanding: semantic, userExplicitlyRequestedComparison: semantic?.intent === "fare_comparison" || /\b(?:compare|cheapest|cheaper|sasti|sasta|sab\s+se\s+sasti|which\s+ride)\b/i.test(String(args.message || "")) });
+    const routedIntent = buildServerIntent(args.message, { hasFareRideContext: hasTrustedConversationContext, hasComparison: Boolean(args.comparisonId), semanticUnderstanding: semantic, userExplicitlyRequestedComparison: semantic?.intent === "fare_comparison" || /\b(?:compare|cheapest|cheaper|sasti|sasta|sab\s+se\s+sasti|which\s+ride)\b/i.test(String(args.message || "")) });
+    const intent = bookingDecision && hasTrustedConversationContext
+      ? { ...routedIntent, intent: "current_trip" }
+      : skipSemanticForClearHelp ? { ...routedIntent, intent: "app_help" } : routedIntent;
     if (semantic) args = { ...args, semanticUnderstanding: semantic };
-    const toolPath = await deterministicToolPath({ intent, args, recent });
+    let resolvedToolTrip = null;
+    let futurePlan = null;
+    let futureResolvedTrip;
+    const futureFareIntent = ["future_fare_plan", "future_fare_follow_up"].includes(intent.intent);
+    const nearbyHistoryRequest = /\b(?:nearby|around\s+(?:me|pickup)|near\s+(?:me|pickup)|historical|past\s+drivers?|driver\s+activity)\b/i.test(String(args.message || ""));
+    const routeToolIntent = ["route_information", "compare_fares", "cheapest_ride", "current_trip"].includes(intent.intent);
+    const requiresVerifiedToolTrip = routeToolIntent || futureFareIntent;
+    const futureForecastEligible = futureFareIntent && plannerEnabled() && routeResolutionEnabled() && forecastEnabled() && observationForecastEnabled();
+    if (futureFareIntent) {
+      futurePlan = planTrip({ message: args.message, requestTimestamp: args.requestTimestamp || new Date(), timezone: "Asia/Karachi", context: planningContext(recent) });
+      if (futureForecastEligible && futurePlan.status === "READY") {
+        try {
+          futureResolvedTrip = await tripResolver({ message: args.message, semantic: { ...semantic, pickup: { query: futurePlan.pickup }, destination: { query: futurePlan.destination } } });
+        } catch {
+          futureResolvedTrip = { status: "ROUTE_UNAVAILABLE" };
+        }
+      }
+    }
+    if (modelToolsEnabled() && routeToolIntent) {
+      const extracted = extractTripLocations(args.message);
+      const pickup = semantic?.pickup?.query || extracted.pickup;
+      const destination = semantic?.destination?.query || extracted.destination;
+      if (pickup && destination) {
+        resolvedToolTrip = await tripResolver({ message: args.message, semantic: { ...semantic, pickup: { query: pickup }, destination: { query: destination } } });
+      }
+    }
+    // Keep policy and explicit service-identity guards ahead of the model, but
+    // give eligible requests to the genuine model tool loop before legacy
+    // keyword-based tool dispatch.
+    const directOnlyIntent = new Set(["app_help", "general_travel", "follow_up", "vehicle_recommendation", "travel_timing"]);
+    const canRunModelTools = modelToolsEnabled()
+      && (!directOnlyIntent.has(intent.intent) || futureFareIntent || nearbyHistoryRequest)
+      && (!routeToolIntent || resolvedToolTrip?.status === "RESOLVED")
+      && (!futureFareIntent || futureForecastEligible && hasVerifiedForecastRoute(futureResolvedTrip));
+    if (canRunModelTools) {
+      const grounding = await base.buildGroundingContext({ userId: args.userId, message: args.message, comparisonId: args.comparisonId, conversationId: args.conversationId });
+      const toolTrip = futureFareIntent ? futureResolvedTrip : resolvedToolTrip;
+      const trustedToolTrip = futureFareIntent
+        ? hasVerifiedForecastRoute(toolTrip) ? toolTrip : null
+        : toolTrip?.status === "RESOLVED" ? toolTrip : null;
+      const context = trustedToolTrip ? { ...grounding, verifiedRoute: { pickup: trustedToolTrip.pickup, destination: trustedToolTrip.destination, route: fareRoutePayload(trustedToolTrip.route), source: "geoapify" } } : grounding;
+      const agent = await runBoundedToolAgent({ llmClient: defaultLlmClient, message: args.message, context, serverContext: { userId: args.userId, conversationId: args.conversationId, comparisonId: args.comparisonId, explicitComparisonIntent: intent.explicitComparisonIntent === true, liveComparisonEnabled: liveComparisonEnabled(), requiresResolvedTrip: requiresVerifiedToolTrip, resolvedTrip: trustedToolTrip, deadlineAt: Date.now() + 12000 }, tools: listTools() });
+      if (agent.handled && agent.toolResults?.length) {
+        if (agent.toolResults.some((item) => item.name === "compare_live_fares")) return { reply: liveFareToolReply({ results: agent.toolResults }, args.message), modelId: agent.result?.modelId || null, provider: agent.result?.provider || null, fallbackUsed: Boolean(agent.result?.fallbackUsed), available: true, status: "AVAILABLE", toolExecution: agent.toolResults, context: { toolCallingMode: "model_selected", toolIntent: intent.intent } };
+        if (agent.status === "UNAVAILABLE" || !agent.result?.text) return { reply: routeResponseLanguage(args.message) === "roman_urdu" ? "Verified Fair Fare data abhi available nahi hai. Main simulated ya historical result ko current nahi bataunga." : "Verified Fair Fare data is unavailable right now. I will not present simulated or historical results as current.", modelId: agent.result?.modelId || null, provider: agent.result?.provider || null, fallbackUsed: Boolean(agent.result?.fallbackUsed), available: false, status: "UNAVAILABLE", errorCode: agent.errorCode || "LLM_PROVIDER_ERROR", providerDiagnostics: agent.providerDiagnostics || null, toolExecution: agent.toolResults, context: { toolCallingMode: "model_selected", toolIntent: intent.intent } };
+        return { reply: agent.result.text, modelId: agent.result.modelId || null, provider: agent.result.provider || null, fallbackUsed: Boolean(agent.result.fallbackUsed), available: true, status: "AVAILABLE", toolExecution: agent.toolResults, comparisonId: agent.toolResults.find((item) => item.ok && item.result?.comparisonId)?.result.comparisonId || null, context: { toolCallingMode: "model_selected", toolIntent: intent.intent } };
+      }
+    }
+
+    const toolPath = await deterministicToolPath({ intent, args, recent, futurePlan, futureResolvedTrip });
     if (toolPath?.reply) {
       const structured = toolPath.reply && typeof toolPath.reply === "object" ? toolPath.reply : null;
       let planningPersistence = { status: "NOT_ATTEMPTED", durable: false };
       if (structured?.trip && args.userId && args.conversationId) {
         planningPersistence = await savePlanningContext({ userId: args.userId, conversationId: args.conversationId, planningIntent: intent.intent, departureAt: structured.trip.departureAt || null, departureTimezone: structured.trip.timezone || "Asia/Karachi", vehiclePreference: structured.trip.vehicleType || null, providerPreferences: requestedProviders(args.message), forecastSource: structured.estimates?.some((item) => item.sourceType === "forecast") ? "forecast" : "unavailable", forecastModelVersion: structured.estimates?.find((item) => item.modelVersion)?.modelVersion || null });
       }
-      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolIntent: intent.intent, planningPersistence, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
+      return { reply: toolPath.reply, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", comparisonId: toolPath.result?.results?.find((item) => item.ok && item.result?.comparisonId)?.result?.comparisonId || null, toolExecution: toolPath.result, context: { toolCallingMode: "server_deterministic", toolIntent: intent.intent, planningPersistence, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
     }
-    if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolIntent: intent.intent, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
-    if (toolsEnabled() && String(process.env.FAIRFARE_AI_MODEL_TOOLS_ENABLED || "false").toLowerCase() === "true") {
-      const agent = await runBoundedToolAgent({ llmClient: defaultLlmClient, message: args.message, context: await base.buildGroundingContext({ userId: args.userId, message: args.message, comparisonId: args.comparisonId, conversationId: args.conversationId }), serverContext: { userId: args.userId, conversationId: args.conversationId, comparisonId: args.comparisonId, explicitComparisonIntent: intent.explicitComparisonIntent === true, liveComparisonEnabled: liveComparisonEnabled(), deadlineAt: Date.now() + 12000 }, tools: listTools() });
-      if (agent.handled && agent.result?.text) return { reply: agent.result.text, modelId: agent.result.modelId || null, provider: agent.result.provider || null, fallbackUsed: Boolean(agent.result.fallbackUsed), available: true, status: "AVAILABLE", toolExecution: agent.toolResults || null, context: { toolIntent: intent.intent } };
-    }
+    if (toolPath?.result && toolPath.result.results?.some((item) => item.ok)) return { reply: toolResultReply(intent.intent, toolPath.result, args.message) || routeReply(toolPath.trip, routeResponseLanguage(args.message)), modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", toolExecution: toolPath.result, context: { toolCallingMode: "server_deterministic", toolIntent: intent.intent, semanticUnderstanding: semantic, semanticUnderstandingDiagnostics: semanticDiagnostics, diagnostics: runtimeDiagnostics(intent, toolPath.result, toolPath.trip) } };
     // Once semantic understanding has classified a non-live request, let the
     // LLM answer it directly. The legacy trip branch is intentionally reserved
     // for requests that need verified route/fare/provider data.
@@ -385,4 +482,4 @@ function routeDecisionResponse({ trip, decision, message, hadPreviousComparison 
   return { reply: route && decision === DECISIONS.FARES_UNAVAILABLE ? `${route}\n\n${fallback}` : fallback, modelId: null, provider: null, fallbackUsed: false, available: true, status: "AVAILABLE", groundingDecision: decision, context: { comparisonUsed: false, comparisonFreshness: null, predictionAvailable: false, preferencesUsed: true, historyUsed: false, historyAvailable: false, groundingDecision: decision, trip: trip ? publicTripContext(trip) : null } };
 }
 
-module.exports = { ...base, answer, oneShotFuturePlan, routeReply, routeResponseLanguage, serviceIdentityReply, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse, fareRoutePayload, modelFirstEnabled, FAIRFARE_POLICY };
+module.exports = { ...base, answer: require("./ai/chatOrchestrator.service").answer, legacyAnswer, oneShotFuturePlan, routeReply, routeResponseLanguage, serviceIdentityReply, liveFareToolReply, setTripResolverForTests, setComparisonBuilderForTests, routeDecisionResponse, fareRoutePayload, modelFirstEnabled, modelToolsEnabled, FAIRFARE_POLICY };

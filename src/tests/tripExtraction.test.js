@@ -129,3 +129,28 @@ test("maps LGU to Lahore Garrison University only after the initial acronym sear
   assert.equal(result.destination.name, "Lahore Garrison University");
   assert.ok(calls.includes("Lahore Garrison University"));
 });
+
+test("preserves three-stop order and routes every consecutive leg", async () => {
+  const legs = [];
+  const result = await resolveTripForAssistant({
+    message: "from Campus to Market then Park",
+    geocode: async ({ input }) => [{ name: input, city: "Lahore", county: "Lahore District", resultType: input === "Market" ? "street" : "amenity", lat: input === "Campus" ? 31.5 : input === "Market" ? 31.51 : 31.52, lng: 74.3 }],
+    route: async ({ origin, destination }) => { legs.push(`${origin.name}->${destination.name}`); return { distanceMeters: 1000, durationSeconds: 100 }; },
+  });
+  assert.equal(result.status, "RESOLVED");
+  assert.deepEqual(result.extracted.stops, ["Campus", "Market", "Park"]);
+  assert.deepEqual(legs, ["Campus->Market", "Market->Park"]);
+  assert.equal(result.route.distanceMeters, 2000);
+  assert.equal(result.resolution[1], "approximate_representative_area");
+});
+
+test("keeps exact user coordinates distinct from geocoder area points", async () => {
+  const result = await resolveTripForAssistant({
+    semantic: { pickup: { query: "my pin", lat: 31.5, lng: 74.3 }, destination: { query: "Town" } },
+    message: "from my pin to Town",
+    geocode: async () => [{ name: "Town", city: "Lahore", county: "Lahore District", resultType: "town", lat: 31.6, lng: 74.4 }],
+    route: async () => ({ distanceMeters: 10000, durationSeconds: 600 }),
+  });
+  assert.deepEqual(result.resolution, ["exact_user_coordinates", "approximate_representative_area"]);
+  assert.equal(result.approximate, true);
+});

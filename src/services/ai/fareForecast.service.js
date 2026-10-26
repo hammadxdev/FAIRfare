@@ -9,7 +9,7 @@ function forecastFare({ observations = [], providerId = null, route = null, vehi
   const status = usable.length >= 20 && validationPass ? "CALIBRATED" : "LIMITED_CALIBRATION";
   return { status, sourceType: "forecast", providerId, vehicleType, estimatedMin: low, estimatedMax: high, currency: "PKR", route: route || null, modelVersion, dataSource: "qualified_historical_observations", evidenceCount: usable.length, calibrationQuality: status === "CALIBRATED" ? "calibrated" : "limited", validation: heldOutValidation || null, uncertainty: status === "CALIBRATED" ? "Held-out validated empirical interval; not a guaranteed fare." : "Limited calibration; do not treat this interval as a reliable provider forecast.", forecastHorizonDays: horizonDays, dataCutoff: new Date(cutoff).toISOString(), generatedAt: new Date(generatedAt).toISOString() };
 }
-function simulationContract(simulation = {}) { return { ...simulation, sourceType: "simulated", label: "FareRide estimate / simulation", availability: "not_verified", actions: [] }; }
+function simulationContract(simulation = {}) { return { ...simulation, sourceType: "simulated", label: "FairFare estimate / simulation", availability: "not_verified", actions: [] }; }
 function compareTimeBuckets(bucketResults = []) {
   const valid = bucketResults.filter((item) => ["CALIBRATED", "LIMITED_CALIBRATION"].includes(item?.status) && Number.isFinite(Number(item.estimatedMin)) && Number.isFinite(Number(item.estimatedMax)) && item.evidenceCount >= 5);
   if (valid.length < 2) return { status: "UNDETERMINED", departureAt: null, explanation: "Reliable cheapest departure time cannot be determined from available data." };

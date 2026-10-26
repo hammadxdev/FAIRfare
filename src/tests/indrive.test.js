@@ -432,11 +432,11 @@ test("inDrive mapper preserves one normalized quote per returned category", () =
   assert.deepEqual(quotes.map((quote) => quote.normalizedCategory), ["BIKE", "RICKSHAW", "ECONOMY_CAR"]);
 });
 
-test("all verified order type mappings are preserved", () => {
+test("configured order type mappings are preserved without asserting upstream verification", () => {
   const response = { currency: { code: "PKR", multiplier: 100 }, calculations: [
-    { order_type_id: 2, autofill_price: 100 }, { order_type_id: 33, autofill_price: 100 },
-    { order_type_id: 31, autofill_price: 100 }, { order_type_id: 29, autofill_price: 100 },
-    { order_type_id: 11, autofill_price: 100 },
+    { order_type_id: 2, price: 100, autofill_price: 100 }, { order_type_id: 33, price: 100, autofill_price: 100 },
+    { order_type_id: 31, price: 100, autofill_price: 100 }, { order_type_id: 29, price: 100, autofill_price: 100 },
+    { order_type_id: 11, price: 100, autofill_price: 100 },
   ] };
   assert.deepEqual(mapPricingResponse(response).map((quote) => [quote.categoryId, quote.categoryName, quote.normalizedCategory]), [
     ["2", "Moto", "BIKE"], ["33", "Mini", "ECONOMY_CAR"], ["31", "Rickshaw", "RICKSHAW"],
@@ -451,16 +451,22 @@ test("verified single-category response normalizes money and preserves fare sema
     price: { value: 11000 }, price_min: { value: 10000 }, price_max: { value: 12000 },
     rush_hour: { is_rush: true }, ttl: 300,
   }, { distanceMeters: 12, durationSeconds: 34 });
-  assert.equal(quote.fare, 109);
+  assert.equal(quote.fare, 110);
   assert.equal(quote.fareMin, 100);
   assert.equal(quote.fareMax, 120);
   assert.equal(quote.metadata.price, 110);
+  assert.equal(quote.metadata.priceRaw, 11000);
+  assert.equal(quote.metadata.autofillPriceRaw, 10900);
+  assert.equal(quote.metadata.autofillPrice, 109);
   assert.equal(quote.metadata.isRush, true);
   assert.equal(quote.metadata.providerTtlSeconds, 300);
   assert.equal(quote.pickupEtaSeconds, null);
   assert.equal(quote.priceType, "suggested");
   assert.equal(quote.exactFare, null);
-  assert.equal(quote.metadata.priceDiagnostics.upstreamPriceField, "autofill_price.value");
+  assert.equal(quote.metadata.priceDiagnostics.upstreamPriceField, "price.value");
+  assert.equal(quote.metadata.priceDiagnostics.originalNumericAmount, 11000);
+  assert.equal(quote.metadata.priceDiagnostics.normalizedNumericAmount, 110);
+  assert.equal(quote.metadata.priceDiagnostics.fallbackUsed, false);
   assert.equal(quote.metadata.priceDiagnostics.priceClassification, "suggested");
 });
 
@@ -469,17 +475,60 @@ test("multi-category calculations preserve price steps and unknown categories sa
     { order_type_id: 11, autofill_price: 15000, price: 15500, price_min: 14000, price_max: 17000, is_rush: false, price_steps: { delta_up: 100, values: [14000, 15000] } },
     { order_type_id: 999, autofill_price: 20000, price_steps: { delta_up: 100, values: [20000] } },
   ] });
-  assert.equal(quotes[0].fare, 150);
+  assert.equal(quotes[0].fare, 155);
   assert.equal(quotes[0].normalizedCategory, "PREMIUM_CAR");
   assert.deepEqual(quotes[0].metadata.priceSteps.values, [14000, 15000]);
   assert.equal(quotes[1].categoryId, "999");
   assert.equal(quotes[1].categoryName, null);
   assert.equal(quotes[1].normalizedCategory, "UNKNOWN");
+  assert.equal(quotes[1].fare, null);
+  assert.equal(quotes[1].isAvailable, false);
 });
 
 test("missing or invalid multiplier does not create a monetary quote", () => {
-  assert.equal(mapPricingResponse({ currency: { code: "PKR" }, calculations: [{ order_type_id: 2, autofill_price: 100 }] })[0].fare, null);
-  assert.equal(mapPricingResponse({ currency: { code: "PKR", multiplier: 0 }, calculations: [{ order_type_id: 2, autofill_price: 100 }] })[0].fare, null);
+  assert.equal(mapPricingResponse({ currency: { code: "PKR" }, calculations: [{ order_type_id: 2, price: 100, autofill_price: 100 }] })[0].fare, null);
+  assert.equal(mapPricingResponse({ currency: { code: "PKR", multiplier: 0 }, calculations: [{ order_type_id: 2, price: 100, autofill_price: 100 }] })[0].fare, null);
+  assert.equal(mapPricingResponse({ currency: { code: "PKR", multiplier: -100 }, calculations: [{ order_type_id: 2, price: 100, autofill_price: 100 }] })[0].fare, null);
+});
+
+test("price is authoritative; missing or invalid price is unavailable without an autofill fallback", () => {
+  const response = { currency: { code: "PKR", multiplier: 100 }, calculations: [
+    { order_type_id: 2, price: 16300, autofill_price: 16300 },
+    { order_type_id: 33, price: "45000", autofill_price: 45000 },
+    { order_type_id: 31, price: null, autofill_price: 30000 },
+    { order_type_id: 29, price_min: 62000, price_max: 70000, price_steps: { values: [62000] }, autofill_price: 62000 },
+    { order_type_id: 11, price: 78000, autofill_price: 79000 },
+  ] };
+  const quotes = mapPricingResponse(response);
+  assert.deepEqual(quotes.map((quote) => quote.fare), [163, null, null, null, 780]);
+  assert.deepEqual(quotes.map((quote) => quote.isAvailable), [true, false, false, false, true]);
+  assert.equal(quotes[0].metadata.autofillPrice, 163);
+  assert.equal(quotes[4].metadata.autofillPrice, 790);
+  assert.equal(quotes[4].metadata.priceDiagnostics.fallbackUsed, false);
+});
+
+test("provider capture time and TTL are distinct from backend processing time", () => {
+  const capturedAt = Date.parse("2026-10-24T12:00:00.000Z");
+  const [current] = mapPricingResponse({ currency: { code: "PKR", multiplier: 100 }, created_at: "2026-10-24T12:00:00.000Z", ttl: 300, calculations: [
+    { order_type_id: 2, price: 16300, autofill_price: 16300 },
+  ] }, {}, { processedAtMs: capturedAt + 299_000 });
+  assert.equal(current.metadata.providerCreatedAt, "2026-10-24T12:00:00.000Z");
+  assert.equal(current.metadata.providerExpiresAt, "2026-10-24T12:05:00.000Z");
+  assert.equal(current.metadata.backendProcessedAt, "2026-10-24T12:04:59.000Z");
+  assert.equal(current.metadata.providerFreshness, "current");
+
+  const [expired] = mapPricingResponse({ currency: { code: "PKR", multiplier: 100 }, created_at: "2026-10-24T12:00:00.000Z", ttl: 300, calculations: [
+    { order_type_id: 2, price: 16300, autofill_price: 16300 },
+  ] }, {}, { processedAtMs: capturedAt + 300_000 });
+  assert.equal(expired.metadata.providerFreshness, "expired");
+  assert.equal(expired.metadata.providerExpiresAt, "2026-10-24T12:05:00.000Z");
+
+  const [unknown] = mapPricingResponse({ currency: { code: "PKR", multiplier: 100 }, ttl: 300, calculations: [
+    { order_type_id: 2, price: 16300 },
+  ] }, {}, { processedAtMs: capturedAt });
+  assert.equal(unknown.metadata.providerFreshness, "unknown");
+  assert.equal(unknown.metadata.providerCreatedAt, null);
+  assert.equal(unknown.metadata.providerExpiresAt, null);
 });
 
 test("normalized provider metadata excludes credentials and fingerprint fields", () => {

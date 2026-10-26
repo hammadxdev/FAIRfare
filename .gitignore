@@ -9,3 +9,7 @@ ml/artifacts/*_metadata.json
 ml/.deps/
 __pycache__/
 ml/__pycache__/
+.env
+.env.*
+!.env.example
+*.zip

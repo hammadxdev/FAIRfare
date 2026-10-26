@@ -1,6 +1,7 @@
 const { buildRouteStatsPayload } = require("./yango.payload");
 const { normalizeRouteStatsResponse } = require("./yango.mapper");
 const { recordProviderApiPayload } = require("../../services/providerApiPayloadStorage.service");
+const crypto = require("node:crypto");
 
 function inspectAccessToken(token, now = Date.now) {
   const value = String(token || "").trim();
@@ -93,8 +94,103 @@ function yangoSelectedClass(rideType, fallback) {
   return fairfareToYango[value] || value || fallback;
 }
 
+function normalizeNearestDrivers(body) {
+  if (!Array.isArray(body?.drivers)) return null;
+  return body.drivers.map((driver) => {
+    const positions = Array.isArray(driver?.positions) ? driver.positions : [];
+    const position = positions[positions.length - 1];
+    const latitude = Number(position?.lat);
+    const longitude = Number(position?.lon);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+    const direction = Number(position.direction);
+    const timestamp = Number(position.timestamp);
+    return {
+      latitude,
+      longitude,
+      ...(Number.isFinite(direction) ? { heading: direction } : {}),
+      ...(Number.isFinite(timestamp) ? { timestamp } : {}),
+      ...(typeof driver.free === "boolean" ? { available: driver.free } : {}),
+      ...(typeof driver.display_tariff === "string" ? { tariff: driver.display_tariff } : {}),
+      ...(typeof driver.static_icon === "boolean" ? { staticIcon: driver.static_icon } : {}),
+    };
+  }).filter(Boolean);
+}
+
+function buildNearestDriversPayload({ latitude, longitude, rideType, config, id = crypto.randomUUID() } = {}) {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+    throw clientError("PROVIDER_INVALID_REQUEST", "Yango nearby-driver coordinates are invalid.");
+  }
+  return {
+    id: String(id),
+    point: [lng, lat],
+    classes: [yangoSelectedClass(rideType, config?.selectedClass || "econom")],
+    current_drivers: [],
+    simplify: true,
+    payment: { type: config?.paymentType || "cash" },
+  };
+}
+
+function nearestDriversHeaders(config) {
+  const headers = {
+    Accept: "application/json",
+    "Content-Type": "application/json; charset=utf-8",
+    Authorization: `Bearer ${config.accessToken}`,
+    "X-Oauth-Token": config.accessToken,
+  };
+  const optional = {
+    "X-Yataxi-Userid": config.driverRequestHeaders?.userId,
+    "User-Agent": config.driverRequestHeaders?.userAgent,
+    "X-User-Agent-Split": config.driverRequestHeaders?.userAgentSplit,
+    "X-Ya-Go-Superapp-Session": config.driverRequestHeaders?.superappSession,
+    "X-Perf-Class": config.driverRequestHeaders?.perfClass,
+    "Accept-Language": config.driverRequestHeaders?.acceptLanguage,
+    "X-Appmetrica-Uuid": config.driverRequestHeaders?.appmetricaUuid,
+    "X-Appmetrica-Deviceid": config.driverRequestHeaders?.appmetricaDeviceId,
+    "X-Mob-Id": config.driverRequestHeaders?.mobileId,
+    "X-Vpn-Active": config.driverRequestHeaders?.vpnActive,
+    "X-Yataxi-Last-Zone-Names": config.driverRequestHeaders?.lastZoneNames || config.zoneName,
+    "X-Yataxi-Has-Ongoing-Orders": config.driverRequestHeaders?.hasOngoingOrders,
+    "X-Yataxi-Ongoing-Orders-Statuses": config.driverRequestHeaders?.ongoingOrdersStatuses,
+  };
+  for (const [name, value] of Object.entries(optional)) if (value) headers[name] = value;
+  return headers;
+}
+
 function createYangoRouteStatsClient({ config, testContext = null, fetchImpl = globalThis.fetch, now = Date.now, diagnosticsEnabled = false, onDiagnostic = null, payloadRecorder = recordProviderApiPayload } = {}) {
   return {
+    async getNearbyDrivers({ latitude, longitude, rideType = "car" } = {}) {
+      if (!config?.enabled || config.mode !== "authorized-live" || !config.authorizationConfigured) throw clientErrorWithDiagnostics("PROVIDER_AUTH_REQUIRED", "Yango authorization is required.", null, "AUTH_ERROR", false);
+      const tokenState = inspectAccessToken(config.accessToken, now);
+      if (tokenState.kind === "missing" || tokenState.kind === "invalid" || tokenState.expired) throw clientErrorWithDiagnostics("PROVIDER_AUTH_REQUIRED", "Yango access token is unavailable or expired.", null, "AUTH_ERROR", false);
+      if (typeof fetchImpl !== "function") throw clientErrorWithDiagnostics("PROVIDER_UNAVAILABLE", "HTTP transport is unavailable.", null, "NETWORK_ERROR", false);
+      const payload = buildNearestDriversPayload({ latitude, longitude, rideType, config });
+      const url = new URL(`${config.baseUrl}${config.nearestDriversPath}`);
+      if (config.nearestDriversMobcf) url.searchParams.set("mobcf", config.nearestDriversMobcf);
+      if (config.nearestDriversMobpr) url.searchParams.set("mobpr", config.nearestDriversMobpr);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), config.timeoutMs);
+      try {
+        const response = await fetchImpl(url.toString(), { method: "POST", headers: nearestDriversHeaders(config), body: JSON.stringify(payload), signal: controller.signal });
+        const text = await response.text();
+        if (!response.ok) {
+          const category = httpErrorCategory(response.status);
+          const code = category === "AUTH_ERROR" || category === "FORBIDDEN" ? "PROVIDER_AUTH_ERROR" : "PROVIDER_ERROR";
+          throw clientErrorWithDiagnostics(code, "Yango nearest-drivers request failed.", response.status, category, true);
+        }
+        let body;
+        try { body = JSON.parse(text); } catch { throw clientErrorWithDiagnostics("PROVIDER_BAD_RESPONSE", "Yango returned malformed nearby-driver JSON.", response.status, "INVALID_RESPONSE", true); }
+        const drivers = normalizeNearestDrivers(body);
+        if (!drivers) throw clientErrorWithDiagnostics("PROVIDER_BAD_RESPONSE", "Yango returned an invalid nearby-driver response.", response.status, "INVALID_RESPONSE", true);
+        // This is FairFare's receipt time, not the driver's position capture time.
+        return { provider: "Yango", status: drivers.length ? "available" : "no_drivers", source: "live", rideType: yangoSelectedClass(rideType, config.selectedClass), drivers, driverCount: drivers.length, receivedAt: new Date(now()).toISOString() };
+      } catch (error) {
+        if (error?.name === "AbortError") throw clientErrorWithDiagnostics("PROVIDER_TIMEOUT", "Yango nearest-drivers request timed out.", null, "TIMEOUT", "unknown");
+        if (error?.yangoDiagnostics || error?.code === "PROVIDER_INVALID_REQUEST") throw error;
+        throw clientErrorWithDiagnostics(error?.code || "PROVIDER_UNAVAILABLE", "Yango nearest-drivers transport failed.", null, "NETWORK_ERROR", "unknown");
+      } finally { clearTimeout(timer); }
+    },
     async getFareEstimates({ pickup, destination, rideType } = {}) {
       if (!config?.enabled || config.mode !== "authorized-live" || !config.authorizationConfigured) throw clientErrorWithDiagnostics("PROVIDER_AUTH_REQUIRED", "Yango authorization is required.", null, "AUTH_ERROR", false);
       const tokenState = inspectAccessToken(config.accessToken, now);
@@ -179,4 +275,4 @@ function createYangoRouteStatsClient({ config, testContext = null, fetchImpl = g
   };
 }
 
-module.exports = { createYangoRouteStatsClient, inspectAccessToken, jwtExpired, inspectErrorBody };
+module.exports = { createYangoRouteStatsClient, inspectAccessToken, jwtExpired, inspectErrorBody, normalizeNearestDrivers, buildNearestDriversPayload };

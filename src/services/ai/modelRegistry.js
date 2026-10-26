@@ -1,12 +1,6 @@
 const MODELS = Object.freeze([
-  { id: "inclusionai/ling-3.1-flash", label: "Ling 3.1 Flash", enabled: true, note: "Current OpenRouter catalog entry; zero-priced catalog model." },
-  { id: "nvidia/nemotron-3.5-lightning:free", label: "Nemotron 3.5 Lightning", enabled: true, note: "Current OpenRouter free catalog entry." },
-  { id: "apodex/apodex-1.1-mini:free", label: "Apodex 1.1 Mini", enabled: true, note: "Current OpenRouter free catalog text-output model." },
-  { id: "dots-studio/dots-3-note-preview:free", label: "Dots3 Note Preview", enabled: true, note: "Current OpenRouter free catalog text-output model." },
-  { id: "nvidia/nemotron-3-super-120b-a12b:free", label: "Nemotron 3 Super", enabled: true, note: "Current OpenRouter free catalog text-output model." },
-  { id: "thinkingmachines/inkling:free", label: "Inkling", enabled: true, note: "Current OpenRouter free catalog text-output model." },
-  { id: "nvidia/nemotron-3-ultra-550b-a55b:free", label: "Nemotron 3 Ultra", enabled: true, note: "Current OpenRouter free catalog text-output model." },
-  { id: "google/gemma-4-31b-it:free", label: "Gemma 4 31B IT", enabled: true, note: "Current OpenRouter free catalog entry." },
+  { id: "grok-4.7", label: "Grok 4.7", enabled: true, note: "xAI model with documented function calling." },
+  { id: "grok-4.3", label: "Grok 4.3", enabled: true, note: "xAI model with documented function calling." },
 ].map((model) => Object.freeze({ ...model, supportsTools: model.supportsTools === true })));
 
 const BY_ID = new Map(MODELS.map((model) => [model.id, model]));

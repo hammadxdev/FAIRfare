@@ -62,6 +62,24 @@ function buildFareUrl({ config, pickup, destination, rideType = null, endpoint =
   return url;
 }
 
+function buildNearbyDriversUrl({ config, latitude, longitude, serviceCode, endpoint = null } = {}) {
+  if (!config?.apiBaseUrl || !(endpoint || config.nearbyEndpoint)) {
+    throw providerError("PROVIDER_INVALID_CONFIGURATION", "Bykea API base URL and nearby endpoint are required.");
+  }
+  const lat = coordinate(latitude, "latitude", -90, 90);
+  const lng = coordinate(longitude, "longitude", -180, 180);
+  const code = String(serviceCode ?? "").trim();
+  if (!/^\d{1,8}$/.test(code)) throw providerError("PROVIDER_INVALID_REQUEST", "serviceCode must be a numeric Bykea service code.");
+  if (Array.isArray(config.serviceCodes) && config.serviceCodes.length && !config.serviceCodes.map(String).includes(code)) {
+    throw providerError("PROVIDER_INVALID_REQUEST", "serviceCode is not enabled in the Bykea server configuration.");
+  }
+  const url = new URL(endpoint || config.nearbyEndpoint, `${config.apiBaseUrl}/`);
+  url.searchParams.set("pickup_lat", String(lat));
+  url.searchParams.set("pickup_lng", String(lng));
+  url.searchParams.set("service_code", code);
+  return url;
+}
+
 function mandatoryHeaders(config) {
   const latitude = Number(config?.headerLatitude);
   const longitude = Number(config?.headerLongitude);
@@ -193,6 +211,57 @@ function createBykeaHttpTransport({ config, requestContract = null, requestImpl 
         void now;
       }
     },
+    async getNearbyDrivers({ latitude, longitude, serviceCode } = {}) {
+      if (typeof requestContract.buildNearbyHeaders !== "function" || !requestContract.nearbyPath) {
+        throw providerError("PROVIDER_INVALID_CONFIGURATION", "Bykea nearby endpoint contract is not configured.");
+      }
+      const lat = coordinate(latitude, "latitude", -90, 90);
+      const lng = coordinate(longitude, "longitude", -180, 180);
+      const url = buildNearbyDriversUrl({ config, latitude: lat, longitude: lng, serviceCode, endpoint: requestContract.nearbyPath });
+      const requiredHeaders = mandatoryHeaders({ ...config, headerLatitude: String(lat), headerLongitude: String(lng) });
+      const headers = requestContract.buildNearbyHeaders({ config: { ...config, apiKey: undefined, appUserToken: undefined }, appUserToken: config.appUserToken, appUserId: config.appUserId, latitude: lat, longitude: lng });
+      if (!headers || typeof headers !== "object") throw providerError("PROVIDER_INVALID_CONFIGURATION", "Bykea request headers are not configured.");
+      const requestHeaders = mergeHeaders(headers, requiredHeaders);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), config.timeoutMs);
+      const id = crypto.randomUUID();
+      safeLog(logger, { operation: "nearby_drivers", requestId: id, requestReachedUpstream: false });
+      try {
+        const response = await requestImpl(url.toString(), { method: "GET", headers: { Accept: "application/json", ...requestHeaders }, signal: controller.signal });
+        safeLog(logger, { operation: "nearby_drivers", requestId: id, requestReachedUpstream: true, httpStatus: response.status });
+        if (!response.ok) {
+          const [code, message] = classifyHttpFailure(response.status);
+          throw providerError(code, message, response.status);
+        }
+        let body;
+        try { body = await response.json(); } catch { throw providerError("PROVIDER_BAD_RESPONSE", "Bykea returned malformed JSON.", response.status); }
+        const data = body?.data;
+        if (!body?.success || !data || !Array.isArray(data.partners) || !Number.isFinite(Number(data.eta))) {
+          throw providerError("PROVIDER_BAD_RESPONSE", "Bykea returned an invalid nearby response.", response.status);
+        }
+        const partners = data.partners.map((partner) => {
+          const latValue = Number(partner?.lat);
+          const lngValue = Number(partner?.lng);
+          if (!partner || partner.id == null || !Number.isFinite(latValue) || latValue < -90 || latValue > 90 || !Number.isFinite(lngValue) || lngValue < -180 || lngValue > 180) return null;
+          const distance = Number(partner.distance);
+          const duration = Number(partner.duration);
+          return {
+            id: String(partner.id), latitude: latValue, longitude: lngValue,
+            ...(Number.isFinite(distance) ? { distance } : {}),
+            ...(Number.isFinite(duration) ? { duration } : {}),
+            ...(Array.isArray(partner.verticals) ? { verticals: partner.verticals } : {}),
+            ...(partner.type != null ? { type: String(partner.type) } : {}),
+          };
+        }).filter(Boolean);
+        // `eta` and partner durations retain their upstream fields; their pickup-ETA
+        // semantics are not verified. `receivedAt` is FairFare receipt time only.
+        return { provider: "bykea", status: partners.length ? "available" : "no_drivers", source: "live", serviceCode: String(serviceCode), eta: Number(data.eta), partners, receivedAt: new Date(now()).toISOString(), requestId: id };
+      } catch (error) {
+        if (error?.name === "AbortError") throw providerError("PROVIDER_TIMEOUT", "Bykea nearby request timed out.");
+        if (error?.httpStatus || error?.code === "PROVIDER_BAD_RESPONSE" || error?.code === "PROVIDER_INVALID_REQUEST" || error?.code === "PROVIDER_INVALID_CONFIGURATION") throw error;
+        throw providerError(error?.code || "PROVIDER_UNAVAILABLE", "Bykea nearby request failed.");
+      } finally { clearTimeout(timer); }
+    },
   };
 }
 
@@ -200,6 +269,7 @@ module.exports = {
   buildFareRequest,
   buildFareQuery,
   buildFareUrl,
+  buildNearbyDriversUrl,
   mandatoryHeaders,
   mergeHeaders,
   summarizeBykeaRequest,

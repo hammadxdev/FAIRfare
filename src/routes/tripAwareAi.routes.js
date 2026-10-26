@@ -1,8 +1,9 @@
 const { Router } = require("express");
 const { requireAuth } = require("../middlewares/auth.middleware");
 const controller = require("../controllers/tripAwareAi.controller");
+const { createGuestRateLimiter } = require("../middlewares/guestRateLimit.middleware");
 const router = Router();
-router.post("/chat", requireAuth, controller.chat);
+router.post("/chat", requireAuth, createGuestRateLimiter({ bucket: "ai-request", limit: 10, windowSeconds: 60 }), controller.chat);
 router.get("/conversations", requireAuth, controller.listConversations);
 router.post("/conversations", requireAuth, controller.createConversation);
 router.get("/conversations/:id", requireAuth, controller.getConversation);

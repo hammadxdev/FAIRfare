@@ -9,7 +9,7 @@ function createBykeaProvider({ config = getConfig(), transport = null, mode = nu
   const configuredTransport = transport || (requestedMode === "authorized-live"
     ? createBykeaHttpTransport({ config, requestContract: createBykeaRequestContract(config) })
     : null);
-  return createAuthorizedProviderAdapter({
+  const adapter = createAuthorizedProviderAdapter({
     id: "urbancab",
     displayName: "Bykea",
     currency: config.currency,
@@ -31,6 +31,23 @@ function createBykeaProvider({ config = getConfig(), transport = null, mode = nu
       }
       : configuredTransport,
   });
+  adapter.getNearbyDrivers = async ({ latitude, longitude, serviceCode } = {}) => {
+    if (requestedMode !== "authorized-live" || typeof configuredTransport?.getNearbyDrivers !== "function") {
+      return { provider: "bykea", status: "unavailable", source: "none", partners: [], error: { code: "LIVE_INTEGRATION_NOT_CONFIGURED", message: "Live Bykea nearby data is currently unavailable." } };
+    }
+    try {
+      return await configuredTransport.getNearbyDrivers({ latitude, longitude, serviceCode });
+    } catch (error) {
+      const status = error?.code === "PROVIDER_TIMEOUT" ? "timeout"
+        : error?.code === "PROVIDER_AUTH_REQUIRED" ? "auth_required"
+          : error?.code === "PROVIDER_ACCESS_DENIED" ? "access_denied"
+            : error?.code === "PROVIDER_RATE_LIMITED" ? "rate_limited"
+              : error?.code === "PROVIDER_INVALID_REQUEST" ? "invalid_request"
+                : "unavailable";
+      return { provider: "bykea", status, source: "none", partners: [], error: { code: error?.code || "PROVIDER_UNAVAILABLE", message: "Live Bykea nearby data is currently unavailable." } };
+    }
+  };
+  return adapter;
 }
 
 module.exports = createBykeaProvider();

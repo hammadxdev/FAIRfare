@@ -2,6 +2,7 @@ const DEFAULT_CURRENCY = "PKR";
 const DEFAULT_CURRENCY_MULTIPLIER = 1;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_FARE_ENDPOINT = "/talos/api/v3/users/estimation/fare";
+const DEFAULT_NEARBY_ENDPOINT = "/talos/api/v1/eta";
 const DEFAULT_SERVICE_MAPPINGS = Object.freeze({
   "23": { label: "Bike", vehicleCategory: "bike", serviceTier: "standard", features: [] },
   "70": { label: "Rickshaw", vehicleCategory: "rickshaw", serviceTier: "standard", features: [] },
@@ -75,6 +76,7 @@ function getConfig(env = process.env) {
   const authorizedLive = booleanValue(env.BYKEA_AUTHORIZED_LIVE, false);
   const apiBaseUrl = String(env.BYKEA_API_BASE_URL || "").trim().replace(/\/$/, "");
   const fareEndpoint = validEndpoint(env.BYKEA_FARE_ENDPOINT || DEFAULT_FARE_ENDPOINT);
+  const nearbyEndpoint = validEndpoint(env.BYKEA_NEARBY_ENDPOINT || DEFAULT_NEARBY_ENDPOINT);
   const deviceId = String(env.BYKEA_DEVICE_ID || "").trim();
   const appUserId = String(env.BYKEA_APP_USER_ID || "").trim();
   const appUserToken = String(env.BYKEA_APP_USER_TOKEN || "").trim();
@@ -115,6 +117,7 @@ function getConfig(env = process.env) {
     authorizedLive,
     apiBaseUrl,
     fareEndpoint,
+    nearbyEndpoint,
     deviceId,
     appUserId,
     appUserToken,
@@ -143,6 +146,7 @@ module.exports = {
   DEFAULT_CURRENCY_MULTIPLIER,
   DEFAULT_TIMEOUT_MS,
   DEFAULT_FARE_ENDPOINT,
+  DEFAULT_NEARBY_ENDPOINT,
   getConfig,
   normalizedMode,
   DEFAULT_SERVICE_MAPPINGS,

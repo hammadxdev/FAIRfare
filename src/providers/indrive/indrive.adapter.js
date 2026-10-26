@@ -1,7 +1,7 @@
 const { getConfig, VEHICLE_TYPE_ORDER_IDS, ORDER_TYPE_IDS } = require("./indrive.constants");
 const { createIndriveClient } = require("./indrive.client");
 const { createSessionManager } = require("./indrive.auth");
-const { mapPricingResponse } = require("./indrive.mapper");
+const { mapPricingResponse, mapCategory } = require("./indrive.mapper");
 const { IndriveError, CODES } = require("./indrive.errors");
 const { calculateSimulatedFare } = require("../simulation.engine");
 const { buildAutocompleteRequest, normalizeAutocompleteResponse } = require("./indrive.autocomplete");
@@ -27,6 +27,17 @@ function buildPricingPayload(route) {
   // and is therefore never sent in the v6 JSON contract.
   Object.defineProperty(payload, "order_type_id", { value: Number(requestedCategory), enumerable: false });
   return payload;
+}
+
+function normalizeNearbyLocations(body) {
+  const contractors = Array.isArray(body?.contractors) ? body.contractors : null;
+  if (!contractors) return null;
+  return contractors.map((item) => {
+    const latitude = Number(item?.latitude); const longitude = Number(item?.longitude);
+    if (!item?.id || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+    const heading = Number(item.heading); const speed = Number(item.speed);
+    return { id: String(item.id), latitude, longitude, ...(Number.isFinite(heading) ? { heading } : {}), ...(Number.isFinite(speed) ? { speed } : {}), transportKind: item.transport_kind == null ? null : String(item.transport_kind), transportComfortLevel: item.transport_comfort_level == null ? null : String(item.transport_comfort_level) };
+  }).filter(Boolean);
 }
 
 function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
@@ -92,6 +103,26 @@ function createIndriveAdapter({ config = getConfig(), client, session } = {}) {
       if (!normalized.valid) throw new IndriveError(CODES.BAD_RESPONSE, "inDrive autocomplete returned an invalid response");
       return { ...normalized, source: "live" };
     },
+    async getNearbyDrivers({ latitude, longitude, rideType } = {}) {
+      const lat = Number(latitude); const lng = Number(longitude);
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) throw new IndriveError(CODES.MALFORMED_REQUEST, "inDrive locations request is invalid");
+      if (!config.enabled || config.mode !== "real") throw new IndriveError(CODES.UNAVAILABLE, "inDrive live locations are not enabled");
+      const accessToken = await sessionManager.ensureValidSession();
+      const requested = rideType == null ? ORDER_TYPE_IDS : [Number(VEHICLE_TYPE_ORDER_IDS[String(rideType)] ?? VEHICLE_TYPE_ORDER_IDS[String(rideType).toUpperCase()] ?? rideType)];
+      if (requested.some((orderTypeId) => !Number.isInteger(orderTypeId) || orderTypeId <= 0)) throw new IndriveError(CODES.MALFORMED_REQUEST, "inDrive locations vehicle type is invalid");
+      const results = await Promise.all(requested.map(async (orderTypeId) => {
+        const response = await indriveClient.getLocations(accessToken, { latitude: lat, longitude: lng, orderTypeId });
+        if (response.status === 401) { await sessionManager.markAuthRequired(); throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive locations authentication failed", { status: response.status }); }
+        if (response.status === 403) { await sessionManager.markAccessDenied(); throw new IndriveError(CODES.ACCESS_DENIED, "inDrive locations access was denied", { status: response.status }); }
+        if (response.status === 408 || response.status === 504) throw new IndriveError(CODES.TIMEOUT, "inDrive locations timed out", { status: response.status });
+        if (response.status === 429) throw new IndriveError(CODES.RATE_LIMITED, "inDrive locations rate limited");
+        if (response.status < 200 || response.status >= 300) throw new IndriveError(CODES.UNAVAILABLE, "inDrive locations failed", { status: response.status });
+        const drivers = normalizeNearbyLocations(response.body);
+        if (!drivers) throw new IndriveError(CODES.BAD_RESPONSE, "inDrive locations returned an invalid response");
+        return { orderTypeId, vehicleType: mapCategory(orderTypeId).normalizedCategory, drivers, driverCount: drivers.length };
+      }));
+      return { provider: "inDrive", status: "available", source: "live", vehicles: results, driverCount: results.reduce((total, item) => total + item.driverCount, 0) };
+    },
     getFareQuote() { throw new Error("Use getQuotes for inDrive"); },
     getPickupEtaMin() { return null; },
   };
@@ -101,3 +132,4 @@ const defaultAdapter = createIndriveAdapter();
 module.exports = defaultAdapter;
 module.exports.createIndriveAdapter = createIndriveAdapter;
 module.exports.buildPricingPayload = buildPricingPayload;
+module.exports.normalizeNearbyLocations = normalizeNearbyLocations;

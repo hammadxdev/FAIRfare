@@ -14,6 +14,7 @@ function authError(message, statusCode, code, details = null) {
 }
 
 const MAX_VERIFICATION_RESENDS = 2;
+const MAX_LOGIN_OTP_RESENDS = 2;
 
 function resendMetadata(resendCount = 0, cooldownSeconds = emailConfig.resendCooldownSeconds()) {
   const count = Math.max(0, Math.min(MAX_VERIFICATION_RESENDS, Number(resendCount) || 0));
@@ -65,7 +66,7 @@ async function sendInformationalEmail(message) {
 }
 
 async function findUser(email) {
-  return (await query("SELECT id,name,email,email_verified_at FROM users WHERE lower(email)=lower($1)", [normalizeEmail(email)])).rows[0];
+  return (await query("SELECT id,name,email,email_verified_at FROM users WHERE lower(btrim(email))=lower(btrim($1))", [normalizeEmail(email)])).rows[0];
 }
 
 async function sendVerificationOtp(email) {
@@ -107,6 +108,41 @@ async function sendVerificationOtp(email) {
       [user.id, hashOtp(code), expiry(emailConfig.verificationTtlMinutes()), nextCount]
     );
     return { accepted: true, ...resendMetadata(nextCount, cooldownSeconds) };
+  });
+}
+
+async function requestLoginOtp(email) {
+  const normalized = normalizeEmail(email);
+  return withTransaction(async (client) => {
+    await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [normalized]);
+    let previous = (await client.query(
+      "SELECT id,last_sent_at,resend_count,expires_at FROM email_login_challenges WHERE email=$1 AND used_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+      [normalized]
+    )).rows[0];
+    if (previous && new Date(previous.expires_at).getTime() <= Date.now()) {
+      await client.query("UPDATE email_login_challenges SET used_at=now() WHERE id=$1 AND used_at IS NULL", [previous.id]);
+      previous = null;
+    }
+    const currentCount = Number(previous?.resend_count || 0);
+    const cooldownSeconds = emailConfig.resendCooldownSeconds();
+    const cooldownRemaining = cooldownRemainingSeconds(previous?.last_sent_at, cooldownSeconds);
+    const metadata = { ...resendMetadata(Math.min(currentCount, MAX_LOGIN_OTP_RESENDS), cooldownRemaining || cooldownSeconds), resendLimit: MAX_LOGIN_OTP_RESENDS };
+    if (cooldownRemaining > 0) throw authError("Please wait before requesting another verification code", 429, "EMAIL_OTP_COOLDOWN", metadata);
+    if (previous && currentCount >= MAX_LOGIN_OTP_RESENDS) throw authError("You have reached the verification resend limit", 429, "EMAIL_OTP_RESEND_LIMIT", metadata);
+
+    const code = secureOtp();
+    try {
+      await getEmailProvider().send({ to: normalized, ...verificationEmail(code, emailConfig.verificationTtlMinutes()) });
+    } catch (error) {
+      throw providerFailure(error, metadata);
+    }
+    const nextCount = previous ? currentCount + 1 : 0;
+    if (previous) await client.query("UPDATE email_login_challenges SET used_at=now() WHERE id=$1 AND used_at IS NULL", [previous.id]);
+    await client.query(
+      "INSERT INTO email_login_challenges (email,otp_hash,expires_at,last_sent_at,resend_count) VALUES ($1,$2,$3,now(),$4)",
+      [normalized, hashOtp(code), expiry(emailConfig.verificationTtlMinutes()), nextCount]
+    );
+    return { accepted: true, ...resendMetadata(nextCount, cooldownSeconds), resendLimit: MAX_LOGIN_OTP_RESENDS };
   });
 }
 
@@ -177,4 +213,4 @@ async function resetPassword({ resetToken, newPassword }) {
   return { reset: true };
 }
 
-module.exports = { sendVerificationOtp, verifyEmailOtp, requestPasswordResetOtp, verifyPasswordResetOtp, resetPassword, resendMetadata, cooldownRemainingSeconds, MAX_VERIFICATION_RESENDS, setEmailProviderForTests: require("./email/emailProvider").setEmailProviderForTests };
+module.exports = { sendVerificationOtp, requestLoginOtp, verifyEmailOtp, hashOtp, validCode, requestPasswordResetOtp, verifyPasswordResetOtp, resetPassword, resendMetadata, cooldownRemainingSeconds, MAX_VERIFICATION_RESENDS, MAX_LOGIN_OTP_RESENDS, setEmailProviderForTests: require("./email/emailProvider").setEmailProviderForTests };

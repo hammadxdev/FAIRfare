@@ -1,5 +1,6 @@
 const DEFAULT_BASE_URL = "https://tc.taxi.yango.tech";
 const DEFAULT_ROUTE_STATS_PATH = "/3.0/routestats";
+const DEFAULT_NEAREST_DRIVERS_PATH = "/3.0/nearestdrivers";
 
 function booleanValue(value, fallback = false) {
   if (value === undefined || value === null || value === "") return fallback;
@@ -38,6 +39,9 @@ function getConfig(env = process.env) {
     enabled,
     baseUrl,
     routeStatsPath: normalizedPath(env.YANGO_ROUTE_STATS_PATH),
+    nearestDriversPath: normalizedPath(env.YANGO_NEAREST_DRIVERS_PATH || DEFAULT_NEAREST_DRIVERS_PATH),
+    nearestDriversMobcf: String(env.YANGO_NEAREST_DRIVERS_MOBCF || "yango%yango_not_eu_by_geo_7%yango_forced_ac").trim(),
+    nearestDriversMobpr: String(env.YANGO_NEAREST_DRIVERS_MOBPR || "yango_not_eu_by_geo_7_TAXI_0").trim(),
     accessToken,
     clientId,
     authorizationVerified,
@@ -45,6 +49,21 @@ function getConfig(env = process.env) {
     supportedZones: String(env.YANGO_SUPPORTED_ZONES || "lahore").split(",").map((zone) => zone.trim().toLowerCase()).filter(Boolean),
     selectedClass: String(env.YANGO_DEFAULT_CLASS || "econom").trim(),
     paymentType: String(env.YANGO_DEFAULT_PAYMENT_TYPE || "cash").trim(),
+    driverRequestHeaders: {
+      userId: String(env.YANGO_USER_ID || "").trim(),
+      userAgent: String(env.YANGO_USER_AGENT || "").trim(),
+      userAgentSplit: String(env.YANGO_USER_AGENT_SPLIT || "").trim(),
+      superappSession: String(env.YANGO_SUPERAPP_SESSION || "").trim(),
+      perfClass: String(env.YANGO_PERF_CLASS || "").trim(),
+      acceptLanguage: String(env.YANGO_ACCEPT_LANGUAGE || "").trim(),
+      appmetricaUuid: String(env.YANGO_APPMETRICA_UUID || "").trim(),
+      appmetricaDeviceId: String(env.YANGO_APPMETRICA_DEVICE_ID || "").trim(),
+      mobileId: String(env.YANGO_MOBILE_ID || "").trim(),
+      vpnActive: String(env.YANGO_VPN_ACTIVE || "").trim(),
+      lastZoneNames: String(env.YANGO_LAST_ZONE_NAMES || "").trim(),
+      hasOngoingOrders: String(env.YANGO_HAS_ONGOING_ORDERS || "").trim(),
+      ongoingOrdersStatuses: String(env.YANGO_ONGOING_ORDERS_STATUSES || "").trim(),
+    },
     timeoutMs: Number(env.YANGO_REQUEST_TIMEOUT_MS || 10000),
     testContext: getTestConfig(env),
     authorizationConfigured,
@@ -69,4 +88,4 @@ function getTestConfig(env = process.env) {
   };
 }
 
-module.exports = { DEFAULT_BASE_URL, DEFAULT_ROUTE_STATS_PATH, getConfig, getTestConfig };
+module.exports = { DEFAULT_BASE_URL, DEFAULT_ROUTE_STATS_PATH, DEFAULT_NEAREST_DRIVERS_PATH, getConfig, getTestConfig };

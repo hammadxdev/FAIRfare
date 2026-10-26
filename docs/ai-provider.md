@@ -8,7 +8,7 @@ and [data controls](https://console.groq.com/docs/your-data).
 
 - Primary: `groq` / `openai/gpt-oss-120b`
 - Same-provider fallback: `groq` / `openai/gpt-oss-20b`
-- Secondary provider: the existing OpenRouter model chain
+- Secondary provider: opt-in xAI Grok model chain
 - Groq endpoint: `https://api.groq.com/openai/v1/chat/completions`
 - Groq free-plan base limits for both GPT-OSS models: 30 RPM, 1,000 RPD,
   8,000 TPM, and 200,000 TPD. These are documented base limits, not a

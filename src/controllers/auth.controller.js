@@ -77,4 +77,16 @@ const resetPassword = asyncHandler(async (req, res) => { const resetToken = Stri
 const sendPhoneCode = asyncHandler(async (req, res) => { const phoneNumber = service.normalizePhone(req.body?.phoneNumber); const provider = require("../services/verificationProvider"); await provider.send({ channel: req.body?.channel || "WHATSAPP", phoneNumber, purpose: "Fair Fare phone verification" }); await service.recordPhoneVerification(phoneNumber, "Fair Fare phone verification"); return success(res, { message: "If verification is available, a code has been sent.", data: { accepted: true } }); });
 const verifyPhoneCode = asyncHandler(async (req, res) => { const phoneNumber = service.normalizePhone(req.body?.phoneNumber); const provider = require("../services/verificationProvider"); await provider.verify({ phoneNumber, code: req.body?.code }); if (req.user?.id) await service.markPhoneVerified(req.user.id, phoneNumber); return success(res, { message: "Phone verified", data: { verified: true } }); });
 const google = asyncHandler(async (req, res) => success(res, { message: "Google sign-in successful", data: await service.googleLogin(req.body?.idToken) }));
-module.exports = { register, login, refresh, logout, me, updateProfile, forgotPassword, resetPassword, verifyEmail, sendVerification, verifyPasswordReset, sendPhoneCode, verifyPhoneCode, google };
+const requestLoginOtp = asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!basicEmail(email) || email.length > 254) throw new AppError("Enter a valid email", 400);
+  const delivery = await emailAuth.requestLoginOtp(email);
+  return success(res, { message: "If this email can receive mail, a verification code has been sent.", data: delivery });
+});
+const verifyLoginOtp = asyncHandler(async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const code = String(req.body?.code || "");
+  if (!basicEmail(email) || email.length > 254) throw new AppError("That verification code is invalid or expired", 400);
+  return success(res, { message: "Email verified", data: await service.verifyEmailOtpLogin(email, code) });
+});
+module.exports = { register, login, refresh, logout, me, updateProfile, forgotPassword, resetPassword, verifyEmail, sendVerification, verifyPasswordReset, sendPhoneCode, verifyPhoneCode, google, requestLoginOtp, verifyLoginOtp };

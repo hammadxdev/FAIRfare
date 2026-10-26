@@ -4,6 +4,7 @@
 function createBykeaRequestContract(config) {
   return {
     path: config.fareEndpoint,
+    nearbyPath: config.nearbyEndpoint,
     method: "GET",
     buildHeaders({ appUserToken, appUserId }) {
       return {
@@ -17,6 +18,13 @@ function createBykeaRequestContract(config) {
         "X-Loc-Altitude": config.headerAltitude,
         "X-User-Agent": config.userAgent,
         "User-Agent": config.userAgent,
+      };
+    },
+    buildNearbyHeaders({ appUserToken, appUserId, latitude, longitude }) {
+      return {
+        ...this.buildHeaders({ appUserToken, appUserId }),
+        "X-Loc-Latitude": String(latitude),
+        "X-Loc-Longitude": String(longitude),
       };
     },
     parseResponse(body) {

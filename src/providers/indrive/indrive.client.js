@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { TOKEN_RENEW_URL, PRICING_URL } = require("./indrive.constants");
+const { TOKEN_RENEW_URL, PRICING_URL, LOCATIONS_URL } = require("./indrive.constants");
 const { IndriveError, CODES } = require("./indrive.errors");
 const { recordProviderApiPayload } = require("../../services/providerApiPayloadStorage.service");
 
@@ -143,6 +143,15 @@ function createIndriveClient({ config, fetchImpl = global.fetch, logger = consol
         method: "POST",
         headers: { ...headers(config, accessToken), "Content-Type": "application/x-www-form-urlencoded", "X-Local-Req-Id": crypto.randomUUID() },
         body: request.body,
+      }, config, fetchImpl);
+    },
+    async getLocations(accessToken, { latitude, longitude, orderTypeId = 2 } = {}) {
+      if (!accessToken) throw new IndriveError(CODES.AUTH_REQUIRED, "inDrive access token is required");
+      const url = new URL(config.locationsUrl || LOCATIONS_URL);
+      url.search = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), source: "orderform", order_type_id: String(orderTypeId) }).toString();
+      return requestJson(url.toString(), {
+        method: "GET",
+        headers: { ...headers(config, accessToken), "X-Local-Req-Id": crypto.randomUUID() },
       }, config, fetchImpl);
     },
   };

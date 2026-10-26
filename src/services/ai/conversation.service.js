@@ -25,9 +25,13 @@ async function claimRequestRun(userId,conversationId,clientMessageId){
 }
 async function completeRequestRun(userId,runId,{status="COMPLETED",toolExecution=null,response=null,comparisonId=null,errorCode=null}={}){
   if(!["COMPLETED","FAILED","UNCERTAIN"].includes(status))throw new AppError("Invalid AI request run status",400);
-  const r=(await query("UPDATE ai_request_runs SET status=$1,tool_execution_json=$2::jsonb,response_json=$3::jsonb,comparison_id=$4,error_code=$5,updated_at=now(),completed_at=now() WHERE id=$6 AND user_id=$7 AND status='PENDING' RETURNING *",[status,JSON.stringify(toolExecution),JSON.stringify(response),comparisonId,errorCode,runId])).rows[0];
+  const r=(await query("UPDATE ai_request_runs SET status=$1,tool_execution_json=$2::jsonb,response_json=$3::jsonb,comparison_id=$4,error_code=$5,updated_at=now(),completed_at=now() WHERE id=$6 AND user_id=$7 AND status='PENDING' RETURNING *",[status,JSON.stringify(toolExecution),JSON.stringify(response),comparisonId,errorCode,runId,userId])).rows[0];
   if(!r)throw new AppError("AI request run is no longer claimable",409);
   return r;
 }
 async function getRequestRun(userId,conversationId,clientMessageId){if(!clientMessageId)return null;return (await query("SELECT * FROM ai_request_runs WHERE user_id=$1 AND conversation_id=$2 AND client_message_id=$3",[userId,conversationId,clientMessageId])).rows[0] || null;}
-module.exports={create,list,get,rename,update,remove,ensure,findByClientMessageId,addMessage,titleFirstMessage,recentMessages,claimRequestRun,completeRequestRun,getRequestRun,titleFromMessage,MAX_CONTEXT_MESSAGES};
+async function recentCompletedRequestRuns(userId,conversationId,limit=20){
+  await getOwned(conversationId,userId);
+  return (await query("SELECT id,status,tool_execution_json,response_json,completed_at,updated_at FROM ai_request_runs WHERE user_id=$1 AND conversation_id=$2 AND status='COMPLETED' ORDER BY completed_at DESC NULLS LAST,updated_at DESC LIMIT $3",[userId,conversationId,Math.min(50,Math.max(1,Number(limit)||20))])).rows;
+}
+module.exports={create,list,get,rename,update,remove,ensure,findByClientMessageId,addMessage,titleFirstMessage,recentMessages,claimRequestRun,completeRequestRun,getRequestRun,recentCompletedRequestRuns,titleFromMessage,MAX_CONTEXT_MESSAGES};

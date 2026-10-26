@@ -16,7 +16,7 @@
     "ml:evaluate": "python ml/evaluate.py --metadata ml/artifacts/fare_model_metadata.json",
     "ml:test-prediction": "python ml/smoke_prediction.py",
     "evaluate:ai": "node evaluation/evaluateAi.js",
-    "ai:smoke": "node scripts/aiOpenRouterSmoke.js",
+    "ai:smoke": "node scripts/aiXaiSmoke.js",
     "performance:check": "node evaluation/performance.js",
     "test": "node scripts/runAiUnitTests.cjs",
     "test:ai-unit": "node scripts/runAiUnitTests.cjs",

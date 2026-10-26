@@ -16,6 +16,17 @@ function cleanLocation(value) {
 
 function extractTripLocations(message) {
   const text = String(message || "").trim();
+  // Preserve natural multi-stop requests ("A to B then C" / "A se B phir C")
+  // without making the model or a keyword router choose tools.
+  const multi = text.match(/\bfrom\s+(.+?)\s+to\s+(.+?)(?:\s+(?:then|phir|aur\s+phir|and\s+then)\s+)(.+?)(?:[?.!,]|$)/i)
+    || text.match(/^(.+?)\s+to\s+(.+?)\s+(?:then|phir|aur\s+phir|and\s+then)\s+(.+?)(?:[?.!,]|$)/i)
+    || text.match(/^(.+?)\s+se\s+(.+?)\s+(?:phir|aur\s+phir|then)\s+(.+?)\s+(?:jana|jaana|go|going|travel)\b/i);
+  if (multi) {
+    const values = multi.slice(1).map(cleanLocation).filter(Boolean);
+    if (values.length === 3 && new Set(values.map((v) => v.toLowerCase())).size === 3) {
+      return { pickup: values[0], destination: values[1], stops: values, pattern: "multi_stop" };
+    }
+  }
   const patterns = [
     // A negated place is not a replacement destination. Keep it as a
     // correction signal so conversation context cannot re-introduce it.

@@ -32,6 +32,20 @@ function firstValue(object, keys) {
 
 function finiteNumber(value) { return typeof value === "number" && Number.isFinite(value) ? value : null; }
 
+function amountValue(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return finiteNumber(value.value);
+  return finiteNumber(value);
+}
+
+function timestampMillis(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.abs(value) < 1e12 ? value * 1000 : value;
+  if (typeof value !== "string" || !value.trim()) return null;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return Math.abs(numeric) < 1e12 ? numeric * 1000 : numeric;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function normalizeMoney(value, multiplier) {
   const number = finiteNumber(value);
   return number !== null && Number.isFinite(multiplier) && multiplier > 0 ? number / multiplier : null;
@@ -52,32 +66,48 @@ function responseItems(raw) {
   return [{ item: raw?.data || raw, envelope: raw }];
 }
 
-function mapPricingResponse(raw, route = {}) {
+function mapPricingResponse(raw, route = {}, options = {}) {
   if (Array.isArray(raw) && raw.length === 0) return [];
+  const backendProcessedAtMs = Number.isFinite(options.processedAtMs) ? options.processedAtMs : Date.now();
   return responseItems(raw).filter(({ item }) => item && typeof item === "object").map(({ item, envelope }) => {
     const category = mapCategory(firstValue(item, ["order_type_id", "orderTypeId", "type_id"]));
-    const currency = typeof envelope?.currency === "object" ? envelope.currency : (item.currency || item.autofill_price?.currency);
+    const currency = typeof envelope?.currency === "object" ? envelope.currency : (item.currency || item.price?.currency || item.autofill_price?.currency);
     const multiplier = finiteNumber(currency?.multiplier);
     const code = typeof currency === "string" ? currency : currency?.code || null;
-    const singleShape = item.autofill_price && typeof item.autofill_price === "object";
-    const recommendedRaw = singleShape ? item.autofill_price.value : firstValue(item, ["autofill_price", "recommended_price"]);
-    const priceRaw = singleShape ? item.price?.value : item.price;
-    const minRaw = singleShape ? item.price_min?.value : item.price_min;
-    const maxRaw = singleShape ? item.price_max?.value : item.price_max;
-    const isRush = singleShape ? item.rush_hour?.is_rush : item.is_rush;
-    const fare = normalizeMoney(recommendedRaw, multiplier);
-    const priceSourceField = singleShape ? "autofill_price.value" : item.autofill_price !== undefined ? "autofill_price" : "recommended_price";
+    const priceRaw = amountValue(item.price);
+    const autofillPriceRaw = amountValue(item.autofill_price);
+    const minRaw = amountValue(item.price_min);
+    const maxRaw = amountValue(item.price_max);
+    const isRush = item.rush_hour?.is_rush ?? item.is_rush;
+    // For the captured calculations response, `price` is the suggested fare.
+    // The public provider contract has not been independently verified, so do
+    // not substitute autofill_price or range/step values when price is absent.
+    const fare = normalizeMoney(priceRaw, multiplier);
+    const priceSourceField = item.price && typeof item.price === "object" ? "price.value" : "price";
+    const ttlSeconds = finiteNumber(envelope?.ttl ?? item.ttl);
+    const ttlIsValid = ttlSeconds !== null && ttlSeconds >= 0;
+    const providerCreatedAtRaw = envelope?.created_at ?? item.created_at ?? null;
+    const providerCreatedAtMs = timestampMillis(providerCreatedAtRaw);
+    const providerExpiresAtMs = providerCreatedAtMs !== null && ttlIsValid ? providerCreatedAtMs + ttlSeconds * 1000 : null;
+    const providerFreshness = providerExpiresAtMs === null ? "unknown" : backendProcessedAtMs >= providerExpiresAtMs ? "expired" : "current";
+    const providerCreatedAt = providerCreatedAtMs === null ? null : new Date(providerCreatedAtMs).toISOString();
+    const providerExpiresAt = providerExpiresAtMs === null ? null : new Date(providerExpiresAtMs).toISOString();
+    const backendProcessedAt = new Date(backendProcessedAtMs).toISOString();
     const priceClassification = fare === null ? "unavailable" : "suggested";
     const priceDiagnostics = {
       categoryId: category.categoryId,
       categoryName: category.categoryName,
       upstreamPriceField: priceSourceField,
-      originalNumericAmount: finiteNumber(recommendedRaw),
+      originalNumericAmount: priceRaw,
       normalizedNumericAmount: fare,
+      autofillPriceRaw,
+      autofillPriceNormalized: normalizeMoney(autofillPriceRaw, multiplier),
+      fallbackUsed: false,
       currency: code,
       priceClassification,
       source: "real",
-      freshnessTtlSeconds: finiteNumber(envelope?.ttl ?? item.ttl ?? 300),
+      freshnessTtlSeconds: ttlIsValid ? ttlSeconds : null,
+      providerFreshness,
     };
     return {
       providerId: "indrive", providerName: "inDrive", ...category,
@@ -88,9 +118,18 @@ function mapPricingResponse(raw, route = {}) {
       tripDurationSeconds: finiteNumber(route.durationSeconds), distanceMeters: finiteNumber(route.distanceMeters),
       isAvailable: fare !== null, deepLink: null,
       metadata: {
-        providerTtlSeconds: finiteNumber(envelope?.ttl ?? item.ttl ?? 300),
+        providerTtlSeconds: ttlIsValid ? ttlSeconds : null,
+        providerCreatedAtRaw: providerCreatedAtRaw === null ? null : sanitizeMetadata(providerCreatedAtRaw),
+        providerCreatedAt,
+        providerExpiresAt,
+        providerFreshness,
+        backendProcessedAt,
         isRush: typeof isRush === "boolean" ? isRush : null,
-        price: normalizeMoney(priceRaw, multiplier), priceMin: normalizeMoney(minRaw, multiplier), priceMax: normalizeMoney(maxRaw, multiplier),
+        priceRaw,
+        price: normalizeMoney(priceRaw, multiplier),
+        autofillPriceRaw,
+        autofillPrice: normalizeMoney(autofillPriceRaw, multiplier),
+        priceMin: normalizeMoney(minRaw, multiplier), priceMax: normalizeMoney(maxRaw, multiplier),
         priceSteps: item.price_steps && typeof item.price_steps === "object" ? sanitizeMetadata(item.price_steps) : null,
         priceDiagnostics,
         raw: sanitizeMetadata(item),

@@ -1,14 +1,44 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const request = require("supertest");
-const app = require("./setup");
-const { query } = require("../config/postgres");
-const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
-const assistant = require("../services/ai/aiRideAssistant.service");
 
-test.beforeEach(() => assistant.setLlmClientForTests({ complete: async ({ context }) => { global.__conversationContext = context; return "Persisted assistant reply"; } }));
+test("completeRequestRun binds runId and userId as parameters six and seven", async () => {
+  const postgresPath = require.resolve("../config/postgres");
+  const conversationPath = require.resolve("../services/ai/conversation.service");
+  const postgres = require(postgresPath);
+  const originalQuery = postgres.query;
+  const originalConversationModule = require.cache[conversationPath];
+  let captured;
+  postgres.query = async (sql, params) => {
+    captured = { sql, params };
+    return { rows: [{}] };
+  };
+  delete require.cache[conversationPath];
+
+  try {
+    const conversations = require(conversationPath);
+    await conversations.completeRequestRun("user-7", "run-6");
+    assert.match(captured.sql, /WHERE id=\$6 AND user_id=\$7 AND status='PENDING'/);
+    assert.equal(captured.params.length, 7);
+    assert.equal(captured.params[5], "run-6");
+    assert.equal(captured.params[6], "user-7");
+  } finally {
+    postgres.query = originalQuery;
+    delete require.cache[conversationPath];
+    if (originalConversationModule) require.cache[conversationPath] = originalConversationModule;
+  }
+});
+
+test.beforeEach(() => {
+  const assistant = require("../services/ai/aiRideAssistant.service");
+  assistant.setLlmClientForTests({ complete: async ({ context }) => { global.__conversationContext = context; return "Persisted assistant reply"; } });
+});
 
 test("AI conversations persist, stay ordered, and ignore client userId", async () => {
+  const request = require("supertest");
+  const app = require("./setup");
+  const { query } = require("../config/postgres");
+  const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
+  const assistant = require("../services/ai/aiRideAssistant.service");
   const a = await createAuthenticatedTestUser(app, "Conversation A");
   const b = await createAuthenticatedTestUser(app, "Conversation B");
   const ah = { Authorization: authHeader(a) }; const bh = { Authorization: authHeader(b) };
@@ -50,6 +80,10 @@ test("AI conversations persist, stay ordered, and ignore client userId", async (
 });
 
 test("AI failure preserves the user message but never stores fake assistant text", async () => {
+  const request = require("supertest");
+  const app = require("./setup");
+  const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
+  const assistant = require("../services/ai/aiRideAssistant.service");
   const auth = await createAuthenticatedTestUser(app, "Conversation Failure");
   assistant.setLlmClientForTests({ complete: async () => { const error = new Error("provider down"); error.code = "LLM_PROVIDER_ERROR"; throw error; } });
   const response = await request(app).post("/api/ai/chat").set("Authorization", authHeader(auth)).send({ message: "Will it be cheaper?" });
@@ -62,6 +96,10 @@ test("AI failure preserves the user message but never stores fake assistant text
 });
 
 test("AI context history is bounded and logout does not delete conversations", async () => {
+  const request = require("supertest");
+  const app = require("./setup");
+  const { query } = require("../config/postgres");
+  const { createAuthenticatedTestUser, authHeader } = require("./helpers/authTestHelper");
   const auth = await createAuthenticatedTestUser(app, "Conversation Context");
   let conversationId;
   for (let i = 0; i < 14; i += 1) {
@@ -72,7 +110,10 @@ test("AI context history is bounded and logout does not delete conversations", a
   const logout = await request(app).post("/api/auth/logout").send({ refreshToken: auth.refreshToken });
   assert.equal(logout.status, 200);
   assert.equal(Number((await query("SELECT COUNT(*) AS count FROM ai_conversations WHERE id = $1", [conversationId])).rows[0].count), 1);
-  const login = await request(app).post("/api/auth/login").send({ email: auth.user.email, password: "test-password-123" });
+  const otp = await request(app).post("/api/auth/email/otp/request").send({ email: auth.email });
+  assert.equal(otp.status, 200);
+  const code = global.__emailTestCodes.get(`${auth.email}:verify`);
+  const login = await request(app).post("/api/auth/email/otp/verify").send({ email: auth.email, code });
   assert.equal(login.status, 200);
   assert.equal((await request(app).get("/api/ai/conversations").set("Authorization", authHeader(login.body.data))).body.data.some((item) => item.id === conversationId), true);
 });

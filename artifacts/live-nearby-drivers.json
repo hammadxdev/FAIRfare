@@ -1,0 +1,402 @@
+{
+  "capturedAt": "2026-10-23T21:08:00.645Z",
+  "pickup": {
+    "latitude": 31.4743802,
+    "longitude": 74.4162735
+  },
+  "providers": {
+    "indrive": {
+      "status": "available",
+      "source": "live",
+      "driverCount": 42,
+      "vehicles": [
+        {
+          "orderTypeId": 2,
+          "vehicleType": "BIKE",
+          "driverCount": 18,
+          "drivers": [
+            {
+              "latitude": 31.4732555,
+              "longitude": 74.4171275,
+              "heading": 0,
+              "speed": 0.06286726891994476,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4727838,
+              "longitude": 74.4190713,
+              "heading": 180.4679412841797,
+              "speed": 1.4539309740066528,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4770952,
+              "longitude": 74.4141297,
+              "heading": 299,
+              "speed": 8.058490753173828,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4765335,
+              "longitude": 74.4198515,
+              "heading": 75.677734375,
+              "speed": 1.0223406553268433,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4767881,
+              "longitude": 74.4201413,
+              "heading": 327,
+              "speed": 4.603898048400879,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4708099,
+              "longitude": 74.4225632,
+              "heading": 112,
+              "speed": 6.089163780212402,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4678982,
+              "longitude": 74.4081812,
+              "heading": 281,
+              "speed": 10.300000190734863,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4737033,
+              "longitude": 74.42738,
+              "heading": 158,
+              "speed": 9.208895683288574,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4700259,
+              "longitude": 74.4262392,
+              "heading": 0,
+              "speed": 0.03481972590088844,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4805869,
+              "longitude": 74.4278547,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4694783,
+              "longitude": 74.4297167,
+              "heading": 115,
+              "speed": 0.8287028074264526,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4808625,
+              "longitude": 74.4035062,
+              "heading": 226,
+              "speed": 9.351987838745117,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4657563,
+              "longitude": 74.405091,
+              "heading": 177,
+              "speed": 10.65999984741211,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4688804,
+              "longitude": 74.4301706,
+              "heading": 0,
+              "speed": 0.06544795632362366,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4710994,
+              "longitude": 74.4311219,
+              "heading": 90,
+              "speed": 0.11915760487318039,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4763069,
+              "longitude": 74.4005516,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4793191,
+              "longitude": 74.4014716,
+              "heading": 227,
+              "speed": 10.843652725219727,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.478725,
+              "longitude": 74.4007217,
+              "heading": 228,
+              "speed": 11.992512702941895,
+              "transportKind": "moto",
+              "transportComfortLevel": "economy"
+            }
+          ]
+        },
+        {
+          "orderTypeId": 33,
+          "vehicleType": "ECONOMY_CAR",
+          "driverCount": 5,
+          "drivers": [
+            {
+              "latitude": 31.4735,
+              "longitude": 74.4162667,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4756153,
+              "longitude": 74.4170503,
+              "heading": 0,
+              "speed": 0.0784289762377739,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.474935,
+              "longitude": 74.402125,
+              "heading": 276,
+              "speed": 13.117180824279785,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4675417,
+              "longitude": 74.4051333,
+              "heading": 10,
+              "speed": 13.003427505493164,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.46567,
+              "longitude": 74.4049217,
+              "heading": 343,
+              "speed": 11.802580833435059,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            }
+          ]
+        },
+        {
+          "orderTypeId": 31,
+          "vehicleType": "RICKSHAW",
+          "driverCount": 1,
+          "drivers": [
+            {
+              "latitude": 31.4809198,
+              "longitude": 74.4034771,
+              "heading": 42.969207763671875,
+              "speed": 2.2188570499420166,
+              "transportKind": "rickshaw",
+              "transportComfortLevel": "economy"
+            }
+          ]
+        },
+        {
+          "orderTypeId": 29,
+          "vehicleType": "STANDARD_CAR",
+          "driverCount": 9,
+          "drivers": [
+            {
+              "latitude": 31.4735,
+              "longitude": 74.4162667,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4756153,
+              "longitude": 74.4170503,
+              "heading": 0,
+              "speed": 0.0784289762377739,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.47145,
+              "longitude": 74.40738,
+              "heading": 0,
+              "speed": 7.12032,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.470835,
+              "longitude": 74.40619,
+              "heading": 213,
+              "speed": 10.397903442382812,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4729433,
+              "longitude": 74.4277033,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4748417,
+              "longitude": 74.4033717,
+              "heading": 277,
+              "speed": 15.930137634277344,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.474935,
+              "longitude": 74.402125,
+              "heading": 276,
+              "speed": 13.117180824279785,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4675417,
+              "longitude": 74.4051333,
+              "heading": 10,
+              "speed": 13.003427505493164,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.46567,
+              "longitude": 74.4049217,
+              "heading": 343,
+              "speed": 11.802580833435059,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            }
+          ]
+        },
+        {
+          "orderTypeId": 11,
+          "vehicleType": "PREMIUM_CAR",
+          "driverCount": 9,
+          "drivers": [
+            {
+              "latitude": 31.4735,
+              "longitude": 74.4162667,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4756153,
+              "longitude": 74.4170503,
+              "heading": 0,
+              "speed": 0.0784289762377739,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.47145,
+              "longitude": 74.40738,
+              "heading": 0,
+              "speed": 7.12032,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.470835,
+              "longitude": 74.40619,
+              "heading": 213,
+              "speed": 10.397903442382812,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4729433,
+              "longitude": 74.4277033,
+              "heading": 0,
+              "speed": 0,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.4748417,
+              "longitude": 74.4033717,
+              "heading": 277,
+              "speed": 15.930137634277344,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.474935,
+              "longitude": 74.402125,
+              "heading": 276,
+              "speed": 13.117180824279785,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.46567,
+              "longitude": 74.4049217,
+              "heading": 343,
+              "speed": 11.802580833435059,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            },
+            {
+              "latitude": 31.481061,
+              "longitude": 74.4304333,
+              "heading": 287,
+              "speed": 5.354140758514404,
+              "transportKind": "car",
+              "transportComfortLevel": "economy"
+            }
+          ]
+        }
+      ]
+    },
+    "yango": {
+      "status": "available",
+      "source": "live",
+      "rideType": "econom",
+      "driverCount": 1,
+      "drivers": [
+        {
+          "latitude": 31.472937,
+          "longitude": 74.40959,
+          "heading": 44,
+          "available": true,
+          "tariff": "business"
+        }
+      ]
+    }
+  }
+}

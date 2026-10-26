@@ -3,17 +3,19 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("./setup");
 
-const password = "correct horse battery";
-
 async function authenticatedSession(label) {
   const email = `profile-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
-  const registered = await request(app).post("/api/auth/register").send({ name: "Profile User", email, password });
-  assert.equal(registered.status, 200);
+  const sent = await request(app).post("/api/auth/email/otp/request").send({ email });
+  assert.equal(sent.status, 200);
   const code = global.__emailTestCodes.get(`${email}:verify`);
-  assert.equal((await request(app).post("/api/auth/email/verify").send({ email, code })).status, 200);
-  const logged = await request(app).post("/api/auth/login").send({ email, password });
+  const logged = await request(app).post("/api/auth/email/otp/verify").send({ email, code });
   assert.equal(logged.status, 200);
-  return logged.body.data.accessToken;
+  const auth = logged.body.data;
+  if (auth.needsName) {
+    const profile = await request(app).patch("/api/auth/me").set("Authorization", `Bearer ${auth.accessToken}`).send({ name: "Profile User" });
+    assert.equal(profile.status, 200);
+  }
+  return auth.accessToken;
 }
 
 test("profile update requires authentication", async () => {
