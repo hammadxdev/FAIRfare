@@ -82,13 +82,15 @@ async function executeToolCall(call, context = {}, state = {}) {
   if (context.nativeToolAgent) {
     const pointKey = (point) => `${point.lat},${point.lng}`;
     const trustedPoint = (point) => state.locations?.get(pointKey(point));
-    if (["calculate_route", "compare_live_fares", "get_nearby_observation_context"].includes(name)) {
-      const pickup = trustedPoint(args.pickup);
-      const dropoff = args.dropoff && trustedPoint(args.dropoff);
-      if (!pickup || args.dropoff && !dropoff) return { ...denied("LOCATION_NOT_VERIFIED"), routeDiagnostics: { originResolved: Boolean(pickup), destinationResolved: Boolean(dropoff), originHasCoordinates: Boolean(args.pickup?.lat != null && args.pickup?.lng != null), destinationHasCoordinates: Boolean(args.dropoff?.lat != null && args.dropoff?.lng != null), originHasPlaceId: Boolean(pickup?.placeId), destinationHasPlaceId: Boolean(dropoff?.placeId), originVerified: Boolean(pickup), destinationVerified: Boolean(dropoff), routeValidationFailureCategory: "location_not_verified" } };
-      if (state.ambiguousLocations?.has(pointKey(args.pickup)) || args.dropoff && state.ambiguousLocations?.has(pointKey(args.dropoff))) return { ...denied("LOCATION_AMBIGUOUS"), routeDiagnostics: { originResolved: Boolean(pickup), destinationResolved: Boolean(dropoff), originHasCoordinates: true, destinationHasCoordinates: Boolean(dropoff), originHasPlaceId: Boolean(pickup?.placeId), destinationHasPlaceId: Boolean(dropoff?.placeId), originVerified: true, destinationVerified: Boolean(dropoff), routeValidationFailureCategory: "location_ambiguous" } };
-      args = { ...args, pickup: { lat: pickup.lat, lng: pickup.lng, name: pickup.name, placeId: pickup.placeId } };
-      if (dropoff) args.dropoff = { lat: dropoff.lat, lng: dropoff.lng, name: dropoff.name, placeId: dropoff.placeId };
+    if (["calculate_route", "compare_live_fares", "get_nearby_observation_context", "plan_lahore_transit"].includes(name)) {
+      const pickup = trustedPoint(args.pickup || args.origin);
+      const dropoff = (args.dropoff || args.destination) && trustedPoint(args.dropoff || args.destination);
+      const originArg = args.pickup || args.origin;
+      const destinationArg = args.dropoff || args.destination;
+      if (!pickup || destinationArg && !dropoff) return { ...denied("LOCATION_NOT_VERIFIED"), routeDiagnostics: { originResolved: Boolean(pickup), destinationResolved: Boolean(dropoff), originHasCoordinates: Boolean(originArg?.lat != null && originArg?.lng != null), destinationHasCoordinates: Boolean(destinationArg?.lat != null && destinationArg?.lng != null), originHasPlaceId: Boolean(pickup?.placeId), destinationHasPlaceId: Boolean(dropoff?.placeId), originVerified: Boolean(pickup), destinationVerified: Boolean(dropoff), routeValidationFailureCategory: "location_not_verified" } };
+      if (state.ambiguousLocations?.has(pointKey(originArg)) || destinationArg && state.ambiguousLocations?.has(pointKey(destinationArg))) return { ...denied("LOCATION_AMBIGUOUS"), routeDiagnostics: { originResolved: Boolean(pickup), destinationResolved: Boolean(dropoff), originHasCoordinates: Boolean(originArg), destinationHasCoordinates: Boolean(destinationArg), originHasPlaceId: Boolean(pickup?.placeId), destinationHasPlaceId: Boolean(dropoff?.placeId), originVerified: true, destinationVerified: Boolean(dropoff), routeValidationFailureCategory: "location_ambiguous" } };
+      args = { ...args, ...(name === "plan_lahore_transit" ? { origin: { lat: pickup.lat, lng: pickup.lng, name: pickup.name, placeId: pickup.placeId } } : { pickup: { lat: pickup.lat, lng: pickup.lng, name: pickup.name, placeId: pickup.placeId } }) };
+      if (dropoff) args[name === "plan_lahore_transit" ? "destination" : "dropoff"] = { lat: dropoff.lat, lng: dropoff.lng, name: dropoff.name, placeId: dropoff.placeId };
       if (name === "compare_live_fares") {
         if (context.liveComparisonEnabled !== true || String(process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED).toLowerCase() !== "true") return denied("LIVE_COMPARISON_DISABLED");
         if (!context.requestRunId) return denied("IDEMPOTENCY_REQUIRED");

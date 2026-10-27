@@ -12,6 +12,7 @@ const TOOL_DESCRIPTIONS = {
   search_locations: "For every named stop in a route request, call this before routing (pickup, destination, and each intermediate stop). Search the user's exact place wording, including Roman Urdu spellings. If a stop has multiple plausible candidates, do not choose coordinates: ask the user to clarify.",
   calculate_route: "Calculate one verified road leg between two coordinates returned by search_locations in this request. Representative points returned by search_locations may be used for broad areas only when the result is relevant and credible; the response must be labeled approximate, never exact pickup. For a multi-stop request, calculate each consecutive leg in order (A→B, then B→C). Never invent coordinates, distance, duration, fare, or live driver availability; these are road estimates, not driver pickup times.",
   compare_live_fares: "Fetch current live provider quotes whenever the user asks what a trip will cost (fare, price, kiraya, how much), which provider or ride type is cheapest, or wants a ride-type suggestion that depends on price, and both pickup and destination have been verified by search_locations. The result also carries the verified road route (distance and duration), so you do not need calculate_route first. Set explicitComparisonIntent for such a request. A client message id is required for idempotent comparison; if the backend rejects this call, explain that the user should retry with a client message id.",
+  plan_lahore_transit: "Plan verified Lahore public transport only from the transit dataset. Use search_locations first for both places. Return official fares, service hours, source freshness, and warnings. If coverage is insufficient, say so; never invent a local route, stop, fare, or duration.",
   get_latest_comparison: "Read an authorized stored comparison. Stored quotes are observations, not newly fetched live prices.",
   get_provider_status: "Read integration configuration and operational status. This does not verify drivers or ride availability.",
   get_nearby_observation_context: "Read aggregate historical nearby observations for a searched location. Never interpret this as live driver availability or pickup ETA.",
@@ -124,7 +125,10 @@ async function answer(args, dependencies = {}) {
   const liveEnabled = enabled("FAIRFARE_AI_LIVE_COMPARISON_ENABLED");
   // Native Gemini function calling intentionally has a small tool surface. Keep
   // the complete registry available to the other AI flows and services.
-  const nativeToolNames = new Set(["search_locations", "calculate_route", "compare_live_fares"]);
+  const nativeToolNames = new Set([
+    "search_locations",
+    "compare_live_fares",
+  ]);
   const tools = toolsEnabled ? listTools().filter((tool) => nativeToolNames.has(tool.name)).map((tool) => ({
     name: tool.name,
     schema: tool.schema,

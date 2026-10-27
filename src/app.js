@@ -13,6 +13,7 @@ const preferenceRoutes = require("./routes/userPreference.routes");
 const tripAwareAiRoutes = require("./routes/tripAwareAi.routes");
 const savedRouteRoutes = require("./routes/savedRoute.routes");
 const locationRoutes = require("./routes/location.routes");
+const transitRoutes = require("./routes/transit.routes");
 
 const notFoundMiddleware = require("./middlewares/notFound.middleware");
 const errorMiddleware = require("./middlewares/error.middleware");
@@ -35,6 +36,7 @@ app.use("/api/predictions", predictionRoutes);
 app.use("/api/ai", tripAwareAiRoutes);
 app.use("/api/saved-routes", savedRouteRoutes);
 app.use("/api/locations", locationRoutes);
+app.use("/api/transit", transitRoutes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
