@@ -83,4 +83,7 @@ test("system policy distinguishes expected fare from future fare and provider of
   assert.match(SYSTEM_INSTRUCTIONS, /roman_urdu/i);
   assert.match(SYSTEM_INSTRUCTIONS, /For any pickup ETA, driver arrival, fastest pickup, or pickup availability question/i);
   assert.match(SYSTEM_INSTRUCTIONS, /Road distance and travel duration are Geoapify route estimates/i);
+  assert.match(SYSTEM_INSTRUCTIONS, /FairFare AI Ride Assistant/i);
+  assert.match(SYSTEM_INSTRUCTIONS, /Never identify yourself as Gemini/i);
+  assert.match(SYSTEM_INSTRUCTIONS, /plan_lahore_transit/i);
 });

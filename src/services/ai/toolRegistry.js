@@ -24,15 +24,18 @@ function nearbyHistoryEnabled() { return String(process.env.FAIRFARE_AI_NEARBY_H
 
 function currentRealQuote(result, now = Date.now()) {
   if (!result || result.dataSource !== "REAL" || String(result.source || "").toLowerCase() !== "live" || result.isAvailable !== true) return null;
-  const fare = Number(result.fare);
+  const selectedQuote = (Array.isArray(result.quotes) ? result.quotes : []).find((quote) => quote?.isAvailable !== false && Number(quote?.fare) > 0) || null;
+  const fare = Number(result.fare ?? selectedQuote?.fare);
   if (!Number.isFinite(fare) || fare <= 0) return null;
   const metadata = result.metadata || {};
-  const expiry = metadata.providerExpiresAt == null ? NaN : Date.parse(metadata.providerExpiresAt);
-  const created = metadata.providerCreatedAt == null ? NaN : Date.parse(metadata.providerCreatedAt);
+  const expiry = Date.parse(metadata.providerExpiresAt || selectedQuote?.expiresAt || "");
+  const created = Date.parse(metadata.providerCreatedAt || selectedQuote?.quotedAt || "");
   const ttl = Number(metadata.providerTtlSeconds);
   const derivedExpiry = Number.isFinite(created) && Number.isFinite(ttl) && ttl >= 0 ? created + ttl * 1000 : NaN;
   const expiresAt = Number.isFinite(expiry) ? expiry : derivedExpiry;
-  const explicitlyCurrent = String(metadata.providerFreshness || "").toLowerCase() === "current";
+  const recentlyQuoted = Number.isFinite(created) && created <= now + 30_000 && now - created <= 5 * 60_000
+    && String(selectedQuote?.source || "live").toLowerCase() === "live";
+  const explicitlyCurrent = String(metadata.providerFreshness || "").toLowerCase() === "current" || recentlyQuoted;
   if (Number.isFinite(expiresAt) ? expiresAt <= now : !explicitlyCurrent) return null;
   if (String(metadata.providerFreshness || "").toLowerCase() === "expired") return null;
   const providerName = String(result.provider?.name || result.provider?.id || "").toLowerCase();
@@ -40,11 +43,11 @@ function currentRealQuote(result, now = Date.now()) {
   return {
     provider: result.provider?.displayName || result.provider?.name || result.provider?.id || "Provider",
     providerId: result.provider?.name || result.provider?.id || null,
-    serviceName: result.providerServiceName || result.quotes?.[0]?.providerServiceName || null,
-    serviceCode: result.service_code || result.quotes?.[0]?.service_code || null,
-    category: result.vehicleCategory || result.quotes?.[0]?.vehicleCategory || result.quotes?.[0]?.categoryName || null,
+    serviceName: result.providerServiceName || selectedQuote?.providerServiceName || null,
+    serviceCode: result.service_code || selectedQuote?.service_code || null,
+    category: result.vehicleCategory || selectedQuote?.vehicleCategory || selectedQuote?.categoryName || null,
     fare,
-    currency: result.currency || result.quotes?.[0]?.currency || "PKR",
+    currency: result.currency || selectedQuote?.currency || "PKR",
     // For inDrive this is inDrive's own route, which can differ slightly from our road route.
     ...(Number(result.quotes?.[0]?.distanceMeters) > 0 && Number(result.quotes?.[0]?.tripDurationSeconds) > 0 ? { providerRoute: { distanceMeters: Number(result.quotes[0].distanceMeters), durationSeconds: Number(result.quotes[0].tripDurationSeconds) } } : {}),
     source: "REAL",
@@ -75,6 +78,9 @@ function currentRealComparison(comparison) {
       status: safeProviderStatus(item?.status || (item?.isAvailable === true ? "available" : "unavailable")),
     }))).map((item) => ({ provider: String(item.provider || "unknown").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "unknown", mode: safeProviderMode(item.mode), status: safeProviderStatus(item.status) })),
   };
+  diagnostics.expectedProviderCount = diagnostics.providerModesStatuses.length;
+  diagnostics.respondedProviderCount = diagnostics.providerModesStatuses.filter((item) => ["available", "ready"].includes(item.status)).length;
+  diagnostics.comparisonCompleteness = quotes.length > 0 && diagnostics.unavailableQuoteCount === 0 ? "complete" : quotes.length > 0 ? "partial" : "unavailable";
   return quotes.length ? { status: "OK", source: "REAL_PROVIDER_QUOTES", comparisonId: comparison.comparisonId || null, searchedAt: comparison.searchedAt || null, quotes, diagnostics } : { status: "UNAVAILABLE", reason: "NO_CURRENT_VERIFIED_REAL_PROVIDER_QUOTES", quotes: [], diagnostics };
 }
 
@@ -150,7 +156,7 @@ function definitions() {
     search_locations: { name: "search_locations", schema: schemas.search_locations, mayCallProvider: true, mayMutateState: false, timeoutMs: 3000, execute: async (args) => { const candidates = (await deps.maps.fetchAutocomplete({ input: args.cityHint ? `${args.query}, ${args.cityHint}` : args.query })) || []; const usable = candidates.map((item) => normalizeCandidate(item, args.query)).filter(Boolean); const selection = selectCandidate(args.query, usable, { preferredCity: args.cityHint || null }); const ranked = [...usable].sort((a, b) => { const aName = String(a.name || "").toLowerCase(); const bName = String(b.name || "").toLowerCase(); const query = String(args.query || "").toLowerCase(); const score = (item, name) => (item.resolutionType === "unrelated_business" ? -10000 : 0) + (name.includes(query) ? 1000 : 0) + (item.resolutionType === "verified_named_landmark" ? 100 : item.resolutionType === "approximate_representative_area" ? 80 : 0) + (Number(item.confidence) || 0); return score(b, bName) - score(a, aName); }).slice(0, 6); return { status: "OK", candidates: ranked.map((normalized) => ({ name: normalized.name, address: normalized.address, placeId: normalized.placeId, lat: normalized.lat, lng: normalized.lng, city: normalized.city, approximate: normalized.approximate, resolutionType: normalized.resolutionType, candidateType: normalized.candidateType })) , diagnostics: { sourceCandidateCount: candidates.length, returnedCandidateCount: ranked.length, selectedResolutionType: selection.location?.resolutionType || null, ambiguous: selection.ambiguous, hasVerifiedCandidate: ranked.some((item) => item.resolutionType === "verified_named_landmark") } }; } },
     calculate_route: { name: "calculate_route", schema: schemas.calculate_route, mayCallProvider: true, mayMutateState: false, timeoutMs: 3500, execute: async (args) => { const route = await deps.maps.computeRoute({ origin: args.pickup, destination: args.dropoff }); return { status: route?.unavailable ? "UNAVAILABLE" : "OK", route: route || null }; } },
   plan_lahore_transit: { name: "plan_lahore_transit", schema: schemas.plan_lahore_transit, mayCallProvider: false, mayMutateState: false, timeoutMs: 750, execute: async (args) => planLahoreTransit({ origin: args.origin, destination: args.destination, originName: args.originName || args.origin.name, destinationName: args.destinationName || args.destination.name }) },
-  compare_live_fares: { name: "compare_live_fares", schema: schemas.compare_live_fares, mayCallProvider: true, mayMutateState: true, timeoutMs: 11000, execute: async (args, ctx) => { if (ctx.liveComparisonEnabled !== true || args.explicitComparisonIntent !== true || ctx.explicitComparisonIntent !== true) return { status: "LIVE_COMPARISON_DISABLED" }; const comparison = await deps.compareFares({ userId: ctx.userId, pickup: args.pickup, dropoff: args.dropoff, vehicleType: args.vehicleType || "car", route: args.route || null }); return currentRealComparison(comparison); } },
+  compare_live_fares: { name: "compare_live_fares", schema: schemas.compare_live_fares, mayCallProvider: true, mayMutateState: true, timeoutMs: 105000, execute: async (args, ctx) => { if (ctx.liveComparisonEnabled !== true || args.explicitComparisonIntent !== true || ctx.explicitComparisonIntent !== true) return { status: "LIVE_COMPARISON_DISABLED" }; const comparison = await deps.compareFares({ userId: ctx.userId, pickup: args.pickup, dropoff: args.dropoff, vehicleType: args.vehicleType || "car", route: args.route || null, deadlineAt: ctx.deadlineAt || null }); return currentRealComparison(comparison); } },
     get_provider_status: { name: "get_provider_status", schema: schemas.get_provider_status, mayCallProvider: false, mayMutateState: false, timeoutMs: 1000, execute: async (args) => { const statuses = await deps.providers.getProviderStatus(); const filtered = args.provider ? statuses.filter((item) => deps.providers.canonicalProviderId(args.provider) === item.id) : statuses; return { status: "OK", providers: filtered.slice(0, MAX_RESULT_ITEMS).map((item) => ({ id: item.id, enabled: item.enabled, status: item.status })) }; } },
     get_nearby_observation_context: { name: "get_nearby_observation_context", schema: schemas.get_nearby_observation_context, mayCallProvider: false, mayMutateState: false, disabled: !nearbyHistoryEnabled(), timeoutMs: 1500, execute: async (args) => deps.readNearbyObservationContext({ latitude: args.pickup.lat, longitude: args.pickup.lng, category: args.category, provider: args.provider || null }) },
     get_app_capabilities: { name: "get_app_capabilities", schema: schemas.get_app_capabilities, mayCallProvider: false, mayMutateState: false, timeoutMs: 500, execute: async () => ({ status: "OK", capabilities: { rideComparison: true, routeCalculation: true, locationSearch: true, supportedVehicleTypes: ["car", "bike", "rickshaw"], liveComparisonEnabled: String(process.env.FAIRFARE_AI_LIVE_COMPARISON_ENABLED || "false").toLowerCase() === "true" } }) },
@@ -161,7 +167,7 @@ function definitions() {
   };
 }
 
-function normalizedTimeout(tool) { return ["search_locations", "compare_live_fares"].includes(tool.name) ? { ...tool, timeoutMs: 30000 } : tool; }
+function normalizedTimeout(tool) { return tool.name === "search_locations" ? { ...tool, timeoutMs: 30000 } : tool; }
 function getTool(name) { const tool = definitions()[name] || null; return tool ? normalizedTimeout(tool) : null; }
 function listTools({ includeDisabled = false } = {}) { return Object.values(definitions()).filter((tool) => includeDisabled || !tool.disabled).map(normalizedTimeout); }
 function setToolDependenciesForTests(overrides = {}) { deps = { ...deps, ...overrides }; }

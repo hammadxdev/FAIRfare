@@ -5,10 +5,10 @@ const ROUTE_PHRASES = /(?:\b(?:go|travel|ride|drive|jana|jaana|jane|jaun)\b.{0,8
 // a directional relation, rather than a large inventory of place names.
 const ROUTE_DISTANCE_QUESTION = /\b(?:road\s+)?(?:distance|door|dur|kitna\s+(?:door|time)|how\s+(?:far|long)|travel\s+time|duration|km|kilometers?)\b/i;
 const ROUTE_RELATION = /\b(?:from|se|say)\b.{1,120}\b(?:to|tak|ka|ki|jana|jaana|jane|go|going)\b|\b(?:to|tak)\b.{1,120}\b(?:from|se|say)\b/i;
-const INJECTION_WORDS = /(?:ignore\s+(?:all\s+)?(?:previous|system|developer)\s+instructions?|reveal\s+(?:the\s+)?(?:system\s+prompt|secret|token|api\s*key)|show\s+(?:me\s+)?(?:password|credentials?)|arbitrary\s+(?:sql|http|url)|access\s+another\s+user|unrestricted\s+tool|bypass\s+(?:auth|authorization))/i;
-const NON_FARE_INTENT = /(?:\b(?:write|build|create|solve|tell|compose|pretend|make)\b.*\b(?:python|javascript|react|website|code|coding|math|mathematics|politic|news|love\s+letter|general\s+chatbot)\b|\b(?:latest\s+political\s+news|love\s+letter)\b)/i;
+const INJECTION_WORDS = /(?:ignore\s+(?:all\s+)?(?:previous|prior|system|developer)\s+(?:instructions?|messages?|rules?)|(?:reveal|repeat|print|dump|leak|show\s+(?:me\s+)?)\s+(?:(?:the|your)\s+)?(?:hidden\s+)?(?:system\s+(?:prompt|message)|developer\s+(?:prompt|message)|secret|token|api\s*key|password|credentials?)|(?:act|pretend)\s+(?:as\s+(?:an?\s+)?|you\s+are\s+|to\s+be\s+)(?:unrestricted|unfiltered|jailbroken)|arbitrary\s+(?:sql|http|url)|access\s+another\s+user|unrestricted\s+tool|bypass\s+(?:auth|authorization|safety|policy)|(?:disable|override)\s+(?:the\s+)?(?:safety|guardrails?|policy|authorization))/i;
+const NON_FARE_INTENT = /(?:\b(?:write|build|create|solve|tell|compose|pretend|make|explain|debug|implement|generate|translate)\b[\s\S]{0,160}\b(?:python|javascript|java|typescript|react|website|code|coding|program|programming|algorithm|recursion|math|mathematics|politic|news|love\s+letter|general\s+chatbot)\b|(?:\bcpp\b|c\+\+|\bc#\b|\bgolang\b|\brust\b)[\s\S]{0,120}\b(?:code|program|function|class|script|likh|bana|samjha)\w*\b|\b(?:code|program|script)\b[\s\S]{0,120}\b(?:likh|bana|explain|debug|kardo|kar\s+do)\w*\b|\b(?:latest\s+political\s+news|love\s+letter)\b)/i;
 const FARE_REQUEST = /(?:\b(?:fare|ride|trip|pickup|dropoff|destination|provider|yango|bykea|indrive|kiraya|sasti|sasta|airport|service\s+#?\d+)\b|\b(?:jana|jaana)\b.{0,80}\b(?:se|to|tak)\b)/i;
-const SERVICE_CODE_REQUEST = /\b(?:service|code)\s*#?\s*[a-z0-9_-]+\b/i;
+const SERVICE_CODE_REQUEST = /(?:\bservice\s+(?:code\s*)?#?\s*[a-z0-9_-]+\b|\bcode\s*#\s*[a-z0-9_-]+\b)/i;
 const GREETING = /^(?:hi|hello|hey|salam|assalam(?:u|o)?\s*alaikum|aoa)\b[!.\s]*$/i;
 const TRAVEL_WEATHER = /\b(?:rain|barish|weather|mausam|fog|dhund|storm|garmi|sardi)\b/i;
 
@@ -17,8 +17,7 @@ function classifyDomain(message, context = {}) {
   if (INJECTION_WORDS.test(text)) return { intent: "out_of_scope", allowed: false, reason: "UNSAFE_REQUEST" };
   if (!text) return { intent: "ambiguous", allowed: false, reason: "EMPTY_MESSAGE" };
   if (GREETING.test(text)) return { intent: "greeting", allowed: true, reason: "GREETING" };
-  if (NON_FARE_INTENT.test(text) && !FARE_REQUEST.test(text)) return { intent: "out_of_scope", allowed: false, reason: "NON_FARE_INTENT" };
-  if (NON_FARE_INTENT.test(text) && !SERVICE_CODE_REQUEST.test(text) && /(?:python|react|website|coding|mathematics|political|love\s+letter|general\s+chatbot)/i.test(text)) return { intent: "out_of_scope", allowed: false, reason: "NON_FARE_INTENT" };
+  if (NON_FARE_INTENT.test(text) && !SERVICE_CODE_REQUEST.test(text)) return { intent: "out_of_scope", allowed: false, reason: "NON_FARE_INTENT" };
   if (context.hasFareRideContext && /\b(?:aur|and|also|iska|is ka|this|that|wali|wala|again|phir|same|kitna|time|duration|distance|door)\b/i.test(text)) return { intent: "follow_up", allowed: true, reason: "CONTEXTUAL_FOLLOW_UP" };
   if (!context.hasFareRideContext && /^(?:aur|also|and)\b/i.test(text)) return { intent: "out_of_scope", allowed: false, reason: "MISSING_FARE_RIDE_CONTEXT" };
   if (FARE_RIDE_WORDS.test(text) || ROUTE_PHRASES.test(text) || (ROUTE_DISTANCE_QUESTION.test(text) && ROUTE_RELATION.test(text))) return { intent: "fare_ride", allowed: true, reason: "DOMAIN_SIGNAL" };

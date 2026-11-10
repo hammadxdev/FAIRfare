@@ -8,6 +8,7 @@ const { routeEvidenceFromRun, matchRouteEvidence } = require("./routeEvidence.se
 const { classifyDomain, outOfScopeReply, FARE_RIDE_WORDS } = require("./domainPolicy.service");
 
 const enabled = (name) => String(process.env[name] || "false").toLowerCase() === "true";
+const requestBudgetMs = (value = process.env.AI_TOTAL_REQUEST_TIMEOUT_MS) => Math.min(120000, Math.max(30000, Number(value) || 120000));
 const TOOL_DESCRIPTIONS = {
   search_locations: "For every named stop in a route request, call this before routing (pickup, destination, and each intermediate stop). Search the user's exact place wording, including Roman Urdu spellings. If a stop has multiple plausible candidates, do not choose coordinates: ask the user to clarify.",
   calculate_route: "Calculate one verified road leg between two coordinates returned by search_locations in this request. Representative points returned by search_locations may be used for broad areas only when the result is relevant and credible; the response must be labeled approximate, never exact pickup. For a multi-stop request, calculate each consecutive leg in order (A→B, then B→C). Never invent coordinates, distance, duration, fare, or live driver availability; these are road estimates, not driver pickup times.",
@@ -27,6 +28,49 @@ function hasUngroundedNumericRouteClaim(text) {
   const value = String(text || "");
   return /\b(?:distance|route|travel|drive|duration|time|km|kilometers?|meters?|minutes?)\b/i.test(value)
     && /\b\d+(?:\.\d+)?\s*(?:km|kilometers?|meters?|minutes?|mins?|hours?)\b/i.test(value);
+}
+
+function applyComparisonCompleteness(reply, toolResults, language = "english") {
+  const comparison = (Array.isArray(toolResults) ? toolResults : []).find((item) => item?.ok === true && item.name === "compare_live_fares" && item.result?.status === "OK");
+  if (comparison?.result?.diagnostics?.comparisonCompleteness !== "partial") return reply;
+  const providers = (comparison.result.quotes || []).map((quote) => quote.provider).filter(Boolean);
+  const providerText = providers.length ? providers.join(", ") : language === "roman_urdu" ? "available providers" : "the responding providers";
+  const notice = language === "roman_urdu"
+    ? `${providerText} se current quote mila, lekin ek ya zyada supported providers ne current quote return nahi kiya. Yeh partial comparison hai.`
+    : `I received current quotes from ${providerText}, but one or more supported providers did not return a current quote. This is a partial comparison.`;
+  const boundedRanking = language === "roman_urdu" ? "return hone wale quotes mein sab se kam" : "lowest among the returned quotes";
+  const boundedReply = String(reply || "")
+    .replace(/\bcheapest\s+(?:overall|across\s+all\s+providers)\b/gi, boundedRanking)
+    .replace(/\b(?:overall|all-provider)\s+cheapest\b/gi, boundedRanking);
+  return `${notice} ${boundedReply}`.trim();
+}
+
+function settledToolFallbackReply(agent, language = "english") {
+  const results = Array.isArray(agent?.toolResults) ? agent.toolResults : [];
+  const comparison = [...results].reverse().find((item) => item?.name === "compare_live_fares");
+  const route = agent?.resolvedTrip?.route || comparison?.result?.route || null;
+  const quotes = comparison?.ok && comparison.result?.status === "OK" ? comparison.result.quotes || [] : [];
+  const routeText = route?.distanceMeters > 0 && route?.durationSeconds > 0
+    ? (language === "roman_urdu"
+      ? `Verified road route taqreeban ${(route.distanceMeters / 1000).toFixed(1)} km aur ${Math.round(route.durationSeconds / 60)} minutes ka hai.`
+      : `The verified road route is approximately ${(route.distanceMeters / 1000).toFixed(1)} km and ${Math.round(route.durationSeconds / 60)} minutes.`)
+    : "";
+  if (quotes.length) {
+    const prices = quotes.map((quote) => `${quote.provider} ${quote.currency || "PKR"} ${quote.fare}`).join(", ");
+    return language === "roman_urdu"
+      ? `${routeText} Current verified quotes: ${prices}. Final provider ya driver price change ho sakti hai.`.trim()
+      : `${routeText} Current verified quotes: ${prices}. The final provider or driver price may differ.`.trim();
+  }
+  if (comparison) return language === "roman_urdu"
+    ? `${routeText} Is waqt current verified provider quotes available nahi huay; main fare invent nahi karunga.`.trim()
+    : `${routeText} Current verified provider quotes were unavailable, so I will not invent a fare.`.trim();
+  if (routeText) return language === "roman_urdu"
+    ? `${routeText} AI provider final jawab generate nahi kar saka, lekin verified route result mehfooz hai.`
+    : `${routeText} The AI provider could not generate the final wording, but the verified route result is preserved.`;
+  if (results.some((item) => item?.name === "search_locations" && item?.ok)) return language === "roman_urdu"
+    ? "Locations mil gayi thin, lekin AI provider route ya fare step complete karne se pehle temporarily unavailable ho gaya. Dobara try karein."
+    : "The locations were found, but the AI provider became temporarily unavailable before completing the route or fare step. Please retry.";
+  return null;
 }
 
 function unavailableFareReply(message, agent = {}) {
@@ -79,7 +123,7 @@ async function answer(args, dependencies = {}) {
   if (!enabled("AI_ASSISTANT_ENABLED")) return unavailable("AI_DISABLED");
   // AI requests have their own bounded budget; this does not alter other API
   // endpoint timeouts. Keep the hard cap aligned with the deployed AI budget.
-  const deadlineAt = Date.now() + Math.min(135000, Math.max(1000, Number(process.env.AI_TOTAL_REQUEST_TIMEOUT_MS) || 135000));
+  const deadlineAt = Date.now() + requestBudgetMs();
   // Ownership checks remain in the repositories. Do not swallow authorization or
   // persistence errors and proceed with a different user's/missing context.
   const recent = args.conversationId ? await recentMessages(args.userId, args.conversationId) : [];
@@ -127,6 +171,8 @@ async function answer(args, dependencies = {}) {
   // the complete registry available to the other AI flows and services.
   const nativeToolNames = new Set([
     "search_locations",
+    "calculate_route",
+    "plan_lahore_transit",
     "compare_live_fares",
   ]);
   const tools = toolsEnabled ? listTools().filter((tool) => nativeToolNames.has(tool.name)).map((tool) => ({
@@ -154,7 +200,7 @@ async function answer(args, dependencies = {}) {
     },
   });
   if (!agent.result?.text) {
-    const reply = unavailableFareReply(args.message, agent);
+    const reply = settledToolFallbackReply(agent, language) || unavailableFareReply(args.message, agent);
     return {
       reply, modelId: agent.result?.modelId || null, provider: agent.result?.provider || null,
       fallbackUsed: true, available: true, status: "AVAILABLE", comparisonId: null,
@@ -167,6 +213,7 @@ async function answer(args, dependencies = {}) {
   let reply = directNumericClaim
     ? (language === "roman_urdu" ? "Main is waqt route ko verify nahi kar saka, isliye distance ya travel time ko confirmed nahi bata sakta. Thori dair baad dobara try karein." : "I could not verify this route in the current request, so I cannot present a distance or travel time as confirmed. Please try again shortly.")
     : agent.result.text;
+  reply = applyComparisonCompleteness(reply, agent.toolResults, language);
   const currentQuotes = agent.toolResults.some((item) => item.ok && item.name === "compare_live_fares" && item.result?.status === "OK");
   if (!comparison && !currentQuotes && /\b(?:book now|book it|go ahead and book|abhi book kar)\b/i.test(reply)) {
     reply = language === "roman_urdu"
@@ -182,4 +229,4 @@ async function answer(args, dependencies = {}) {
   };
 }
 
-module.exports = { answer, responseLanguage };
+module.exports = { answer, responseLanguage, requestBudgetMs, applyComparisonCompleteness, settledToolFallbackReply };

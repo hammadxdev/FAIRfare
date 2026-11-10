@@ -4,6 +4,7 @@ const { getTool } = require("./toolRegistry");
 const MAX_TOOL_CALLS = 3;
 const MAX_LIVE_COMPARISONS = 1;
 const DEFAULT_DEADLINE_MS = 30000;
+const FINAL_RESPONSE_RESERVE_MS = 15000;
 const MAX_AGENT_ROUNDS = MAX_TOOL_CALLS + 1;
 
 function stable(value) { if (Array.isArray(value)) return `[${value.map(stable).sort().join(",")}]`; if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`; return JSON.stringify(value); }
@@ -40,6 +41,21 @@ function locationMatchesQuery(query, point) {
   }
   const tokens = text.split(/[^a-z0-9]+/).filter((token) => token.length > 2 && !["university", "campus", "new", "the"].includes(token));
   return tokens.length === 0 || tokens.filter((token) => haystack.includes(token)).length >= Math.max(1, Math.ceil(tokens.length * 0.5));
+}
+function normalizedPlaceText(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+function isStrongFirstCandidate(query, point) {
+  if (!(point?.resolutionType === "verified_named_landmark" && point.approximate === false && point.placeId && Number.isFinite(point.lat) && Number.isFinite(point.lng))) return false;
+  const wanted = normalizedPlaceText(query);
+  const name = normalizedPlaceText(point.name);
+  if (!wanted || !name) return false;
+  // Autocomplete is relevance ordered. Prefer its first verified exact/famous
+  // Lahore landmark instead of treating every looser suggestion as ambiguous.
+  if (name === wanted || name.startsWith(`${wanted} `) || wanted.startsWith(`${name} `)) return true;
+  const distinctive = wanted.split(" ").filter((token) => token.length > 2 && !["lahore", "university", "campus", "the"].includes(token));
+  const lahoreAssociated = /\blahore\b/.test(`${point.name || ""} ${point.address || ""} ${point.city || ""}`.toLowerCase()) || /\blahore\b/.test(wanted);
+  return lahoreAssociated && distinctive.length > 0 && distinctive.every((token) => name.includes(token));
 }
 function normalizeAgentToolCall(call, roundNumber, index) {
   const name = typeof call?.name === "string" ? call.name : typeof call?.function?.name === "string" ? call.function.name : typeof call?.functionCall?.name === "string" ? call.functionCall.name : "";
@@ -128,7 +144,13 @@ async function executeToolCall(call, context = {}, state = {}) {
   const configuredTimeout = name === "search_locations"
     ? Number(process.env.FAIRFARE_AI_SEARCH_LOCATIONS_TIMEOUT_MS || 30000)
     : Number(tool.timeoutMs);
-  const deadline = Math.min(configuredTimeout, remainingMs(context));
+  // Provider clients keep their own transport-specific timeouts. The live
+  // comparison may use the shared remaining budget, but it must leave enough
+  // time for the model to explain the settled results to the user.
+  const availableMs = remainingMs(context);
+  const deadline = name === "compare_live_fares"
+    ? Math.min(configuredTimeout, Math.max(0, availableMs - FINAL_RESPONSE_RESERVE_MS))
+    : Math.min(configuredTimeout, availableMs);
   if (deadline <= 0) return { ok: false, name, error: { code: "REQUEST_DEADLINE_EXCEEDED" } };
   const serverContext = { ...context, resolvedTrip: state.resolvedTrip || context.resolvedTrip, explicitComparisonIntent: context.explicitComparisonIntent === true };
   if (name === "search_locations") {
@@ -149,7 +171,8 @@ async function executeToolCall(call, context = {}, state = {}) {
       const firstIsVerifiedRelevant = Boolean(first?.resolutionType === "verified_named_landmark" && first.approximate === false && first.placeId && locationMatchesQuery(args.query, first));
       const verified = relevant.filter((point) => point.resolutionType === "verified_named_landmark" && point.approximate === false && point.placeId && Number.isFinite(point.lat) && Number.isFinite(point.lng));
       const selectedIndex = firstIsVerifiedRelevant ? 0 : (result.candidates || []).findIndex((point) => verified.includes(point));
-      result.diagnostics = { ...(result.diagnostics || {}), selectedCandidateIndex: selectedIndex >= 0 ? selectedIndex : null, selectedCandidate: selectedIndex >= 0 ? { name: result.candidates[selectedIndex].name, placeId: result.candidates[selectedIndex].placeId, lat: result.candidates[selectedIndex].lat, lng: result.candidates[selectedIndex].lng, resolutionType: result.candidates[selectedIndex].resolutionType, approximate: result.candidates[selectedIndex].approximate } : null, candidateCount: (result.candidates || []).length, relevantCandidateCount: relevant.length, validCandidateCount: relevant.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng)).length, ambiguous: verified.length > 1, hasVerifiedCandidate: verified.length > 0 };
+      const preferFirst = isStrongFirstCandidate(args.query, first);
+      result.diagnostics = { ...(result.diagnostics || {}), selectedCandidateIndex: selectedIndex >= 0 ? selectedIndex : null, selectedCandidate: selectedIndex >= 0 ? { name: result.candidates[selectedIndex].name, placeId: result.candidates[selectedIndex].placeId, lat: result.candidates[selectedIndex].lat, lng: result.candidates[selectedIndex].lng, resolutionType: result.candidates[selectedIndex].resolutionType, approximate: result.candidates[selectedIndex].approximate } : null, candidateCount: (result.candidates || []).length, relevantCandidateCount: relevant.length, validCandidateCount: relevant.filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng)).length, ambiguous: !preferFirst && verified.length > 1, preferredFirstCandidate: preferFirst, hasVerifiedCandidate: verified.length > 0 };
       for (const point of relevant) {
         if (typeof point.lat === "number" && Number.isFinite(point.lat) && Math.abs(point.lat) <= 90 && typeof point.lng === "number" && Number.isFinite(point.lng) && Math.abs(point.lng) <= 180)
           state.locations.set(`${point.lat},${point.lng}`, point);
@@ -188,7 +211,7 @@ async function runBoundedToolAgent({ llmClient, message, context = {}, serverCon
   const callIds = new Set();
   const executionContext = { ...serverContext, deadlineAt, allowedTools: new Set(tools.map((tool) => tool.name)) };
   const rounds = Math.max(1, Math.min(Number(maxRounds) || MAX_AGENT_ROUNDS, MAX_AGENT_ROUNDS));
-  const failed = (errorCode, error = null) => ({ handled: true, status: "UNAVAILABLE", errorCode, toolResults: results, modelSelectedTools: selected, modelRequests: requests, toolRequestDiagnostics: { rounds: roundDiagnostics }, providerDiagnostics: error ? { httpStatus: error.statusCode || null, providerErrorCode: error.providerErrorCode || null, providerFailureCategory: error.providerFailureCategory || null, parserFailureCategory: error.parserFailureCategory || null, responseDiagnostics: error.responseDiagnostics || null, retryAfterMs: error.retryAfterMs ?? null, rateLimitKind: error.rateLimitKind || null, rateLimitMetadata: { resetRequests: error.resetRequests ?? null, resetTokens: error.resetTokens ?? null, remainingRequests: error.remainingRequests ?? null, remainingTokens: error.remainingTokens ?? null } } : null });
+  const failed = (errorCode, error = null) => ({ handled: true, status: "UNAVAILABLE", errorCode, toolResults: results, modelSelectedTools: selected, modelRequests: requests, resolvedTrip: state.resolvedTrip || null, toolRequestDiagnostics: { rounds: roundDiagnostics }, providerDiagnostics: error ? { httpStatus: error.statusCode || null, providerErrorCode: error.providerErrorCode || null, providerFailureCategory: error.providerFailureCategory || null, parserFailureCategory: error.parserFailureCategory || null, responseDiagnostics: error.responseDiagnostics || null, retryAfterMs: error.retryAfterMs ?? null, rateLimitKind: error.rateLimitKind || null, rateLimitMetadata: { resetRequests: error.resetRequests ?? null, resetTokens: error.resetTokens ?? null, remainingRequests: error.remainingRequests ?? null, remainingTokens: error.remainingTokens ?? null } } : null });
   let requests = 0;
   let finalizationPending = false;
   let lastResult = null;
@@ -211,7 +234,7 @@ async function runBoundedToolAgent({ llmClient, message, context = {}, serverCon
         status: item.result?.status || item.error?.code || "UNKNOWN",
         candidateCount: Array.isArray(item.result?.candidates) ? item.result.candidates.length : 0,
         validCandidateCount: Array.isArray(item.result?.candidates) ? item.result.candidates.filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)).length : 0,
-        ambiguous: Array.isArray(item.result?.candidates) && item.result.candidates.filter((point) => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)).length > 1,
+        ambiguous: item.result?.diagnostics?.ambiguous === true,
       }));
       return { handled: true, result: lastResult, toolResults: results, modelSelectedTools: selected, modelRequests: requests, toolRequestDiagnostics: { ...(lastResult.toolRequestDiagnostics || {}), rounds: roundDiagnostics, followUpToolChoice: requests > 1 ? "auto" : null, searchDiagnostics }, resolvedTrip: state.resolvedTrip || null };
     }
@@ -251,4 +274,4 @@ async function runBoundedToolAgent({ llmClient, message, context = {}, serverCon
   return failed(finalizationPending ? "MODEL_ROUND_LIMIT" : "TOOL_CALL_LIMIT");
 }
 
-module.exports = { executeToolCall, executeToolCalls, runBoundedToolAgent, sanitize, stable, MAX_TOOL_CALLS, MAX_LIVE_COMPARISONS, DEFAULT_DEADLINE_MS, MAX_AGENT_ROUNDS };
+module.exports = { executeToolCall, executeToolCalls, runBoundedToolAgent, sanitize, stable, MAX_TOOL_CALLS, MAX_LIVE_COMPARISONS, DEFAULT_DEADLINE_MS, MAX_AGENT_ROUNDS, FINAL_RESPONSE_RESERVE_MS };

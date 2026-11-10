@@ -2,6 +2,7 @@ const { spawnSync } = require("node:child_process");
 
 const files = [
   "src/tests/aiDomainPolicy.test.js",
+  "src/tests/aiChatBudget.test.js",
   "src/tests/aiIntentRouter.test.js",
   "src/tests/aiGroundingPolicy.test.js",
   "src/tests/aiGroundingDecision.test.js",
