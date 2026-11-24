@@ -51,7 +51,7 @@ function persistNearbyInBackground(provider, query, result, requestStartedAt, re
 }
 
 const getIndriveSuggestions = asyncHandler(async (req, res) => {
-  const result = await indrive().getSuggestions({ text: req.query.text || req.query.input, latitude: req.query.latitude ?? req.query.lat, longitude: req.query.longitude ?? req.query.lng, sessionId: req.query.sessionId || req.query.sessionToken });
+  const result = await indrive().getAutocomplete({ text: req.query.text || req.query.input, latitude: req.query.latitude ?? req.query.lat, longitude: req.query.longitude ?? req.query.lng, sessionId: req.query.sessionId || req.query.sessionToken });
   return success(res, { data: providerData(result) });
 });
 
