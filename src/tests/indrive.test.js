@@ -88,6 +88,26 @@ test("inDrive runtime configuration excludes environment credentials", () => {
   assert.equal(Object.prototype.hasOwnProperty.call(runtime, "refreshToken"), false);
 });
 
+test("inDrive configuration maps captured header environment names", () => {
+  const runtime = getConfig({
+    NODE_ENV: "development",
+    INDRIVE_DEVICE_FINGERPRINT: "captured-device",
+    INDRIVE_X_FINGERPRINT: "captured-fingerprint",
+    INDRIVE_X_APP: "android captured",
+    INDRIVE_ACCEPT_LANGUAGE: "ur_PK",
+    INDRIVE_X_OS_TYPE: "captured-os",
+    INDRIVE_X_APP_FLAVOR: "captured-flavor",
+    INDRIVE_USER_AGENT: "captured-agent",
+  });
+  assert.equal(runtime.deviceFingerprint, "captured-device");
+  assert.equal(runtime.fingerprint, "captured-fingerprint");
+  assert.equal(runtime.appVersion, "android captured");
+  assert.equal(runtime.language, "ur_PK");
+  assert.equal(runtime.osType, "captured-os");
+  assert.equal(runtime.appFlavor, "captured-flavor");
+  assert.equal(runtime.userAgent, "captured-agent");
+});
+
 test("inDrive session manager reports missing refresh configuration without crashing", async () => {
   const database = createDb();
   const manager = createSessionManager({ config: { ...config, refreshToken: "" }, client: { renew: async () => { throw new Error("must not call"); } }, database, logger: { log() {} } });
@@ -346,6 +366,7 @@ test("renewal client sends the verified endpoint, body, and observed fingerprint
   assert.equal(request.options.headers.Authorization, undefined);
   assert.equal(request.options.headers["X-Device-Fingerprint"], "device");
   assert.equal(request.options.headers["X-Fingerprint"], "finger");
+  assert.equal(request.options.headers["User-Agent"], "okhttp/5.3.0");
   assert.doesNotMatch(JSON.stringify(request), /live|real-secret|captured/i);
 });
 

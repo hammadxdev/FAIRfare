@@ -12,7 +12,7 @@ function headers(config, accessToken) {
     "X-App-Flavor": config.appFlavor,
     "X-App": config.appVersion,
     "Content-Type": "application/json; charset=utf-8",
-    "User-Agent": "okhttp/5.3.0",
+    "User-Agent": config.userAgent || "okhttp/5.3.0",
   };
   if (config.deviceFingerprint) result["X-Device-Fingerprint"] = config.deviceFingerprint;
   if (config.fingerprint) result["X-Fingerprint"] = config.fingerprint;

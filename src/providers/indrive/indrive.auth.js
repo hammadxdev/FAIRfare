@@ -168,7 +168,7 @@ function createSessionManager({ client, config = getConfig(), now = () => Date.n
 
   async function ensureValidSession({ force = false } = {}) {
     const session = await load();
-    if (!force && !session?.accessToken && !configuredRefreshToken(session)) {
+    if (!force && !session?.accessToken && !(await configuredRefreshToken(session))) {
       if (!refreshPromise) refreshPromise = refreshSession({ force }).finally(() => { refreshPromise = null; });
       return refreshPromise;
     }

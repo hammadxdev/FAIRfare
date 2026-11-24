@@ -118,10 +118,8 @@ async function resolveProviderConfig(provider, environmentConfig, options = {}) 
     merged.enabled = row.enabled;
     merged.pricingUrl = row.apiBaseUrl ? `${row.apiBaseUrl}${row.apiPath}` : environmentConfig.pricingUrl;
     merged.autocompleteUrl = row.apiBaseUrl ? `${row.apiBaseUrl}${row.autocompletePath}` : environmentConfig.autocompleteUrl;
-    merged.appVersion = row.appVersion;
-    merged.language = row.language;
-    merged.osType = row.osType;
-    merged.appFlavor = row.appFlavor;
+    // Device identity and observed client headers come from the deployment
+    // environment. Do not let a stale runtime-config row replace them.
     merged.timeoutMs = row.timeoutMs;
     merged.refreshBufferSeconds = row.refreshBufferSeconds;
     merged.mode = liveAllowed && row.mode === "real" ? "real" : row.mode === "simulated" ? "simulated" : "unavailable";
